@@ -17,8 +17,10 @@ protected:
 	TRandom * random_generator_;
 	TTree * sim_data_;
 	Event event_;
+	ArDataTables *ArTables_;
 	int skip_counter_;
 	//Event current_event;
+
 	void DoStepLength (Event &event);
 	void Solve (long double LnR, Event &event);
 	void DoScattering(Event &event);
@@ -38,7 +40,7 @@ public:
 	bool IsFinished(Event &event);
 	void SetParameters(double Concetr /*in SI*/, double E /*in SI*/);
 	void SetParameters(double T /*in K*/, double Pressure /*in SI*/, double E /*in SI*/);
-	Manager(UInt_t RandomSeed = 42);
+	Manager(ArDataTables *Ar_tables, UInt_t RandomSeed = 42);
 	void LoopSimulation(void);
 	void WriteHistory(std::string root_fname);
 	void Test(void);

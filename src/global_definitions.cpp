@@ -47,9 +47,9 @@ void ensure_folder(std::string folder)
 	struct stat st;
 	stat(folder.c_str(), &st);
 	if (!S_ISDIR(st.st_mode)) {
-		int code = system(("mkdir \"" + folder + "\"").c_str());
+		int code = system(("mkdir -p \"" + folder + "\"").c_str());
 		if (code)
-			std::cout << "mkdir error: " << code << std::endl;
+			std::cout << "mkdir -p error: " << code << std::endl;
 	}
 #endif //_WIN32__
 }

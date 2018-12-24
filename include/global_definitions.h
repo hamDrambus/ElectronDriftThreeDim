@@ -4,9 +4,10 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #if defined(__WIN32__)
 #define NOMINMAX
-#include <windows.h>
+#include "Windows4Root.h"
 #include <direct.h>
 #else
 #include <dirent.h>
@@ -14,6 +15,7 @@
 #include <sys/stat.h>
 #endif
 
+#define THREADS_NUMBER_ 3
 #define L_MAX_ 10
 #define EN_MINIMUM_ 5e-3
 #define XS_EL_EN_MAXIMUM_ 20.0
@@ -43,7 +45,7 @@
 #define Width_1o2_ 2.2e-3
 //^in eV
 #define RESONANCE_EN_LOSS_FACTOR_ 1.0
-#define DRIFT_DISTANCE_ 3e-3
+#define DRIFT_DISTANCE_ 1e-4
 //^in m
 #define SKIP_HISTORY_ 0
 
@@ -98,6 +100,7 @@ struct Event
 	double deb_solver_y_right;
 	double deb_solver_E_left;
 	double deb_solver_E_right;
+	double deb_solver_E_delta;
 	double deb_N_integral;
 };
 

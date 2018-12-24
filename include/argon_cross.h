@@ -10,7 +10,7 @@
 #include <vector>
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include <tgmath.h>
+#include <ctgmath>
 #include "global_definitions.h"
 #include "PolynomialFit.h"
 #include "LegendrePolynomials.h"
@@ -34,16 +34,19 @@ public:
 	void Reset(void);
 };
 
+class ArExperimental;
 class InelasticProcess
 {
 protected:
+	ArExperimental *ArExper_; //only for ionization energy for BB_XS(E);
 	std::string name_;
 	DataVector exp_XS_;
 	unsigned int ID_;
 	double En_threshold_;
 	double Oscillator_strength_;
 public:
-	InelasticProcess(std::string name, unsigned int ID, double En, double F, std::vector<double> &Ens, std::vector<double> &XSs);
+	InelasticProcess(std::string name, unsigned int ID, double En, double F, std::vector<double> &Ens, std::vector<double> &XSs,
+		ArExperimental *ArExper);
 	double operator ()(double E); //returns cross section in 1e-16 cm^2
 	double BB_XS(double E);
 	double Exp_XS(double E);
@@ -69,8 +72,36 @@ public:
 	long double phase_shift (long double k, unsigned int l);
 };
 
+class ArAllData {
+public:
+	ArExperimental ArExper_;
+	ArAllData(void);
+	void argon_phase_values_exp(long double k, unsigned int l, long double &tan, long double &sin, long double &cos);
+	void argon_phase_values_MERT5(long double k, unsigned int l, long double &tan, long double &sin, long double &cos);
+	//E in eV, theta in radians, output is in m
+	long double argon_cross_elastic_diff(long double E, long double theta);
+	long double argon_cross_elastic(long double E);
+	long double argon_cross_elastic_from_phases(long double E);
+	long double argon_back_scatter_prob(long double E);
+	long double argon_TM_forward(long double E);
+	long double argon_TM_backward(long double E);
+
+	long double argon_cross_resonance_3o2_diff(long double E, long double theta);
+	long double argon_cross_resonance_1o2_diff(long double E, long double theta);
+	long double argon_cross_resonance_3o2(long double E);
+	long double argon_cross_resonance_1o2(long double E);
+	long double argon_back_resonance_3o2_prob(long double E);
+	long double argon_back_resonance_1o2_prob(long double E);
+	long double argon_TM_forward_resonance_3o2(long double E);
+	long double argon_TM_forward_resonance_1o2(long double E);
+	long double argon_TM_backward_resonance_3o2(long double E);
+	long double argon_TM_backward_resonance_1o2(long double E);
+};
+
 class ArDataTables //loads data from default files if presented. If not then values are calculated and files are created.
 {
+public:
+	ArAllData ArAllData_;
 protected:
 	std::string total_cross_elastic_fname;
 	std::string total_cross_resonance_3o2_fname;
@@ -95,30 +126,6 @@ public:
 	int getOrder(void);
 	int getNused(void);
 };
-
-extern ArExperimental ArExper;
-extern ArDataTables ArTables;
-
-void argon_phase_values_exp(long double k, unsigned int l, long double &tan, long double &sin, long double &cos);
-void argon_phase_values_MERT5(long double k, unsigned int l, long double &tan, long double &sin, long double &cos);
-//E in eV, theta in radians, output is in m
-long double argon_cross_elastic_diff (long double E, long double theta);
-long double argon_cross_elastic (long double E);
-long double argon_cross_elastic_from_phases (long double E);
-long double argon_back_scatter_prob (long double E);
-long double argon_TM_forward (long double E);
-long double argon_TM_backward (long double E);
-
-long double argon_cross_resonance_3o2_diff (long double E, long double theta);
-long double argon_cross_resonance_1o2_diff (long double E, long double theta);
-long double argon_cross_resonance_3o2 (long double E);
-long double argon_cross_resonance_1o2 (long double E);
-long double argon_back_resonance_3o2_prob (long double E);
-long double argon_back_resonance_1o2_prob (long double E);
-long double argon_TM_forward_resonance_3o2 (long double E);
-long double argon_TM_forward_resonance_1o2 (long double E);
-long double argon_TM_backward_resonance_3o2 (long double E);
-long double argon_TM_backward_resonance_1o2 (long double E);
 
 #endif
 

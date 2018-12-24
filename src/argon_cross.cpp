@@ -1,8 +1,5 @@
 #include "argon_cross.h"
 
-ArExperimental ArExper;
-ArDataTables ArTables;
-
 EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 {
 	/*ElasticXS, Resonance_3o2_XS, Resonance_1o2_XS, ResonancesXS,
@@ -154,8 +151,9 @@ void EnergyScanner::Reset(void)
 }
 
 
-InelasticProcess::InelasticProcess(std::string name, unsigned int ID, double En, double F, std::vector<double> &Ens, std::vector<double> &XSs):
-		name_(name), ID_(ID), En_threshold_(En), Oscillator_strength_(F), exp_XS_(Ens, XSs, 3, 4)
+InelasticProcess::InelasticProcess(std::string name, unsigned int ID, double En, double F, std::vector<double> &Ens, std::vector<double> &XSs,
+	ArExperimental *ArExper):
+		name_(name), ID_(ID), En_threshold_(En), Oscillator_strength_(F), exp_XS_(Ens, XSs, 3, 4), ArExper_(ArExper)
 {}
 
 double InelasticProcess::operator ()(double E) //returns cross section in 1e-16 cm^2
@@ -179,7 +177,7 @@ double InelasticProcess::BB_XS(double E)
 	double gamma2 = gamma*gamma;
 	double beta2 = 1.0-1.0/gamma2;
 	double BBconst = 8.0*M_PI*a_bohr_SIconst*a_bohr_SIconst*Ry_eVconst*Ry_eVconst/e_mass_eVconst;
-	return (Oscillator_strength_/(En_threshold_*beta2))*log(beta2*gamma2*e_mass_eVconst/(2.0*En_threshold_)-beta2)*BBconst*E/(E+En_threshold_+ArExper.E_Ionization);
+	return (Oscillator_strength_/(En_threshold_*beta2))*log(beta2*gamma2*e_mass_eVconst/(2.0*En_threshold_)-beta2)*BBconst*E/(E+En_threshold_+ArExper_->E_Ionization);
 }
 
 double InelasticProcess::Exp_XS(double E)
@@ -199,6 +197,7 @@ unsigned int InelasticProcess::get_ID (void) const
 
 ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd order polynomial*/, max_process_ID(0), E_Ionization(0)
 {
+	std::cout << "Reading Ar exprimental data..." << std::endl;
 	std::ifstream inp;
 	inp.open("data/ArScatteringCross.dat");
 	std::string line, word;
@@ -275,6 +274,7 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 	inp.open("data/ArExitations_Magboltz.dat");
 	read_inelastic(inp, excitations);
 	inp.close();
+	std::cout << "Finished reading Ar exprimental data." << std::endl;
 }
 
 void ArExperimental::read_inelastic(std::ifstream &inp, std::vector<InelasticProcess> &to)
@@ -297,7 +297,7 @@ void ArExperimental::read_inelastic(std::ifstream &inp, std::vector<InelasticPro
 			continue;
 		if (word[0]=='"') {
 			if (read_section>=0) {//write previous data and header
-				if (E_vals.size()!=XS_vals.size()){
+				if (E_vals.size()!=XS_vals.size()) {
 					std::size_t new_sz = std::min(E_vals.size(),XS_vals.size());
 					std::cout<<"Line "<<line_count<<" warning! "<<proc_name<<" values size mismatch. Trimming data to size: "<<new_sz<<std::endl;
 					if (E_vals.size()>new_sz)
@@ -305,7 +305,7 @@ void ArExperimental::read_inelastic(std::ifstream &inp, std::vector<InelasticPro
 					if (XS_vals.size()>new_sz)
 						XS_vals.erase(XS_vals.begin()+new_sz, XS_vals.end());
 				}
-				to.push_back(InelasticProcess(proc_name, max_process_ID, En_thresh, F, E_vals, XS_vals));
+				to.push_back(InelasticProcess(proc_name, max_process_ID, En_thresh, F, E_vals, XS_vals, this));
 				F=0;
 				E_vals.clear();
 				XS_vals.clear();
@@ -355,7 +355,7 @@ void ArExperimental::read_inelastic(std::ifstream &inp, std::vector<InelasticPro
 			if (XS_vals.size()>new_sz)
 				XS_vals.erase(XS_vals.begin()+new_sz, XS_vals.end());
 		}
-		to.push_back(InelasticProcess(proc_name, max_process_ID, En_thresh, F, E_vals, XS_vals));
+		to.push_back(InelasticProcess(proc_name, max_process_ID, En_thresh, F, E_vals, XS_vals, this));
 		++max_process_ID;
 	}
 }
@@ -439,7 +439,7 @@ ArDataTables::ArDataTables():
 			E = EnRange.Next(err);
 			if (0!=err)
 				break;
-			cross = argon_cross_elastic(E);
+			cross = ArAllData_.argon_cross_elastic(E);
 			str<<E<<"\t"<<cross<<std::endl;
 			total_cross_elastic_.push_back(E, cross);
 		}
@@ -460,7 +460,7 @@ ArDataTables::ArDataTables():
 			E = EnRange.Next(err);
 			if (0!=err)
 				break;
-			cross = argon_cross_resonance_3o2(E);
+			cross = ArAllData_.argon_cross_resonance_3o2(E);
 			str<<E<<"\t"<<cross<<std::endl;
 			total_cross_resonance_3o2_.push_back(E, cross);
 		}
@@ -481,7 +481,7 @@ ArDataTables::ArDataTables():
 			E = EnRange.Next(err);
 			if (0!=err)
 				break;
-			cross = argon_cross_resonance_1o2(E);
+			cross = ArAllData_.argon_cross_resonance_1o2(E);
 			str<<E<<"\t"<<cross<<std::endl;
 			total_cross_resonance_1o2_.push_back(E, cross);
 		}
@@ -494,7 +494,7 @@ ArDataTables::ArDataTables():
 long double ArDataTables::TotalCrossSection (double E)
 {
 	long double XS_total = 0;
-	for (int i = Event::Elastic, end_ =  Event::Elastic + 2 + ArExper.max_process_ID; i!=end_; ++i)
+	for (int i = Event::Elastic, end_ =  Event::Elastic + 2 + ArAllData_.ArExper_.max_process_ID; i!=end_; ++i)
 		XS_total+=CrossSection(E, i);
 	return XS_total;
 }
@@ -512,7 +512,7 @@ long double ArDataTables::CrossSection (double E, short type)
 	}
 	if (type>=Event::Ionization) {
 		short ID = type - Event::Ionization;
-		InelasticProcess *p = ArExper.FindInelastic(ID);
+		InelasticProcess *p = ArAllData_.ArExper_.FindInelastic(ID);
 		if (NULL!=p)
 			return (*p)(E);
 	}
@@ -558,19 +558,21 @@ double ArDataTables::generate_Theta (double E, short type, double Rand) //TODO: 
 	diff_XS.resize(ANGLE_POINTS_, 0);
 	thetas.resize(ANGLE_POINTS_, 0);
 	F.resize(ANGLE_POINTS_, 0);
-	long double (*diff_cross)(long double, long double);
+	long double (ArAllData::*diff_cross)(long double, long double) = 0;
 	if (Event::Elastic == type) {
-		diff_cross = argon_cross_elastic_diff;
+		diff_cross = &ArAllData::argon_cross_elastic_diff;
 	}
 	if (Event::Resonance_3o2 == type) {
-		diff_cross = argon_cross_resonance_3o2_diff;
+		diff_cross = &ArAllData::argon_cross_resonance_3o2_diff;
 	}
 	if (Event::Resonance_1o2 == type) {
-		diff_cross = argon_cross_resonance_1o2_diff;
+		diff_cross = &ArAllData::argon_cross_resonance_1o2_diff;
 	}
+	if (0 == diff_cross)
+		return Rand*M_PI;
 	for (std::size_t i=0, i_end_=diff_XS.size(); i!=i_end_; ++i) {
 		thetas[i] = i*M_PI/(double)(i_end_-1);
-		diff_XS[i]=diff_cross(E, thetas[i]);
+		diff_XS[i]=(ArAllData_.*diff_cross)(E, thetas[i]);
 		if (i!=0) {
 			F[i] = F[i-1] + 0.5*(diff_XS[i]+diff_XS[i-1])*(thetas[i]-thetas[i-1]);//Integral
 		}
@@ -611,17 +613,19 @@ int ArDataTables::getNused(void)
 	return total_cross_elastic_.getNused();
 }
 
+ArAllData::ArAllData (void)
+{}
 //k is in atomic units
-void argon_phase_values_exp(long double k, unsigned int l, long double &tan, long double &sin, long double &cos)
+void ArAllData::argon_phase_values_exp(long double k, unsigned int l, long double &tan, long double &sin, long double &cos)
 {
-	double angle = ArExper.phase_shift(k, l);
+	double angle = ArExper_.phase_shift(k, l);
 	tan = std::tan(angle);
 	sin = std::sin(angle);
 	cos = std::cos(angle);
 }
 
 //k is in atomic units
-void argon_phase_values_MERT5(long double k, unsigned int l, long double &tan, long double &sin, long double &cos)
+void ArAllData::argon_phase_values_MERT5(long double k, unsigned int l, long double &tan, long double &sin, long double &cos)
 {
 	//see Kurokawa Phys. Rev. A84 2011, MERT5+ fit http://dx.doi.org/10.1103/PhysRevA.84.062717
 	double A = -1.365;
@@ -649,14 +653,14 @@ void argon_phase_values_MERT5(long double k, unsigned int l, long double &tan, l
 }
 
 //E in eV
-long double argon_cross_elastic_diff (long double E, long double theta) {
+long double ArAllData::argon_cross_elastic_diff (long double E, long double theta) {
 	//different formulas are used for E<0.24eV and E>0.24eV!
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
 	// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
 	LegendrePolynom P1, P2;
 	long double cross = 0;
 	long double cos_th = cos(theta);
-	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper.max_L(k);
+	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper_.max_L(k);
 	for (unsigned int l=0; l<=L_MAX; ++l) {
 		long double sin_phase_l = 0;
 		long double cos_phase_l = 1;
@@ -685,7 +689,7 @@ long double argon_cross_elastic_diff (long double E, long double theta) {
 	return cross*a_bohr_SIconst*a_bohr_SIconst; //const is multiplied bt 1e10
 }
 
-long double argon_cross_elastic (long double E)
+long double ArAllData::argon_cross_elastic (long double E)
 {
 	if (E <THRESH_E_XS_) {
 		long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
@@ -702,18 +706,18 @@ long double argon_cross_elastic (long double E)
 		cross*=4*M_PI/pow(k,2);
 		return cross*a_bohr_SIconst*a_bohr_SIconst;
 	} else {
-		return ArExper.total_elastic_cross(a_h_bar_2e_m_e_SIconst*sqrt(E), a_h_bar_2e_m_e_SIconst*sqrt(E));
+		return ArExper_.total_elastic_cross(a_h_bar_2e_m_e_SIconst*sqrt(E), a_h_bar_2e_m_e_SIconst*sqrt(E));
 	}
 	return 0;
 }
 
 //for testing only
-long double argon_cross_elastic_from_phases (long double E)
+long double ArAllData::argon_cross_elastic_from_phases (long double E)
 {
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
 	// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
 	long double cross = 0;
-	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper.max_L(k);
+	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper_.max_L(k);
 	for (unsigned int l=0; l<=L_MAX; ++l) {
 		long double sin_phase_l = 0;
 		long double cos_phase_l = 1;
@@ -728,14 +732,14 @@ long double argon_cross_elastic_from_phases (long double E)
 	return cross*a_bohr_SIconst*a_bohr_SIconst;
 }
 
-long double argon_back_scatter_prob (long double E)
+long double ArAllData::argon_back_scatter_prob (long double E)
 {
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
 	// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
 	LegendrePolynom P1, P2;
 	long double W = 0;
 	long double cross =0;
-	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper.max_L(k);
+	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper_.max_L(k);
 	for (unsigned int l=0; l<=L_MAX; ++l) {
 		long double sin_phase_l = 0;
 		long double cos_phase_l = 1;
@@ -763,14 +767,14 @@ long double argon_back_scatter_prob (long double E)
 	return W/(2*cross);
 }
 //energy loss and input are in eV
-long double argon_TM_forward (long double E)
+long double ArAllData::argon_TM_forward (long double E)
 {
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
 	// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
 	LegendrePolynom P1, P2;
 	long double W = 0;
 	long double cross =0;
-	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper.max_L(k);
+	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper_.max_L(k);
 	for (unsigned int l=0; l<=L_MAX; ++l) {
 		long double sin_phase_l = 0;
 		long double cos_phase_l = 1;
@@ -798,14 +802,14 @@ long double argon_TM_forward (long double E)
 	return W/cross;
 }
 
-long double argon_TM_backward (long double E)
+long double ArAllData::argon_TM_backward (long double E)
 {
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
 	// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
 	LegendrePolynom P1, P2;
 	long double W = 0;
 	long double cross =0;
-	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper.max_L(k);
+	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper_.max_L(k);
 	for (unsigned int l=0; l<=L_MAX; ++l) {
 		long double sin_phase_l = 0;
 		long double cos_phase_l = 1;
@@ -833,17 +837,17 @@ long double argon_TM_backward (long double E)
 	return W/cross;
 }
 
-long double argon_cross_resonance_3o2_diff (long double E, long double theta)
+long double ArAllData::argon_cross_resonance_3o2_diff (long double E, long double theta)
 {
-	return 0;
+	return argon_cross_elastic_diff(E, theta);
 }
 
-long double argon_cross_resonance_1o2_diff (long double E, long double theta)
+long double ArAllData::argon_cross_resonance_1o2_diff (long double E, long double theta)
 {
-	return 0;
+	return argon_cross_elastic_diff(E, theta);
 }
 
-long double argon_cross_resonance_3o2 (long double E)
+long double ArAllData::argon_cross_resonance_3o2 (long double E)
 {
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E);
 	long double sin_phase_1 = 0;
@@ -859,7 +863,7 @@ long double argon_cross_resonance_3o2 (long double E)
 	return cross * a_bohr_SIconst * a_bohr_SIconst;
 }
 
-long double argon_cross_resonance_1o2 (long double E)
+long double ArAllData::argon_cross_resonance_1o2 (long double E)
 {
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E);
 	long double sin_phase_1 = 0;
@@ -874,32 +878,32 @@ long double argon_cross_resonance_1o2 (long double E)
 	return cross * a_bohr_SIconst * a_bohr_SIconst;
 }
 
-long double argon_back_resonance_3o2_prob (long double E)
+long double ArAllData::argon_back_resonance_3o2_prob (long double E)
 {
 	return argon_back_scatter_prob(E);
 }
 
-long double argon_back_resonance_1o2_prob (long double E)
+long double ArAllData::argon_back_resonance_1o2_prob (long double E)
 {
 	return argon_back_scatter_prob(E);
 }
 
-long double argon_TM_forward_resonance_3o2 (long double E)
+long double ArAllData::argon_TM_forward_resonance_3o2 (long double E)
 {
 	return argon_TM_forward(E);
 }
 
-long double argon_TM_forward_resonance_1o2 (long double E)
+long double ArAllData::argon_TM_forward_resonance_1o2 (long double E)
 {
 	return argon_TM_forward(E);
 }
 
-long double argon_TM_backward_resonance_3o2 (long double E)
+long double ArAllData::argon_TM_backward_resonance_3o2 (long double E)
 {
 	return argon_TM_backward(E);;
 }
 
-long double argon_TM_backward_resonance_1o2 (long double E)
+long double ArAllData::argon_TM_backward_resonance_1o2 (long double E)
 {
 	return argon_TM_backward(E);;
 }

@@ -1,6 +1,7 @@
 #include "Manager.h"
 
-Manager::Manager(UInt_t RandomSeed) : is_ready_(false), eField_(0), Concentration_(0), Coefficient_(0), skip_counter_(0)
+Manager::Manager(ArDataTables *Ar_tables, UInt_t RandomSeed) : is_ready_(false), eField_(0), Concentration_(0), Coefficient_(0),
+	skip_counter_(0), ArTables_(Ar_tables)
 {
 	random_generator_ = new TRandom1(RandomSeed); //TRandom3 is a default. TRandom1 is slower but better
 	InitTree();
@@ -76,7 +77,7 @@ long double Manager::XS_integral(long double from, long double to, long double E
 	long double Int = 0;
 	if ((from-Eny)/from<1e-6) {//irregularity case
 		E = 1e-6*from + Eny;
-		Int+=0.5*(ArTables.TotalCrossSection(E)+ArTables.TotalCrossSection(from))*sqrt(E_prev*(E_prev-Eny));
+		Int+=0.5*(ArTables_->TotalCrossSection(E)+ArTables_->TotalCrossSection(from))*sqrt(E_prev*(E_prev-Eny));
 		from = E;
 		E_prev = from;
 	}
@@ -92,7 +93,7 @@ long double Manager::XS_integral(long double from, long double to, long double E
 	event.deb_N_integral = i_end_;
 	for (int i=0; i!=i_end_;++i) {
 		E = energy_range_.Value(i);
-		Int+=ArTables.TotalCrossSection(E)*sqrt(E/(E-Eny))*(E-E_prev);
+		Int+=ArTables_->TotalCrossSection(E)*sqrt(E/(E-Eny))*(E-E_prev);
 		E_prev = E;
 	}
 	return Int;
@@ -103,8 +104,8 @@ void Manager::Initialize(Event &event)
 	if (!is_ready_)
 		return;
 	skip_counter_=0;
-	event.CrossSections.resize(ArExper.max_process_ID + 2, 0); //2==Elastic + Resonance
-	event.CrossSectionsSum.resize(ArExper.max_process_ID + 2, 0);
+	event.CrossSections.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + 2, 0); //2==Elastic + Resonance
+	event.CrossSectionsSum.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + 2, 0);
 	event.En_start = 1 + 3*random_generator_->Uniform();
 	//event.En_start = 3;
 	event.En_collision = 0;
@@ -138,16 +139,24 @@ void Manager::Solve (long double LnR, Event &event) //TODO: tabulate
 			e_start = Eny;
 			LnR = LnR - TURN_INT;
 			case_ = 2;
-		} else { //Vx is always 0.
+		} else { //Vx is always < 0.
 			LnR = TURN_INT - LnR; //energy decrease from En_start to E_coll is changed to energy increase from Eny to E_coll
+			e_start = Eny;
 			case_ = 1;
 		}
 	}
-	long double I_max = XS_integral(e_start, EN_MAXIMUM_, Eny, event);
-	event.En_collision = EN_MAXIMUM_;
-	long double e_finish = EN_MAXIMUM_;
+	//approximate right point. By default it is EN_MAXIMUM_, but there are a lot of extra calculations in this case
+	long double left = e_start;
+	long double right = e_start + 10*LnR/(ArTables_->TotalCrossSection(left)*sqrt(left/(left-Eny)));
+	right = std::min((double)right, EN_MAXIMUM_);
+	long double I_max = XS_integral(e_start, right, Eny, event);
+	if (I_max < LnR) {
+		I_max = XS_integral(e_start, EN_MAXIMUM_, Eny, event);
+		right = EN_MAXIMUM_;
+	}
+	long double e_finish = right;
+	event.En_collision = right;
 	long double prev_solution = e_start;
-	long double left = e_start, right = EN_MAXIMUM_;
 	long double f_left = -LnR, f_right = I_max-LnR, f_new;
 	double convergence_criteria = 2e-4*std::min(e_start, e_finish - prev_solution);
 	if (I_max < LnR) {
@@ -156,6 +165,7 @@ void Manager::Solve (long double LnR, Event &event) //TODO: tabulate
 		event.deb_solver_y_right = LnR-I_max;
 		event.deb_solver_E_left = left;
 		event.deb_solver_E_right = right;
+		event.deb_solver_E_delta = 0;
 	} else {
 		while (convergence_criteria < std::fabs(e_finish - prev_solution)) {
 			prev_solution = e_finish;
@@ -175,6 +185,7 @@ void Manager::Solve (long double LnR, Event &event) //TODO: tabulate
 		event.deb_solver_y_right = f_right;
 		event.deb_solver_E_left = left;
 		event.deb_solver_E_right = right;
+		event.deb_solver_E_delta = e_finish - prev_solution;
 	}
 	event.En_collision = e_finish;
 	if (1==case_) {
@@ -227,7 +238,7 @@ void Manager::DoScattering(Event &event)
 	if (!is_ready_)
 		return;
 	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i) {
-		event.CrossSections[i] = ArTables.CrossSection(std::fabs(event.En_collision), i);//process type == index in cross section array.
+		event.CrossSections[i] = ArTables_->CrossSection(std::fabs(event.En_collision), i);//process type == index in cross section array.
 		event.CrossSectionsSum[i] = std::max(event.CrossSections[i], 0.0) + ((i==0) ? 0.0 : event.CrossSectionsSum[i-1]);
 	}
 	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i)
@@ -242,7 +253,7 @@ void Manager::DoScattering(Event &event)
 		}
 
 	double R2 = random_generator_->Uniform();
-	event.delta_theta = ArTables.generate_Theta (event.En_collision, event.process, R2);
+	event.delta_theta = ArTables_->generate_Theta (event.En_collision, event.process, R2);
 	event.theta_finish = event.delta_theta + event.theta_start;
 	if (event.theta_finish>M_PI)
 		event.theta_finish = 2*M_PI - event.theta_finish;
@@ -261,7 +272,7 @@ void Manager::DoScattering(Event &event)
 			break;
 		}
 		case (Event::Ionization): {
-			InelasticProcess *p = ArExper.FindInelastic(event.process-Event::Ionization);
+			InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(event.process-Event::Ionization);
 			if (NULL!=p) {
 				EnergyLoss = (event.En_collision > 0) ? p->get_En_thresh() : -p->get_En_thresh();
 				EnergyLoss += (event.En_collision - EnergyLoss)/2.0; //Consider that residual energy is equally divided between 2 electrons
@@ -269,7 +280,7 @@ void Manager::DoScattering(Event &event)
 			break;
 		}
 		default: {
-			InelasticProcess *p = ArExper.FindInelastic(event.process-Event::Ionization);
+			InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(event.process-Event::Ionization);
 			if (NULL!=p)
 				EnergyLoss = (event.En_collision > 0) ? p->get_En_thresh() : -p->get_En_thresh();
 		}
@@ -363,8 +374,8 @@ void Manager::WriteHistory(std::string root_fname)
 	str<<Event::Elastic<<"\t\"Elastic scattering\""<<std::endl;
 	str<<Event::Resonance_3o2<<"\t\"Feshbach resonance 3/2\""<<std::endl;
 	str<<Event::Resonance_1o2<<"\t\"Feshbach resonance 1/2\""<<std::endl;
-	for (int proc = Event::Ionization, end_ = ArExper.max_process_ID + Event::Ionization; proc!=end_; ++proc) {
-		InelasticProcess *p = ArExper.FindInelastic(proc-Event::Ionization);
+	for (int proc = Event::Ionization, end_ = ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization; proc!=end_; ++proc) {
+		InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(proc-Event::Ionization);
 		if (NULL!=p)
 			str<<proc<<"\t"<<p->get_name()<<std::endl;
 	}
@@ -373,16 +384,16 @@ void Manager::WriteHistory(std::string root_fname)
 
 void Manager::Test(void)
 {
-	int Order = ArTables.getOrder();
-	int Nused = ArTables.getNused();
+	int Order = ArTables_->getOrder();
+	int Nused = ArTables_->getNused();
 
 	std::string fname_XS_3_4 = "tests/Int_XS_3_4.txt";
 	std::string fname_XS_high_3_4 = "tests/Int_XS_high_3_4.txt";
 	std::string fname_XS_1_2 = "tests/Int_XS_1_2.txt";
 	std::string fname_XS_high_1_2 = "tests/Int_XS_high_1_2.txt";
 
-	ArTables.setOrder(3);
-	ArTables.setNused(4);
+	ArTables_->setOrder(3);
+	ArTables_->setNused(4);
 	std::ofstream str;
 	str.open(fname_XS_3_4, std::ios_base::trunc);
 	str<<"//E[eV]\tInt{XS_elastic}"<<std::endl;
@@ -400,13 +411,13 @@ void Manager::Test(void)
 	double dE = 1e-5;
 	while (E<EN_MAXIMUM_) {
 		str<< E<<"\t"<<Int<<std::endl;
-		Int+=ArTables.XS_elastic(std::fabs(E))*dE;
+		Int+=ArTables_->XS_elastic(std::fabs(E))*dE;
 		E+=dE;
 	}
 	str.close();
 
-	ArTables.setOrder(1);
-	ArTables.setNused(2);
+	ArTables_->setOrder(1);
+	ArTables_->setNused(2);
 	str.open(fname_XS_1_2, std::ios_base::trunc);
 	str<<"//E[eV]\tInt{XS_elastic}"<<std::endl;
 	for (unsigned int l=0; l<50001;++l) {
@@ -422,7 +433,7 @@ void Manager::Test(void)
 	dE = 1e-5;
 	while (E<EN_MAXIMUM_) {
 		str<< E<<"\t"<<Int<<std::endl;
-		Int+=ArTables.XS_elastic(std::fabs(E))*dE;
+		Int+=ArTables_->XS_elastic(std::fabs(E))*dE;
 		E+=dE;
 	}
 	str.close();
@@ -437,6 +448,6 @@ void Manager::Test(void)
 	str.close();
 	INVOKE_GNUPLOT(name);
 
-	ArTables.setOrder(Order);
-	ArTables.setNused(Nused);
+	ArTables_->setOrder(Order);
+	ArTables_->setNused(Nused);
 }
