@@ -178,7 +178,8 @@ void Manager::Solve (long double LnR, Event &event) //TODO: tabulate
 				right = e_finish;
 				f_right = f_new;
 			}
-			convergence_criteria = 2e-4*(std::min(e_start, e_finish));//std::max(2e-6, std::fabs(5e-4*event.En_finish));
+			convergence_criteria = 2e-4*(std::min(std::max(e_start, (long double)0.1*XS_EL_EN_MINIMUM_),
+					std::max(e_finish, (long double)0.1*XS_EL_EN_MINIMUM_)));//std::max(2e-6, std::fabs(5e-4*event.En_finish));
 		}
 		event.En_collision = e_finish;
 		event.deb_solver_y_left = f_left;
@@ -340,6 +341,7 @@ bool Manager::IsFinished(Event &event)
 {
 	if (!is_ready_)
 		return true;
+	return sim_data_->GetEntries()>=1000;
 	return !(event.pos_finish < DRIFT_DISTANCE_);
 	//return !((event.pos_finish < DRIFT_DISTANCE_)&&(event.pos_finish> -10*DRIFT_DISTANCE_));
 }

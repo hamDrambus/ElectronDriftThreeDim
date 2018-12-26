@@ -551,6 +551,9 @@ long double ArDataTables::XS_resonance_1o2(double E)
 
 double ArDataTables::generate_Theta (double E, short type, double Rand) //TODO: tabulate
 {
+	if (Rand<0.4)
+		return M_PI;
+	return 0;
 	if (type>=Event::Ionization) {//Considered uniform.
 		return Rand*M_PI;
 	}

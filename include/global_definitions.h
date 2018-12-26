@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #endif
 
-#define THREADS_NUMBER_ 3
+#define THREADS_NUMBER_ 6
 #define L_MAX_ 10
 #define EN_MINIMUM_ 5e-3
 #define XS_EL_EN_MAXIMUM_ 20.0
@@ -45,7 +45,7 @@
 #define Width_1o2_ 2.2e-3
 //^in eV
 #define RESONANCE_EN_LOSS_FACTOR_ 1.0
-#define DRIFT_DISTANCE_ 1e-4
+#define DRIFT_DISTANCE_ 1e-5
 //^in m
 #define SKIP_HISTORY_ 0
 
@@ -64,7 +64,7 @@ const double Ar_mass_eVconst = 3.726e10; //eV
 #if defined(__WIN32__)
 #define INVOKE_GNUPLOT(a) system(("start \"\" \"%GNUPLOT%\\gnuplot.exe\" --persist \"" + a + "\"").c_str())
 #else
-#define INVOKE_GNUPLOT(a) system(("konsole -e gnuplot \"" + a +"\"").c_str());
+#define INVOKE_GNUPLOT(a) system(("gnome-terminal -- bash -c \"gnuplot \"" + a +"\"\"").c_str());
 #endif //__WIN32__
 
 std::string strtoken(std::string &in, std::string break_symbs);

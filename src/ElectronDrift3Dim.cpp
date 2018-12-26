@@ -56,7 +56,7 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 			&process_runs_in_thread, _submanagers[n]));
 	}
 	
-	//test_all(&ar_data[1]);
+	//test_all(ar_data[1]);
 	
 	for (int n = 0; n < N_threads; ++n) {
 		_submanagers[n]->SetParameters(concentration, field);
@@ -81,8 +81,8 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 		delete _submanagers[n];
 		delete ar_data[n];
 		conditions[n]->Delete();
-		mutexes[n]->Delete();
-		thread_mutexes[n]->Delete();
+		delete mutexes[n];
+		delete thread_mutexes[n];
 	}
 }
 

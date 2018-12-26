@@ -14,7 +14,7 @@
 	double E_at_time = 1e-11;
 	double dt = 6e-12;
 	double DRIFT_DISTANCE = 1e-4;
-	std::string fname1("Output/v01.0/eData_7.0Td.root");
+	std::string fname1("Output/v01.1/eData_7.0Td_deb.root");
 	std::string fname2("Output/v/eData_3Td_1.root");
 	
 	double En_start;
@@ -112,8 +112,9 @@
 		      }
 		    }
 		    //if (!((pos_finish<DRIFT_DISTANCE)&&(pos_finish>-10*DRIFT_DISTANCE))) {
-		    if (!(pos_finish<DRIFT_DISTANCE)) {
+		    if (((i==(_end_-1))||time_start==0.0)&&i!=0) {
 			++num_of_electrons;
+			tree->GetEntry(i-1);
 			hist_V_drift->Fill(pos_finish/(time_start+delta_time_full));
 			hist_T_drift->Fill(time_start+delta_time_full);
 			histEfinalAvr->Fill(En_avr);
@@ -218,15 +219,15 @@ void Plot_e (int n_of_e) {
 	unsigned long int _end_ = tree->GetEntries();
 	for (unsigned long int i=0;(i!=_end_)&&(num_of_electrons<=n_of_e);++i){
 	    tree->GetEntry(i);
+	    if (((i==(_end_-1))||time_start==0.0)&&i!=0) {
+		++num_of_electrons;
+	    } 
 	    if (n_of_e==num_of_electrons) {
 		t_.push_back(time_start);
 		Ec_.push_back(std::fabs(En_collision));
 		x_.push_back(pos_finish);
 	    }
 	    //if (!((pos_finish<DRIFT_DISTANCE)&&(pos_finish>-10*DRIFT_DISTANCE))) {
-	    if (!(pos_finish<DRIFT_DISTANCE)) {
-		++num_of_electrons;
-	    } 
 	}
     }
     std::cout<<"Size: "<<t_.size()<<std::endl;
