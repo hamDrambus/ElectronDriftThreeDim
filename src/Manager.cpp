@@ -341,7 +341,7 @@ bool Manager::IsFinished(Event &event)
 {
 	if (!is_ready_)
 		return true;
-	return sim_data_->GetEntries()>=1000;
+	//return sim_data_->GetEntries()>=10000;
 	return !(event.pos_finish < DRIFT_DISTANCE_);
 	//return !((event.pos_finish < DRIFT_DISTANCE_)&&(event.pos_finish> -10*DRIFT_DISTANCE_));
 }
