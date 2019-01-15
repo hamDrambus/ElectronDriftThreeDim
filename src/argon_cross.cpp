@@ -494,8 +494,16 @@ ArDataTables::ArDataTables():
 long double ArDataTables::TotalCrossSection (double E)
 {
 	long double XS_total = 0;
-	for (int i = Event::Elastic, end_ =  Event::Elastic + 2 + ArAllData_.ArExper_.max_process_ID; i!=end_; ++i)
-		XS_total+=CrossSection(E, i);
+	//inefficient way: spending time at searching certain inelastic process, when they are all summed in th end:
+	//for (int i = Event::Elastic, end_ =  Event::Elastic + 2 + ArAllData_.ArExper_.max_process_ID; i!=end_; ++i)
+	//	XS_total+=CrossSection(E, i);
+	XS_total = XS_elastic(E) + XS_resonance_3o2(E) + XS_resonance_1o2(E);
+	for (int i = 0, end_ = ArAllData_.ArExper_.excitations.size(); i != end_; ++i) {
+		XS_total += ArAllData_.ArExper_.excitations[i](E);
+	}
+	for (int i = 0, end_ = ArAllData_.ArExper_.excitations.size(); i != end_; ++i) {
+		XS_total += ArAllData_.ArExper_.excitations[i](E);
+	}
 	return XS_total;
 }
 

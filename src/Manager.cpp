@@ -99,6 +99,27 @@ long double Manager::XS_integral(long double from, long double to, long double E
 	return Int;
 }
 
+long double Manager::XS_integral_for_test(long double from, long double to, long double Eny, long double dE)
+{
+	double E = from, E_prev = from;
+	long double dx;
+	long double Int = 0;
+	if ((from - Eny) / from<1e-6) {//irregularity case
+		E = 1e-6*from + Eny;
+		Int += 0.5*(ArTables_->TotalCrossSection(E) + ArTables_->TotalCrossSection(from))*sqrt(E_prev*(E_prev - Eny));
+		from = E;
+		E_prev = from;
+	}
+	while (E<to) {
+		Int += ArTables_->TotalCrossSection(E)*sqrt(E / (E - Eny))*dE;
+		E_prev = E;
+		E += dE;
+	}
+	E = to;
+	Int += ArTables_->TotalCrossSection(E)*sqrt(E / (E - Eny))*(E - E_prev);
+	return Int;
+}
+
 void Manager::Initialize(Event &event)
 {
 	if (!is_ready_)
@@ -341,7 +362,7 @@ bool Manager::IsFinished(Event &event)
 {
 	if (!is_ready_)
 		return true;
-	//return sim_data_->GetEntries()>=10000;
+	return sim_data_->GetEntries()>=100;
 	return !(event.pos_finish < DRIFT_DISTANCE_);
 	//return !((event.pos_finish < DRIFT_DISTANCE_)&&(event.pos_finish> -10*DRIFT_DISTANCE_));
 }
@@ -386,70 +407,42 @@ void Manager::WriteHistory(std::string root_fname)
 
 void Manager::Test(void)
 {
-	int Order = ArTables_->getOrder();
-	int Nused = ArTables_->getNused();
+	std::cout << "Testing Manager->Solve():" << std::endl;
+	std::cout << "Testing integral calculations: " << std::endl;
+	Event dummy;
+	std::cout << "\tEy=0, Ei=1eV:" << std::endl;
+	std::cout << "\tEf\tXS_integral()\tdE=1e-3\tdE=1e-5" << std::endl;
+	std::cout << "\t"<<2.0<<"\t" << XS_integral(1, 2, 0, dummy) << "\t" << XS_integral_for_test(1, 2, 0, 1e-3) 
+		<< "\t" << XS_integral_for_test(1, 2, 0, 1e-5) << std::endl;
+	std::cout << "\t" << 1.2 << "\t" << XS_integral(1, 1.2, 0, dummy) << "\t" << XS_integral_for_test(1, 1.2, 0, 1e-3)
+		<< "\t" << XS_integral_for_test(1, 1.2, 0, 1e-5) << std::endl;
+	std::cout << "\t" << 1.01 << "\t" << XS_integral(1, 1.01, 0, dummy) << "\t" << XS_integral_for_test(1, 1.01, 0, 1e-3)
+		<< "\t" << XS_integral_for_test(1, 1.01, 0, 1e-5) << std::endl;
 
-	std::string fname_XS_3_4 = "tests/Int_XS_3_4.txt";
-	std::string fname_XS_high_3_4 = "tests/Int_XS_high_3_4.txt";
-	std::string fname_XS_1_2 = "tests/Int_XS_1_2.txt";
-	std::string fname_XS_high_1_2 = "tests/Int_XS_high_1_2.txt";
+	std::cout <<std::endl << "\tEy=0, Ei=11.05eV:" << std::endl;
+	std::cout << "\tEf=\tXS_integral()\tdE=1e-3\tdE=1e-5" << std::endl;
+	std::cout << "\t" << 11.3 << "\t" << XS_integral(11.05, 11.3, 0, dummy) << "\t" << XS_integral_for_test(11.05, 11.3, 0, 1e-3)
+		<< "\t" << XS_integral_for_test(11.05, 11.3, 0, 1e-5) << std::endl;
+	std::cout << "\t" << 11.12 << "\t" << XS_integral(11.05, 11.12, 0, dummy) << "\t" << XS_integral_for_test(11.05, 11.12, 0, 1e-3)
+		<< "\t" << XS_integral_for_test(11.05, 11.12, 0, 1e-5) << std::endl;
+	std::cout << "\t" << 11.07 << "\t" << XS_integral(11.05, 11.07, 0, dummy) << "\t" << XS_integral_for_test(11.05, 11.07, 0, 1e-3)
+		<< "\t" << XS_integral_for_test(11.05, 11.07, 0, 1e-5) << std::endl;
 
-	ArTables_->setOrder(3);
-	ArTables_->setNused(4);
-	std::ofstream str;
-	str.open(fname_XS_3_4, std::ios_base::trunc);
-	str<<"//E[eV]\tInt{XS_elastic}"<<std::endl;
-	double E;
-	for (unsigned int l=0; l<50001;++l) {
-		E = -EN_MAXIMUM_ + l*2*EN_MAXIMUM_/50000.0;
-		//str<< E<<"\t"<<XS_integral(-EN_MAXIMUM_, E)<<std::endl;
-	}
-	str.close();
+	std::cout << std::endl << "\tEy=2.5, Ei=5.0eV:" << std::endl;
+	std::cout << "\tEf=\tXS_integral()\tdE=1e-3\tdE=1e-5" << std::endl;
+	std::cout << "\t" << 6.0 << "\t" << XS_integral(5.0, 6.0, 2.5, dummy) << "\t" << XS_integral_for_test(5.0, 6.0, 2.5, 1e-3)
+		<< "\t" << XS_integral_for_test(5.0, 6.0, 2.5, 1e-5) << std::endl;
+	std::cout << "\t" << 5.1 << "\t" << XS_integral(5.0, 5.1, 2.5, dummy) << "\t" << XS_integral_for_test(5.0, 5.1, 2.5, 1e-3)
+		<< "\t" << XS_integral_for_test(5.0, 5.1, 2.5, 1e-5) << std::endl;
+	
+	std::cout << std::endl << "\tEy=5.0, Ei=5.0eV:"<<std::endl;
+	std::cout << "\tEf=\tXS_integral()\tdE=1e-3\tdE=1e-5" << std::endl;
+	std::cout << "\t" << 6.0 << "\t" << XS_integral(5.0, 6.0, 5.0, dummy) << "\t" << XS_integral_for_test(5.0, 6.0, 5.0, 1e-3)
+		<< "\t" << XS_integral_for_test(5.0, 6.0, 5.0, 1e-5) << std::endl;
+	std::cout << "\t" << 5.1 << "\t" << XS_integral(5.0, 5.1, 5.0, dummy) << "\t" << XS_integral_for_test(5.0, 5.1, 5.0, 1e-3)
+		<< "\t" << XS_integral_for_test(5.0, 5.1, 5.0, 1e-5) << std::endl;
+	std::cout << "\t" << 5.01 << "\t" << XS_integral(5.0, 5.01, 5.0, dummy) << "\t" << XS_integral_for_test(5.0, 5.01, 5.0, 1e-3)
+		<< "\t" << XS_integral_for_test(5.0, 5.01, 5.0, 1e-5) << std::endl;
 
-	str.open(fname_XS_high_3_4, std::ios_base::trunc);
-	str<<"//E[eV]\tInt{XS_elastic}"<<std::endl;
-	double Int = 0;
-	E = -EN_MAXIMUM_;
-	double dE = 1e-5;
-	while (E<EN_MAXIMUM_) {
-		str<< E<<"\t"<<Int<<std::endl;
-		Int+=ArTables_->XS_elastic(std::fabs(E))*dE;
-		E+=dE;
-	}
-	str.close();
-
-	ArTables_->setOrder(1);
-	ArTables_->setNused(2);
-	str.open(fname_XS_1_2, std::ios_base::trunc);
-	str<<"//E[eV]\tInt{XS_elastic}"<<std::endl;
-	for (unsigned int l=0; l<50001;++l) {
-		E = -EN_MAXIMUM_ + l*2*EN_MAXIMUM_/50000.0;
-		//str<< E<<"\t"<<XS_integral(-EN_MAXIMUM_, E)<<std::endl;
-	}
-	str.close();
-
-	str.open(fname_XS_high_1_2, std::ios_base::trunc);
-	str<<"//E[eV]\tInt{XS_elastic}"<<std::endl;
-	Int = 0;
-	E = -EN_MAXIMUM_;
-	dE = 1e-5;
-	while (E<EN_MAXIMUM_) {
-		str<< E<<"\t"<<Int<<std::endl;
-		Int+=ArTables_->XS_elastic(std::fabs(E))*dE;
-		E+=dE;
-	}
-	str.close();
-
-	std::string name = std::string("tests/test_XS_integral.sc");
-	str.open(name, std::ios_base::trunc);
-	str<<"plot '"<<fname_XS_3_4<<"' u 1:2 title 'I(XS) 3,4'"<<std::endl;
-	str<<"replot '"<<fname_XS_high_3_4 <<"' u 1:2 w line lc rgb \"#000000\" title 'I(XS) high acc. 3,4'"<<std::endl;
-	str<<"replot '"<<fname_XS_1_2<<"' u 1:2 title 'I(XS) 1,2'"<<std::endl;
-	str<<"replot '"<<fname_XS_high_1_2 <<"' u 1:2 w line lc rgb \"#FF0000\" title 'I(XS) high acc. 1,2'"<<std::endl;
-	str<<"pause -1"<<std::endl;
-	str.close();
-	INVOKE_GNUPLOT(name);
-
-	ArTables_->setOrder(Order);
-	ArTables_->setNused(Nused);
+	std::cout << "===============================================" << std::endl << std::endl << std::endl;
 }

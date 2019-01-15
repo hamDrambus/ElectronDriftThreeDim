@@ -55,8 +55,9 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 		pThreads.push_back(new TThread(("MTManager_" + std::to_string(n)).c_str(),
 			&process_runs_in_thread, _submanagers[n]));
 	}
-	
+	MTManager test_man(&ArDataTables_, -1, 1, seed);
 	//test_all(ar_data[1]);
+	//test_man.Test();
 	
 	for (int n = 0; n < N_threads; ++n) {
 		_submanagers[n]->SetParameters(concentration, field);
@@ -94,7 +95,7 @@ int main(int argn, char * argv[]) {
 	std::string root_fname = "Output/eData_3Td.root";
 	double Td = 7; //=E/N in 1e-21 in Si
 	unsigned int seed = 42;
-	unsigned int num_of_electrons = 30;
+	unsigned int num_of_electrons = 1;
 	double pressure = 1.015e5;
 	double temperature = 87;
 	if (argn!=1) {
@@ -121,7 +122,7 @@ int main(int argn, char * argv[]) {
 	std::chrono::duration<double> diff = end-start;
 	std::cout<<"Elapsed time:\t"<<diff.count()<<" s"<<std::endl;
 	std::cout<<"Enter something: ";
-	std::cin>>a;
+	//std::cin>>a;
 	//app.Run();
 	return 0;
 }

@@ -20,11 +20,10 @@ public:
 	Int_t getOrder(void) const;
 	void getCoefs(TVectorD &pars) const;
 
-	virtual Int_t operator ()(std::vector<double> &xs_in, std::vector<double> &ys_in,
-		TVectorD &pars_out, double in_x0=0); //in_x0 - in what poInt_t set zero x (In the SG filter it is convenient to set x_in
+	virtual Int_t operator ()(std::vector<double> &xs_in, std::vector<double> &ys_in, double in_x0=0); //in_x0 - in what poInt_t set zero x (In the SG filter it is convenient to set x_in
 	//to the poInt_t in which value is calculated
 	virtual Int_t operator ()(std::vector<double> &xs_in, std::vector<double> &ys_in,
-		int offset, int N_points, TVectorD &pars_out, double in_x0=0); //only for a part of a vector. offset+N_points-1 must in the range of vector
+		int offset, int N_points, double in_x0=0); //only for a part of a vector. offset+N_points-1 must in the range of vector
 };
 
 //Wraps PolynomialFit: stores raw data, N points used in every fit and last region (cache_n_from, cache_n_to) in which fit/interpolation took place.

@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #endif
 
-#define THREADS_NUMBER_ 6
+#define THREADS_NUMBER_ 1
 #define L_MAX_ 10
 #define EN_MINIMUM_ 5e-3
 #define XS_EL_EN_MAXIMUM_ 20.0

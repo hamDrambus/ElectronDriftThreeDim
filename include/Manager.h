@@ -32,6 +32,7 @@ protected:
 	double eField_;
 	double Coefficient_;
 	long double XS_integral(long double from, long double to, long double Eny, Event &event);
+	long double XS_integral_for_test(long double from, long double to, long double Eny, long double dE);
 	long double Path_integral (long double x, long double cos_th);
 public:
 	void Initialize(Event &event);

@@ -27,13 +27,12 @@ void PolynomialFit::getCoefs(TVectorD &pars) const
 	pars = _last_coefs;
 }
 
-Int_t PolynomialFit::operator ()(std::vector<double> &xs_in, std::vector<double> &ys_in,
-	TVectorD &pars_out, double in_x0){
-	return (*this)(xs_in, ys_in, 0, xs_in.size(), pars_out, in_x0);
+Int_t PolynomialFit::operator ()(std::vector<double> &xs_in, std::vector<double> &ys_in, double in_x0){
+	return (*this)(xs_in, ys_in, 0, xs_in.size(), in_x0);
 }
 
 Int_t PolynomialFit::operator ()(std::vector<double> &xs_in, std::vector<double> &ys_in,
-	int offset, int N_points, TVectorD &pars_out, double in_x0) //only for a part of a vector
+	int offset, int N_points, double in_x0) //only for a part of a vector
 {
 	if (xs_in.size() != ys_in.size()) {
 		std::cout<<"PolynomialFit::operator(): Error: x-y data size mismatch"<<std::endl;
@@ -54,23 +53,27 @@ Int_t PolynomialFit::operator ()(std::vector<double> &xs_in, std::vector<double>
 		std::cout<<"\torder="<<_order<<" N_points="<<N_points<<std::endl;
 		return -4;
 	}
-
-	TMatrixD mat(N_points, _order + 1);
-	for (int col = 0; col < mat.GetNcols(); col++)
-		for (int row = 0; row < mat.GetNrows(); row++)
-			mat[row][col] = pow(xs_in[offset+ row] - in_x0, col);
-	TVectorD Y(N_points);
-	for (int row = 0; row < Y.GetNrows(); row++)
-		Y[row] = ys_in[offset + row];
-	TMatrixD mT(mat);
-	mT.T();
-	TMatrixD In(mT*mat);//because normal assignment like mat = mT*mat does not work! First resizing must be done.
-	In.SetTol(1e-40);
-	_last_coefs.ResizeTo(_order + 1);
-	_last_coefs = (In.Invert())*mT*Y;
-	pars_out.ResizeTo(_last_coefs);
-	pars_out = _last_coefs;
-	if (pars_out.GetNrows()!=(_order+1)) {
+	if (1 == _order) {
+		_last_coefs.ResizeTo(_order + 1);
+		_last_coefs[1] = (ys_in[offset + 1] - ys_in[offset]) / (xs_in[offset + 1] - xs_in[offset]);
+		_last_coefs[0] = ys_in[offset] + (in_x0 - xs_in[offset])*_last_coefs[1];
+		//^value at in_x0 point
+	} else {
+		TMatrixD mat(N_points, _order + 1);
+		for (int col = 0; col < mat.GetNcols(); col++)
+			for (int row = 0; row < mat.GetNrows(); row++)
+				mat[row][col] = pow(xs_in[offset + row] - in_x0, col);
+		TVectorD Y(N_points);
+		for (int row = 0; row < Y.GetNrows(); row++)
+			Y[row] = ys_in[offset + row];
+		TMatrixD mT(mat);
+		mT.T();
+		TMatrixD In(mT*mat);//because normal assignment like mat = mT*mat does not work! First resizing must be done.
+		In.SetTol(1e-40);
+		_last_coefs.ResizeTo(_order + 1);
+		_last_coefs = (In.Invert())*mT*Y;
+	}
+	if (_last_coefs.GetNrows()!=(_order+1)) {
 		return -5;
 	}
 	return 0;
@@ -255,8 +258,7 @@ double DataVector::operator()(double point)
 	cache_n_from = n_min;
 	cache_n_to = n_max;
 	isCached = true;
-	TVectorD temp;
-	Int_t ret_code = fitter(xs, ys, n_min, n_max-n_min+1 /*==N_used*/, temp, x0_used);
+	Int_t ret_code = fitter(xs, ys, n_min, n_max-n_min+1 /*==N_used*/, x0_used);
 	if (0==ret_code)
 		return calculate(point);
 	if (-5==ret_code) {//matrix inversion failed
@@ -276,7 +278,7 @@ double DataVector::operator()(double point, double x0)
 //[n_min, n_max] are used, not [n_min,n_max). N_used==n_max-n_min+1>=order+1
 void DataVector::get_indices(double x, int &n_min, int &n_max)
 {
-	if (x < xs.front())
+	if (x <= xs.front())
 	{
 		n_min = 0;
 		n_max = N_used-1; //order is set to be matching the number of points
@@ -288,8 +290,21 @@ void DataVector::get_indices(double x, int &n_min, int &n_max)
 		n_min = n_max - N_used + 1;
 		return;
 	}
-	int out_ = 0;
-	while ((x > xs[out_]) && (x > xs[out_+1])) ++out_;
+	std::size_t left = 0;
+	std::size_t right = std::max(left, xs.size() - 2);
+	std::size_t out_ = (left+right)/2;
+	while (true) {
+		if ((x > xs[out_]) && (x <= xs[out_ + 1]))
+			break;
+		if (x <= xs[out_]) {
+			right = out_ - 1;
+			out_ = (left + right) / 2;
+		} else {
+			left = out_ + 1;
+			out_ = (left + right) / 2;
+		}
+	}
+	//out_ is such, that x>xs[out] and x<=xs[out+1]
 	n_min = out_ - (N_used-1) / 2; //asymmetrical interpolation in the case of odd order.
 	n_max = n_min + (N_used-1);
 	if (n_min < 0)
