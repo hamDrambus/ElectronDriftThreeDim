@@ -99,6 +99,11 @@ long double Manager::XS_integral(long double from, long double to, long double E
 	return Int;
 }
 
+long double Manager::XS_integral_table(long double from, long double to, long double Eny, Event &event)
+{
+	return ArTables_->integral_table(to, Eny) - ArTables_->integral_table(from, Eny);
+}
+
 long double Manager::XS_integral_for_test(long double from, long double to, long double Eny, long double dE)
 {
 	double E = from, E_prev = from;
@@ -192,6 +197,100 @@ void Manager::Solve (long double LnR, Event &event) //TODO: tabulate
 			prev_solution = e_finish;
 			e_finish = (left*f_right - right*f_left) / (f_right - f_left);
 			f_new = XS_integral(e_start, e_finish, Eny, event) - LnR;
+			if (f_new < 0) {
+				left = e_finish;
+				f_left = f_new;
+			} else {
+				right = e_finish;
+				f_right = f_new;
+			}
+			convergence_criteria = 2e-4*(std::min(std::max(e_start, (long double)0.1*XS_EL_EN_MINIMUM_),
+					std::max(e_finish, (long double)0.1*XS_EL_EN_MINIMUM_)));//std::max(2e-6, std::fabs(5e-4*event.En_finish));
+		}
+		event.En_collision = e_finish;
+		event.deb_solver_y_left = f_left;
+		event.deb_solver_y_right = f_right;
+		event.deb_solver_E_left = left;
+		event.deb_solver_E_right = right;
+		event.deb_solver_E_delta = e_finish - prev_solution;
+	}
+	event.En_collision = e_finish;
+	if (1==case_) {
+		event.theta_collision = acos(-sqrt((event.En_collision-Eny)/event.En_collision));
+	} else {
+		event.theta_collision = acos(sqrt((event.En_collision-Eny)/event.En_collision));
+	}
+}
+
+void Manager::Solve_table (long double LnR, Event &event)
+{
+	event.deb_log_rand = LnR;
+	long double Eny = event.En_start*sin(event.theta_start)*sin(event.theta_start);
+	long double e_start = event.En_start;
+	short case_ = 0; //0 - normal Vx_start>0, 1 - Vx_start<0, no sign change, 2 - Vx_start<0, sign is changed
+	double INT = XS_integral_table(Eny, event.En_start, Eny, event);
+	if (event.theta_start>M_PI/2) {
+		if (LnR>INT) { //Vx changes its sign.
+			INT = LnR - INT; //INT(Eny, Eny)===0;
+		} else { //Vx is always < 0.
+			INT = INT - LnR; //energy decrease from En_start to E_coll is changed to energy increase from Eny to E_coll
+		}
+	} else {
+		INT = INT + LnR;
+	}
+	event.En_collision = ArTables_->integral_table.find_E(Eny, INT); //TODO: add debug info - uncertainty and overflow - status output varaible
+	if (event.En_collision<0) {
+		std::cout<<"Manager::Solve_table::Error: found E<0 in table. Eny= "<<Eny<<" Ei= "<<event.En_start<<" Int= "<<INT<<std::endl;
+		event.En_collision = std::min(0.01*event.En_start, 0.001) + event.En_start;
+	}
+
+}
+
+//Solve with high accuracy integral
+void Manager::Solve_test (long double LnR, Event &event)
+{
+	event.deb_log_rand = LnR;
+	long double Eny = event.En_start*sin(event.theta_start)*sin(event.theta_start);
+	long double e_start = event.En_start;
+	short case_ = 0; //0 - normal Vx_start>0, 1 - Vx_start<0, no sign change, 2 - Vx_start<0, sign is changed
+	if (event.theta_start>M_PI/2) {
+		double TURN_INT = XS_integral(Eny, event.En_start, Eny, event);
+		if (LnR>TURN_INT) { //Vx changes its sign.
+			e_start = Eny;
+			LnR = LnR - TURN_INT;
+			case_ = 2;
+		} else { //Vx is always < 0.
+			LnR = TURN_INT - LnR; //energy decrease from En_start to E_coll is changed to energy increase from Eny to E_coll
+			e_start = Eny;
+			case_ = 1;
+		}
+	}
+	//approximate right point. By default it is EN_MAXIMUM_, but there are a lot of extra calculations in this case
+	long double left = e_start;
+	long double right = e_start + 10*LnR/(ArTables_->TotalCrossSection(left)*sqrt(left/(left-Eny)));
+	right = std::min((double)right, EN_MAXIMUM_);
+	long double I_max = XS_integral_for_test(e_start, right, Eny, 1e-5);
+	if (I_max < LnR) {
+		I_max = XS_integral_for_test(e_start, EN_MAXIMUM_, Eny, 1e-5);
+		right = EN_MAXIMUM_;
+	}
+	long double e_finish = right;
+	event.En_collision = right;
+	long double prev_solution = e_start;
+	long double f_left = -LnR, f_right = I_max-LnR, f_new;
+	double convergence_criteria = 2e-4*std::min(e_start, e_finish - prev_solution);
+	if (I_max < LnR) {
+		event.process = Event::Overflow;
+		event.deb_solver_y_left = 0;
+		event.deb_solver_y_right = LnR-I_max;
+		event.deb_solver_E_left = left;
+		event.deb_solver_E_right = right;
+		event.deb_solver_E_delta = 0;
+	} else {
+		while (convergence_criteria < std::fabs(e_finish - prev_solution)) {
+			prev_solution = e_finish;
+			e_finish = (left*f_right - right*f_left) / (f_right - f_left);
+			f_new = XS_integral_for_test(e_start, e_finish, Eny, 1e-5) - LnR;
 			if (f_new < 0) {
 				left = e_finish;
 				f_left = f_new;

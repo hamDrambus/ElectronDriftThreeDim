@@ -23,6 +23,8 @@ protected:
 
 	void DoStepLength (Event &event);
 	void Solve (long double LnR, Event &event);
+	void Solve_table (long double LnR, Event &event);
+	void Solve_test (long double LnR, Event &event);
 	void DoScattering(Event &event);
 	void PostStepAction(Event &event);
 	void DoGotoNext(Event &event);
@@ -33,6 +35,7 @@ protected:
 	double Coefficient_;
 	long double XS_integral(long double from, long double to, long double Eny, Event &event);
 	long double XS_integral_for_test(long double from, long double to, long double Eny, long double dE);
+	long double XS_integral_table(long double from, long double to, long double Eny, Event &event);
 	long double Path_integral (long double x, long double cos_th);
 public:
 	void Initialize(Event &event);

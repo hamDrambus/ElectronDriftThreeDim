@@ -13,6 +13,7 @@
 #include <ctgmath>
 #include "global_definitions.h"
 #include "PolynomialFit.h"
+#include "FunctionTable.h"
 #include "LegendrePolynomials.h"
 #include "ColoredInterval.h"
 
@@ -106,11 +107,14 @@ protected:
 	std::string total_cross_elastic_fname;
 	std::string total_cross_resonance_3o2_fname;
 	std::string total_cross_resonance_1o2_fname;
+	std::string integral_table_fname;
 
 	DataVector total_cross_elastic_;
 	DataVector total_cross_resonance_3o2_;
 	DataVector total_cross_resonance_1o2_;
+	FunctionTable integral_table;
 	void read_data (std::ifstream &inp, DataVector &data, long double y_factor = 1);
+	void generate_integral_table(void);
 public:
 	ArDataTables();
 	long double CrossSection (double E, short type);

@@ -411,6 +411,7 @@ ArDataTables::ArDataTables():
 	total_cross_elastic_fname("data_derived/total_cross_section_elastic.dat"),
 	total_cross_resonance_3o2_fname("data_derived/total_cross_section_resonance3o2.dat"),
 	total_cross_resonance_1o2_fname("data_derived/total_cross_section_resonance1o2.dat"),
+	integral_table_fname("data_derived/cross_integrals.dat"),
 	total_cross_elastic_(1,2), //interpolation with 1st order polynomial
 	total_cross_resonance_3o2_(1,2),
 	total_cross_resonance_1o2_(1,2)
@@ -419,6 +420,7 @@ ArDataTables::ArDataTables():
 	ensure_file(total_cross_elastic_fname);
 	ensure_file(total_cross_resonance_3o2_fname);
 	ensure_file(total_cross_resonance_1o2_fname);
+	ensure_file(integral_table_fname);
 	total_cross_resonance_3o2_.set_out_value(0);
 	total_cross_resonance_1o2_.set_out_value(0);
 
@@ -488,7 +490,58 @@ ArDataTables::ArDataTables():
 		str.close();
 	}
 
+	inp.open(integral_table_fname, std::ios_base::binary);
+	if (!inp.is_open()) {
+		generate_integral_table();
+		str.open(integral_table_fname, std::ios_base::trunc|std::ios_base::binary);
+		integral_table.write(str);
+		str.close();
+	} else {
+		integral_table.read(inp);
+		inp.close();
+		if (integral_table.is_empty()) {
+			generate_integral_table();
+			str.open(integral_table_fname, std::ios_base::trunc|std::ios_base::binary);
+			integral_table.write(str);
+			str.close();
+		}
+	}
+
 	std::cout<<"Finished constructing Ar data tables"<<std::endl;
+}
+
+void ArDataTables::generate_integral_table(void) //uses tabulated total cross section
+{
+	std::cout<<"Generating cross section integrals..."<<std::endl;
+	ColoredRange energy_Y_range = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0, EN_MAXIMUM_, 1e-3) +
+				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
+				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
+				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) + 	//fine area
+				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80);	//fine area
+	for (long int Ey_i=0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i!=Ey_ind_end_;++Ey_i) {
+		double Ey = energy_Y_range.Value(Ey_i);
+		ColoredRange energy_range = ColoredInterval (0, 0.1, 2e-4) + ColoredInterval (0.1, 1, 8e-4) +
+					ColoredInterval (1, 10, 1e-2) + ColoredInterval (10, EN_MAXIMUM_, 0.02) +
+					ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
+					ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
+					ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) + 	//fine area
+					ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80) +	//fine area
+					ColoredInterval (11.5, EN_MAXIMUM_, 0.003);
+		//^dE defined by characteristics of cross section
+		//dE defiend by sqrt(E/E-Ey) - finer dE when E is closer to Ey
+		energy_range = energy_range + ColoredInterval(Ey, 1.1*Ey, Ey/500.0) + ColoredInterval(1.1*Ey, 10*Ey, Ey/100.0) + ColoredInterval(10*Ey, 50*Ey, Ey/10.0);
+		energy_range.Trim(Ey, EN_MAXIMUM_);
+		long double Int = 0;
+		double E = Ey, E_prev = Ey;
+		for (long int E_i=0, E_i_end_=energy_range.NumOfIndices(); E_i!=E_i_end_;++E_i) {
+			E = energy_range.Value(E_i);
+			if (E!=Ey) {//irregularity case
+				Int+=TotalCrossSection(E)*sqrt(E/(E-Ey))*(E-E_prev);
+			}
+			E_prev = E;
+			integral_table.push(E, Ey, Int);
+		}
+	}
 }
 
 long double ArDataTables::TotalCrossSection (double E)
