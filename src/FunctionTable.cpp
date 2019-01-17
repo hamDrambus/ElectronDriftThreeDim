@@ -420,6 +420,12 @@ void FunctionTable::read (std::ifstream& str)
 		_ys.resize(size);
 		counter = 0;
 		while (!str.eof() && counter != size) {
+			str.read((char*)&val, sizeof(double));
+			_Eys[counter] = val;
+			if (str.eof()) {
+				valid = false;
+				break;
+			}
 			str.read((char*)&size_E, sizeof(std::size_t));
 			_Es[counter].resize(size_E);
 			_ys[counter].resize(size_E);
@@ -453,7 +459,7 @@ void FunctionTable::write (std::ofstream& str)
 		str.write((char*)&_Eys[Ey_ind], sizeof(double));
 		std::size_t size= _Es[Ey_ind].size();
 		str.write((char*)&size, sizeof(std::size_t));
-		for (std::size_t E = 0, E_end_= real_size; E != E_end_; ++E) {
+		for (std::size_t E = 0, E_end_= size; E != E_end_; ++E) {
 			str.write((char*)&_Es[Ey_ind][E], sizeof(double));
 			str.write((char*)&_ys[Ey_ind][E], sizeof(double));
 		}
