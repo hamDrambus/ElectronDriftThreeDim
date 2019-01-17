@@ -112,10 +112,10 @@ protected:
 	DataVector total_cross_elastic_;
 	DataVector total_cross_resonance_3o2_;
 	DataVector total_cross_resonance_1o2_;
-	FunctionTable integral_table;
 	void read_data (std::ifstream &inp, DataVector &data, long double y_factor = 1);
 	void generate_integral_table(void);
 public:
+	FunctionTable integral_table_;
 	ArDataTables();
 	long double CrossSection (double E, short type);
 	long double TotalCrossSection (double E);

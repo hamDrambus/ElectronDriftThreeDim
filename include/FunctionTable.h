@@ -2,6 +2,7 @@
 #define FUNCTION_TABLE_H
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <deque>
 #include "PolynomialFit.h"

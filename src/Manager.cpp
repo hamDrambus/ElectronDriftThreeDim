@@ -101,7 +101,7 @@ long double Manager::XS_integral(long double from, long double to, long double E
 
 long double Manager::XS_integral_table(long double from, long double to, long double Eny, Event &event)
 {
-	return ArTables_->integral_table(to, Eny) - ArTables_->integral_table(from, Eny);
+	return ArTables_->integral_table_(to, Eny) - ArTables_->integral_table_(from, Eny);
 }
 
 long double Manager::XS_integral_for_test(long double from, long double to, long double Eny, long double dE)
@@ -238,7 +238,7 @@ void Manager::Solve_table (long double LnR, Event &event)
 	} else {
 		INT = INT + LnR;
 	}
-	event.En_collision = ArTables_->integral_table.find_E(Eny, INT); //TODO: add debug info - uncertainty and overflow - status output varaible
+	event.En_collision = ArTables_->integral_table_.find_E(Eny, INT); //TODO: add debug info - uncertainty and overflow - status output varaible
 	if (event.En_collision<0) {
 		std::cout<<"Manager::Solve_table::Error: found E<0 in table. Eny= "<<Eny<<" Ei= "<<event.En_start<<" Int= "<<INT<<std::endl;
 		event.En_collision = std::min(0.01*event.En_start, 0.001) + event.En_start;
@@ -510,38 +510,89 @@ void Manager::Test(void)
 	std::cout << "Testing integral calculations: " << std::endl;
 	Event dummy;
 	std::cout << "\tEy=0, Ei=1eV:" << std::endl;
-	std::cout << "\tEf\tXS_integral()\tdE=1e-3\tdE=1e-5" << std::endl;
+	std::cout << "\tEf\tXS_integral()\tdE=1e-3\tdE=1e-5\tTable" << std::endl;
 	std::cout << "\t"<<2.0<<"\t" << XS_integral(1, 2, 0, dummy) << "\t" << XS_integral_for_test(1, 2, 0, 1e-3) 
-		<< "\t" << XS_integral_for_test(1, 2, 0, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(1, 2, 0, 1e-5) << "\t" <<XS_integral_table(1,2,0,dummy)<< std::endl;
 	std::cout << "\t" << 1.2 << "\t" << XS_integral(1, 1.2, 0, dummy) << "\t" << XS_integral_for_test(1, 1.2, 0, 1e-3)
-		<< "\t" << XS_integral_for_test(1, 1.2, 0, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(1, 1.2, 0, 1e-5) << "\t" << XS_integral_table(1, 1.2, 0, dummy) << std::endl;
 	std::cout << "\t" << 1.01 << "\t" << XS_integral(1, 1.01, 0, dummy) << "\t" << XS_integral_for_test(1, 1.01, 0, 1e-3)
-		<< "\t" << XS_integral_for_test(1, 1.01, 0, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(1, 1.01, 0, 1e-5) << "\t" << XS_integral_table(1, 1.01, 0, dummy) << std::endl;
 
 	std::cout <<std::endl << "\tEy=0, Ei=11.05eV:" << std::endl;
-	std::cout << "\tEf=\tXS_integral()\tdE=1e-3\tdE=1e-5" << std::endl;
+	std::cout << "\tEf=\tXS_integral()\tdE=1e-3\tdE=1e-5\tTable" << std::endl;
 	std::cout << "\t" << 11.3 << "\t" << XS_integral(11.05, 11.3, 0, dummy) << "\t" << XS_integral_for_test(11.05, 11.3, 0, 1e-3)
-		<< "\t" << XS_integral_for_test(11.05, 11.3, 0, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(11.05, 11.3, 0, 1e-5) << "\t" << XS_integral_table(11.05, 11.3, 0, dummy) << std::endl;
 	std::cout << "\t" << 11.12 << "\t" << XS_integral(11.05, 11.12, 0, dummy) << "\t" << XS_integral_for_test(11.05, 11.12, 0, 1e-3)
-		<< "\t" << XS_integral_for_test(11.05, 11.12, 0, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(11.05, 11.12, 0, 1e-5) << "\t" << XS_integral_table(11.05, 11.12, 0, dummy) << std::endl;
 	std::cout << "\t" << 11.07 << "\t" << XS_integral(11.05, 11.07, 0, dummy) << "\t" << XS_integral_for_test(11.05, 11.07, 0, 1e-3)
-		<< "\t" << XS_integral_for_test(11.05, 11.07, 0, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(11.05, 11.07, 0, 1e-5) << "\t" << XS_integral_table(11.05, 11.07, 0, dummy) << std::endl;
 
 	std::cout << std::endl << "\tEy=2.5, Ei=5.0eV:" << std::endl;
-	std::cout << "\tEf=\tXS_integral()\tdE=1e-3\tdE=1e-5" << std::endl;
+	std::cout << "\tEf=\tXS_integral()\tdE=1e-3\tdE=1e-5\tTable" << std::endl;
 	std::cout << "\t" << 6.0 << "\t" << XS_integral(5.0, 6.0, 2.5, dummy) << "\t" << XS_integral_for_test(5.0, 6.0, 2.5, 1e-3)
-		<< "\t" << XS_integral_for_test(5.0, 6.0, 2.5, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(5.0, 6.0, 2.5, 1e-5) << "\t" << XS_integral_table(5.0, 6.0, 2.5, dummy) << std::endl;
 	std::cout << "\t" << 5.1 << "\t" << XS_integral(5.0, 5.1, 2.5, dummy) << "\t" << XS_integral_for_test(5.0, 5.1, 2.5, 1e-3)
-		<< "\t" << XS_integral_for_test(5.0, 5.1, 2.5, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(5.0, 5.1, 2.5, 1e-5) << "\t" << XS_integral_table(5.0, 5.1, 2.5, dummy) << std::endl;
 	
 	std::cout << std::endl << "\tEy=5.0, Ei=5.0eV:"<<std::endl;
-	std::cout << "\tEf=\tXS_integral()\tdE=1e-3\tdE=1e-5" << std::endl;
+	std::cout << "\tEf=\tXS_integral()\tdE=1e-3\tdE=1e-5\tTable" << std::endl;
 	std::cout << "\t" << 6.0 << "\t" << XS_integral(5.0, 6.0, 5.0, dummy) << "\t" << XS_integral_for_test(5.0, 6.0, 5.0, 1e-3)
-		<< "\t" << XS_integral_for_test(5.0, 6.0, 5.0, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(5.0, 6.0, 5.0, 1e-5) << "\t" << XS_integral_table(5.0, 6.0, 5.0, dummy) << std::endl;
 	std::cout << "\t" << 5.1 << "\t" << XS_integral(5.0, 5.1, 5.0, dummy) << "\t" << XS_integral_for_test(5.0, 5.1, 5.0, 1e-3)
-		<< "\t" << XS_integral_for_test(5.0, 5.1, 5.0, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(5.0, 5.1, 5.0, 1e-5) << "\t" << XS_integral_table(5.0, 5.1, 5.0, dummy) << std::endl;
 	std::cout << "\t" << 5.01 << "\t" << XS_integral(5.0, 5.01, 5.0, dummy) << "\t" << XS_integral_for_test(5.0, 5.01, 5.0, 1e-3)
-		<< "\t" << XS_integral_for_test(5.0, 5.01, 5.0, 1e-5) << std::endl;
+		<< "\t" << XS_integral_for_test(5.0, 5.01, 5.0, 1e-5) << "\t" << XS_integral_table(5.0, 5.01, 5.0, dummy) << std::endl;
+	std::cout << std::endl;
+
+	std::cout << "Testing Solvers:" << std::endl;
+	std::cout << "\tEi = 5eV, theta = Pi/2, LnR = 0.3" << std::endl;
+	std::cout << "Ec=\tOld\tdE=1e-5\tTable" << std::endl;
+	double Ec0, Ec1, Ec2;
+	dummy.En_start = 5;
+	dummy.theta_start = M_PI / 2;
+	Solve(0.3, dummy);
+	Ec0 = dummy.En_collision;
+	Solve_test(0.3, dummy);
+	Ec1 = dummy.En_collision;
+	Solve_table(0.3, dummy);
+	Ec2 = dummy.En_collision;
+	std::cout << "\t"<<Ec0<<"\t"<<Ec1<<"\t"<<Ec2<< std::endl<<std::endl;
+
+	std::cout << "\tEi = 1eV, theta = Pi/4, LnR = 0.01" << std::endl;
+	std::cout << "Ec=\tOld\tdE=1e-5\tTable" << std::endl;
+	dummy.En_start = 1;
+	dummy.theta_start = M_PI / 4;
+	Solve(0.01, dummy);
+	Ec0 = dummy.En_collision;
+	Solve_test(0.01, dummy);
+	Ec1 = dummy.En_collision;
+	Solve_table(0.01, dummy);
+	Ec2 = dummy.En_collision;
+	std::cout << "\t" << Ec0 << "\t" << Ec1 << "\t" << Ec2 << std::endl << std::endl;
+
+	std::cout << "\tEi = 5eV, theta = Pi, LnR = 0.1" << std::endl;
+	std::cout << "Ec=\tOld\tdE=1e-5\tTable" << std::endl;
+	dummy.En_start = 5;
+	dummy.theta_start = M_PI;
+	Solve(0.1, dummy);
+	Ec0 = dummy.En_collision;
+	Solve_test(0.1, dummy);
+	Ec1 = dummy.En_collision;
+	Solve_table(0.1, dummy);
+	Ec2 = dummy.En_collision;
+	std::cout << "\t" << Ec0 << "\t" << Ec1 << "\t" << Ec2 << std::endl << std::endl;
+
+	std::cout << "\tEi = 5eV, theta = 0, LnR = 0.1" << std::endl;
+	std::cout << "Ec=\tOld\tdE=1e-5\tTable" << std::endl;
+	dummy.En_start = 5;
+	dummy.theta_start = 0;
+	Solve(0.1, dummy);
+	Ec0 = dummy.En_collision;
+	Solve_test(0.1, dummy);
+	Ec1 = dummy.En_collision;
+	Solve_table(0.1, dummy);
+	Ec2 = dummy.En_collision;
+	std::cout << "\t" << Ec0 << "\t" << Ec1 << "\t" << Ec2 << std::endl << std::endl;
 
 	std::cout << "===============================================" << std::endl << std::endl << std::endl;
 }

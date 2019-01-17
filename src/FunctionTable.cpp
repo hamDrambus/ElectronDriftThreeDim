@@ -450,12 +450,12 @@ void FunctionTable::write (std::ofstream& str)
 	std::size_t real_size= _Eys.size();
 	str.write((char*)&real_size, sizeof(std::size_t));
 	for (std::size_t Ey_ind = 0, Ey_ind_end_= real_size; Ey_ind != Ey_ind_end_; ++Ey_ind) {
-		str.write((char*)_Eys[Ey_ind], sizeof(double));
+		str.write((char*)&_Eys[Ey_ind], sizeof(double));
 		std::size_t size= _Es[Ey_ind].size();
-		str.write((char*)size, sizeof(std::size_t));
+		str.write((char*)&size, sizeof(std::size_t));
 		for (std::size_t E = 0, E_end_= real_size; E != E_end_; ++E) {
-			str.write((char*)_Es[Ey_ind][E], sizeof(double));
-			str.write((char*)_ys[Ey_ind][E], sizeof(double));
+			str.write((char*)&_Es[Ey_ind][E], sizeof(double));
+			str.write((char*)&_ys[Ey_ind][E], sizeof(double));
 		}
 	}
 }

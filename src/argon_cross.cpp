@@ -494,15 +494,15 @@ ArDataTables::ArDataTables():
 	if (!inp.is_open()) {
 		generate_integral_table();
 		str.open(integral_table_fname, std::ios_base::trunc|std::ios_base::binary);
-		integral_table.write(str);
+		integral_table_.write(str);
 		str.close();
 	} else {
-		integral_table.read(inp);
+		integral_table_.read(inp);
 		inp.close();
-		if (integral_table.is_empty()) {
+		if (integral_table_.is_empty()) {
 			generate_integral_table();
 			str.open(integral_table_fname, std::ios_base::trunc|std::ios_base::binary);
-			integral_table.write(str);
+			integral_table_.write(str);
 			str.close();
 		}
 	}
@@ -539,7 +539,7 @@ void ArDataTables::generate_integral_table(void) //uses tabulated total cross se
 				Int+=TotalCrossSection(E)*sqrt(E/(E-Ey))*(E-E_prev);
 			}
 			E_prev = E;
-			integral_table.push(E, Ey, Int);
+			integral_table_.push(E, Ey, Int);
 		}
 	}
 }

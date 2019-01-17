@@ -57,7 +57,7 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 	}
 	MTManager test_man(&ArDataTables_, -1, 1, seed);
 	//test_all(ar_data[1]);
-	//test_man.Test();
+	test_man.Test();
 	
 	for (int n = 0; n < N_threads; ++n) {
 		_submanagers[n]->SetParameters(concentration, field);
