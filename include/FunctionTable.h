@@ -17,19 +17,19 @@ protected:
 	std::deque<std::vector<double> > _Es;
 	std::deque<std::vector<double> > _ys;
 	std::deque<double> _Eys;
-	std::pair<long int, long int> find_Ey_indexes (double Ey);
-	std::pair<long int, long int> find_E_indexes (double E, std::size_t Ey_index);
-	std::pair<long int, long int> find_E_indexes_by_value (double val, std::size_t Ey_index);
+	std::pair<long int, long int> find_Ey_indexes (double Ey) const;
+	std::pair<long int, long int> find_E_indexes (double E, std::size_t Ey_index) const;
+	std::pair<long int, long int> find_E_indexes_by_value (double val, std::size_t Ey_index) const;
 public:
 	FunctionTable(void);
-	virtual double operator ()(double E, double Ey);
-	double find_E (double Ey, double val);
+	virtual double operator ()(double E, double Ey) const;
+	double find_E (double Ey, double val) const;
 	void push (double E, double Ey, double val);
 	void clear (void);
 
 	void read (std::ifstream& str);
 	void write (std::ofstream& str);
-	bool is_empty(void);
+	bool is_empty(void) const;
 };
 
 #endif

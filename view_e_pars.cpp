@@ -13,8 +13,8 @@
 	int DEF_W = 900, DEF_H = 700;
 	double E_at_time = 1e-11;
 	double dt = 6e-12;
-	double DRIFT_DISTANCE = 1e-4;
-	std::string fname1("Output/v01.1/eData_7.0Td_deb.root");
+	double DRIFT_DISTANCE = 1e-3;
+	std::string fname1("Output/v01.1/eData_7.0Td.root");
 	std::string fname2("Output/v/eData_3Td_1.root");
 	
 	double En_start;

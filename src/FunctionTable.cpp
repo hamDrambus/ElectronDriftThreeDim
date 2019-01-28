@@ -3,7 +3,7 @@
 FunctionTable::FunctionTable(void)
 {}
 
-std::pair<long int, long int> FunctionTable::find_Ey_indexes (double Ey)
+std::pair<long int, long int> FunctionTable::find_Ey_indexes (double Ey) const
 {
 	std::pair<long int, long int> out(-1,-1);
 	if (_Eys.empty()) {
@@ -45,7 +45,7 @@ std::pair<long int, long int> FunctionTable::find_Ey_indexes (double Ey)
 	return out;
 }
 
-std::pair<long int, long int> FunctionTable::find_E_indexes (double E, std::size_t Ey_index)
+std::pair<long int, long int> FunctionTable::find_E_indexes (double E, std::size_t Ey_index) const
 {
 	std::pair<long int, long int> out(-1,-1);
 	if (_Es[Ey_index].empty()) {
@@ -87,7 +87,7 @@ std::pair<long int, long int> FunctionTable::find_E_indexes (double E, std::size
 	return out;
 }
 
-std::pair<long int, long int> FunctionTable::find_E_indexes_by_value (double val, std::size_t Ey_index)
+std::pair<long int, long int> FunctionTable::find_E_indexes_by_value (double val, std::size_t Ey_index) const
 {
 	std::pair<long int, long int> out(-1,-1);
 	if (_Es[Ey_index].empty()) {
@@ -129,7 +129,7 @@ std::pair<long int, long int> FunctionTable::find_E_indexes_by_value (double val
 	return out;
 }
 
-double FunctionTable::operator ()(double E, double Ey)
+double FunctionTable::operator ()(double E, double Ey) const
 {
 	std::pair<long int, long int> Ey_indexes = find_Ey_indexes(Ey);
 	if (-1==Ey_indexes.first)
@@ -211,7 +211,7 @@ double FunctionTable::operator ()(double E, double Ey)
 	return 0;
 }
 
-double FunctionTable::find_E (double Ey, double val)
+double FunctionTable::find_E (double Ey, double val) const
 {
 	std::pair<long int, long int> Ey_indexes = find_Ey_indexes(Ey);
 	if (-1==Ey_indexes.first)
@@ -305,6 +305,7 @@ void FunctionTable::push (double E, double Ey, double val)
 			_Eys.push_back(Ey);
 			_Es.push_back(std::vector<double>());
 			_ys.push_back(std::vector<double>());
+			Ey_index = _Eys.size()-1;
 			goto second;
 		}
 		if (Ey==_Eys.back()) {
@@ -466,7 +467,7 @@ void FunctionTable::write (std::ofstream& str)
 	}
 }
 
-bool FunctionTable::is_empty(void)
+bool FunctionTable::is_empty(void) const
 {
 	return _Eys.empty();
 }

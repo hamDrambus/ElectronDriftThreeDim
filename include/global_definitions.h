@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #endif
 
-#define THREADS_NUMBER_ 1
+#define THREADS_NUMBER_ 4
 #define L_MAX_ 10
 #define EN_MINIMUM_ 5e-3
 #define XS_EL_EN_MAXIMUM_ 20.0
@@ -45,9 +45,9 @@
 #define Width_1o2_ 2.2e-3
 //^in eV
 #define RESONANCE_EN_LOSS_FACTOR_ 1.0
-#define DRIFT_DISTANCE_ 1e-3
+#define DRIFT_DISTANCE_ 3e-3
 //^in m
-#define SKIP_HISTORY_ 0
+#define SKIP_HISTORY_ 999
 
 const long double e_charge_SIconst = 1.60217662e-19; //in coulombs (SI)
 const long double e_mass_SIconst = 9.10938356e-31; //in kg (SI)

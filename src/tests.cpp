@@ -85,6 +85,26 @@ void test_polynomial_fit (void)
 	INVOKE_GNUPLOT(name);
 }
 
+void test_2_dim_table (void)
+{
+	FunctionTable table;
+	//F(x,y) = -0.5x + y. x:[0,2] y:[x,1]
+	for (int ix = 0, ix_end_=11; ix!=ix_end_; ++ix) {
+		for (int iy = 0, iy_end_ = ix_end_ - ix; iy!=iy_end_; ++iy) {
+			double Ey = ix * 2.0/(ix_end_-1);
+			double E = (iy_end_==1) ? Ey : (Ey + iy * (1.0-Ey)/(iy_end_ -1));
+			table.push(E, Ey, -0.5*Ey + E);
+		}
+	}
+	std::cout<<"(X, Y):\t(0.0,0.0)\t(2.0,1,0)\t(0.0,1.0)\t(0.5,0.5)\t(0.2,0.7)"<<std::endl;
+	std::cout<<"F(X,Y):\t0.000\t0.000\t1.000\t0.250\t0.600"<<std::endl;
+	std::cout<<"Table:\t"<<table(0,0)<<"\t";
+	std::cout<<table(1,2)<<"\t";
+	std::cout<<table(1,0.0)<<"\t";
+	std::cout<<table(0.5,0.5)<<"\t";
+	std::cout<<table(0.7,0.2)<<std::endl;
+}
+
 void test_phase_shift_fit (ArDataTables *ArTables)
 {
 	std::string fname_McEachran = "tests/phase_shifts_McEachran_";
@@ -887,12 +907,16 @@ void test_all (ArDataTables *ArTables)
 	std::cout<<"Testing polynimial fit:"<<std::endl;
 	test_polynomial_fit ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-
+	*/
+	std::cout<<"Testing function table:"<<std::endl;
+	test_2_dim_table ();
+	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
+	/*
 	std::cout<<"Testing phase shifts fit:"<<std::endl;
 	test_phase_shift_fit (ArTables);
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 	*/
-	std::cout<<"Testing factor helping class:"<<std::endl;
+	/*std::cout<<"Testing factor helping class:"<<std::endl;
 	test_factor_helper ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 
@@ -903,7 +927,7 @@ void test_all (ArDataTables *ArTables)
 	std::cout<<"Testing colored intervals:"<<std::endl;
 	test_colored_interval ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-	/*
+	*//*
 	std::cout<<"Testing integrals of legendre polynomials:"<<std::endl;
 	test_legendre_intregral ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
@@ -924,7 +948,7 @@ void test_all (ArDataTables *ArTables)
 	test_TM_backward (ArTables);
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 	*/
-	std::cout<<"Testing resonance cross section:"<<std::endl;
+	/*std::cout<<"Testing resonance cross section:"<<std::endl;
 	test_resonance_cross (ArTables);
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 
@@ -935,6 +959,6 @@ void test_all (ArDataTables *ArTables)
 	std::cout<<"Testing Ar data tables:"<<std::endl;
 	test_data_table (ArTables);
 	std::cout<<"==============================================="<<std::endl;
-
+*/
 	std::cout<<"Testing finished."<<std::endl<<std::endl<<std::endl;
 }

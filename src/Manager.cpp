@@ -101,7 +101,7 @@ long double Manager::XS_integral(long double from, long double to, long double E
 
 long double Manager::XS_integral_table(long double from, long double to, long double Eny, Event &event)
 {
-	return ArTables_->integral_table_(to, Eny) - ArTables_->integral_table_(from, Eny);
+	return (*ArTables_->integral_table_)(to, Eny) - (*ArTables_->integral_table_)(from, Eny);
 }
 
 long double Manager::XS_integral_for_test(long double from, long double to, long double Eny, long double dE)
@@ -110,11 +110,13 @@ long double Manager::XS_integral_for_test(long double from, long double to, long
 	long double dx;
 	long double Int = 0;
 	if ((from - Eny) / from<1e-6) {//irregularity case
-		E = 1e-6*from + Eny;
-		Int += 0.5*(ArTables_->TotalCrossSection(E) + ArTables_->TotalCrossSection(from))*sqrt(E_prev*(E_prev - Eny));
+		E = std::min(1e-6*from + Eny, to);
+		Int += 0.5*(ArTables_->TotalCrossSection(E) + ArTables_->TotalCrossSection(from))*sqrt(E*(E - Eny));
 		from = E;
 		E_prev = from;
 	}
+	if (from==to)
+		return Int;
 	while (E<to) {
 		Int += ArTables_->TotalCrossSection(E)*sqrt(E / (E - Eny))*dE;
 		E_prev = E;
@@ -232,18 +234,24 @@ void Manager::Solve_table (long double LnR, Event &event)
 	if (event.theta_start>M_PI/2) {
 		if (LnR>INT) { //Vx changes its sign.
 			INT = LnR - INT; //INT(Eny, Eny)===0;
+			case_ = 2;
 		} else { //Vx is always < 0.
 			INT = INT - LnR; //energy decrease from En_start to E_coll is changed to energy increase from Eny to E_coll
+			case_ = 1;
 		}
 	} else {
 		INT = INT + LnR;
 	}
-	event.En_collision = ArTables_->integral_table_.find_E(Eny, INT); //TODO: add debug info - uncertainty and overflow - status output varaible
+	event.En_collision = ArTables_->integral_table_->find_E(Eny, INT); //TODO: add debug info - uncertainty and overflow - status output variable
 	if (event.En_collision<0) {
 		std::cout<<"Manager::Solve_table::Error: found E<0 in table. Eny= "<<Eny<<" Ei= "<<event.En_start<<" Int= "<<INT<<std::endl;
 		event.En_collision = std::min(0.01*event.En_start, 0.001) + event.En_start;
 	}
-
+	if (1==case_) {
+		event.theta_collision = acos(-sqrt((event.En_collision-Eny)/event.En_collision));
+	} else {
+		event.theta_collision = acos(sqrt((event.En_collision-Eny)/event.En_collision));
+	}
 }
 
 //Solve with high accuracy integral
@@ -334,7 +342,7 @@ void Manager::DoStepLength(Event &event)
 	long double L = - log(random_generator_->Uniform());
 	L *= Coefficient_; //Calculated once for fixed parameters;
 	//solving L = XS_integral(Ei, Ec) for Ec===E collision.
-	Solve(L, event);
+	Solve_table(L, event);
 
 	//Energy is in eV
 	long double vel_0 = sqrt(2.0*e_charge_SIconst*event.En_start / e_mass_SIconst)*cos(event.theta_start);
@@ -461,7 +469,7 @@ bool Manager::IsFinished(Event &event)
 {
 	if (!is_ready_)
 		return true;
-	return sim_data_->GetEntries()>=100;
+	//return sim_data_->GetEntries()>=100;
 	return !(event.pos_finish < DRIFT_DISTANCE_);
 	//return !((event.pos_finish < DRIFT_DISTANCE_)&&(event.pos_finish> -10*DRIFT_DISTANCE_));
 }

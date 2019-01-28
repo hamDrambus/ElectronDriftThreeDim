@@ -34,7 +34,8 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 	std::vector<TCondition*> conditions;
 	std::vector<ArDataTables*> ar_data;
 
-	ArDataTables ArDataTables_;
+	FunctionTable *table = new FunctionTable;
+	ArDataTables ArDataTables_ (table);
 	if (N_threads > num_of_electrons)
 		N_threads = num_of_electrons;
 	int N_acc = 0;
@@ -57,7 +58,7 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 	}
 	MTManager test_man(&ArDataTables_, -1, 1, seed);
 	//test_all(ar_data[1]);
-	test_man.Test();
+	//test_man.Test();
 	
 	for (int n = 0; n < N_threads; ++n) {
 		_submanagers[n]->SetParameters(concentration, field);
@@ -85,6 +86,7 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 		delete mutexes[n];
 		delete thread_mutexes[n];
 	}
+	delete table;
 }
 
 int main(int argn, char * argv[]) {

@@ -407,14 +407,15 @@ void ArDataTables::read_data (std::ifstream &inp, DataVector &data, long double 
 	}
 }
 
-ArDataTables::ArDataTables():
+ArDataTables::ArDataTables(FunctionTable * table):
 	total_cross_elastic_fname("data_derived/total_cross_section_elastic.dat"),
 	total_cross_resonance_3o2_fname("data_derived/total_cross_section_resonance3o2.dat"),
 	total_cross_resonance_1o2_fname("data_derived/total_cross_section_resonance1o2.dat"),
 	integral_table_fname("data_derived/cross_integrals.dat"),
 	total_cross_elastic_(1,2), //interpolation with 1st order polynomial
 	total_cross_resonance_3o2_(1,2),
-	total_cross_resonance_1o2_(1,2)
+	total_cross_resonance_1o2_(1,2),
+	integral_table_(table)
 {
 	std::cout<<"Constructing Ar data tables"<<std::endl;
 	ensure_file(total_cross_elastic_fname);
@@ -494,15 +495,15 @@ ArDataTables::ArDataTables():
 	if (!inp.is_open()) {
 		generate_integral_table();
 		str.open(integral_table_fname, std::ios_base::trunc|std::ios_base::binary);
-		integral_table_.write(str);
+		integral_table_->write(str);
 		str.close();
 	} else {
-		integral_table_.read(inp);
+		integral_table_->read(inp);
 		inp.close();
-		if (integral_table_.is_empty()) {
+		if (integral_table_->is_empty()) {
 			generate_integral_table();
 			str.open(integral_table_fname, std::ios_base::trunc|std::ios_base::binary);
-			integral_table_.write(str);
+			integral_table_->write(str);
 			str.close();
 		}
 	}
@@ -535,11 +536,18 @@ void ArDataTables::generate_integral_table(void) //uses tabulated total cross se
 		double E = Ey, E_prev = Ey;
 		for (long int E_i=0, E_i_end_=energy_range.NumOfIndices(); E_i!=E_i_end_;++E_i) {
 			E = energy_range.Value(E_i);
-			if (E!=Ey) {//irregularity case
+			if (E<=Ey) {
+				E_prev = E;
+				integral_table_->push(Ey, Ey, 0);
+				continue;
+			}
+			if (E_prev == Ey) {//irregularity case
+				Int += 0.5*(TotalCrossSection(E) + TotalCrossSection(Ey))*sqrt(E*(E - Ey));
+			} else {
 				Int+=TotalCrossSection(E)*sqrt(E/(E-Ey))*(E-E_prev);
 			}
 			E_prev = E;
-			integral_table_.push(E, Ey, Int);
+			integral_table_->push(E, Ey, Int);
 		}
 	}
 }

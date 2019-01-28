@@ -8,9 +8,11 @@
 #include <TRandom3.h>
 #include <TRandom1.h>
 #include "PolynomialFit.h"
+#include "FunctionTable.h"
 #include "argon_cross.h"
 
 void test_polynomial_fit (void);
+void test_2_dim_table (void);
 void test_phase_shift_fit (ArDataTables *ArTables);
 void test_factor_helper (void);
 void test_legendre_polynomial(void);

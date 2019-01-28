@@ -115,8 +115,8 @@ protected:
 	void read_data (std::ifstream &inp, DataVector &data, long double y_factor = 1);
 	void generate_integral_table(void);
 public:
-	FunctionTable integral_table_;
-	ArDataTables();
+	FunctionTable *integral_table_; //shared between threads after it is initialized
+	ArDataTables(FunctionTable * table);
 	long double CrossSection (double E, short type);
 	long double TotalCrossSection (double E);
 	long double XS_elastic(double E);
