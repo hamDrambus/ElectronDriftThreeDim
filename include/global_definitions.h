@@ -17,7 +17,6 @@
 
 #define THREADS_NUMBER_ 4
 #define L_MAX_ 10
-#define EN_MINIMUM_ 5e-3
 #define XS_EL_EN_MAXIMUM_ 20.0
 #define XS_EL_EN_MINIMUM_ 1e-3
 #define PHASES_EN_MAXIMUM_ 12
@@ -35,6 +34,8 @@
  * From 5e-3 to 1 eV MERT5 PS are used for total elastic XS.
  * Experimental PS are used otherwise.
  */
+#define D_EN_SMOOTH_ 0.1
+//^ MERT5 and experimental totalXS
 #define EN_MAXIMUM_ 16.0
 //^
 #define ANGLE_POINTS_ 51
@@ -45,9 +46,11 @@
 #define Width_1o2_ 2.2e-3
 //^in eV
 #define RESONANCE_EN_LOSS_FACTOR_ 1.0
-#define DRIFT_DISTANCE_ 3e-3
+#define DRIFT_DISTANCE_ 1e-2
 //^in m
-#define SKIP_HISTORY_ 999
+#define DRIFT_DISTANCE_HISTORY 9.6e-3
+//^in m. Write info about electron only starting from this position
+#define SKIP_HISTORY_ 0
 
 const long double e_charge_SIconst = 1.60217662e-19; //in coulombs (SI)
 const long double e_mass_SIconst = 9.10938356e-31; //in kg (SI)
@@ -70,6 +73,7 @@ const double Ar_mass_eVconst = 3.726e10; //eV
 std::string strtoken(std::string &in, std::string break_symbs);
 void ensure_file(std::string fname); //makes sure file can be created later on
 void ensure_folder(std::string folder);
+char* c_str_cp (const std::string &str);
 
 struct Event
 {
@@ -91,7 +95,7 @@ struct Event
 	double delta_time;
 	double delta_time_full; //with resonance delay
 	enum ProcessType : short {None = -1, Elastic = 0, Resonance_3o2 = 1, Resonance_1o2 = 2, Ionization = 3, Overflow = -2};
-	short process; //2 is ionization and from 3 to max are excitations (process = ID + 2).
+	short process; //3 is ionization and from 4 to max are excitations (process = ID + 3).
 	std::vector<double> CrossSections; //for each process starting from Elastic=1
 	std::vector<double> CrossSectionsSum; //helper for random process selection
 	//Debug info:

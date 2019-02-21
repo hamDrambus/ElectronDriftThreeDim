@@ -5,12 +5,17 @@
 #include <fstream>
 #include <vector>
 #include <deque>
+#include <TCanvas.h>
+#include <TGraph.h>
+#include <TH1D.h>
+#include <TH2D.h>
+#include "global_definitions.h"
 #include "PolynomialFit.h"
 
 //for monotone rising function only!
 //F(E1,Ey)>F(E2,Ey) if E1>E2
 //Ey:[0, Emax = 16eV]
-//E: [Ey,Emax=16eV]
+//E: [Ey,Emax=16eV] - not necessary - for theta tables E===theta [0, M_PI] and F - probability function
 //F(Ey,Ey) = 0; - not necessary condition
 class FunctionTable {
 protected:
@@ -29,6 +34,7 @@ public:
 
 	void read (std::ifstream& str);
 	void write (std::ofstream& str);
+	void plot_E_Ey (void);
 	bool is_empty(void) const;
 };
 

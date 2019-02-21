@@ -8,18 +8,18 @@ EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 		PlotResonance_3o2, PlotResonance_1o2, PlotResonances,
 		PlotDiffXS, PlotInelastic, PlotElasticResXS, PlotAllXS*/
 	switch (type_) {
-	case (ElasticXS): {
+	case (ElasticXS): { //used for table construction
 		//from 1e-3 eV to 0.1 eV with step 5e-4 eV, etc.
-		energy_range_ = ColoredInterval (XS_EL_EN_MINIMUM_, 0.1, 5e-4) + ColoredInterval (0.1, 1, 1e-3) +
+		energy_range_ =ColoredInterval (0, XS_EL_EN_MINIMUM_, 1e-4) + ColoredInterval (XS_EL_EN_MINIMUM_, 0.1, 5e-4) + ColoredInterval (0.1, 1, 1e-3) +
 				ColoredInterval (1, 10, 5e-2) + ColoredInterval (10, XS_EL_EN_MAXIMUM_, 0.1);
 		break;
 	}
-	case (Resonance_3o2_XS): {
+	case (Resonance_3o2_XS): { //used for table construction
 		energy_range_ = ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/2) + 	//coarse area
 				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/30); 		//fine area
 		break;
 	}
-	case (Resonance_1o2_XS): {
+	case (Resonance_1o2_XS): { //used for table construction
 		energy_range_ = ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/2) + 	//coarse area
 				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/30); 		//fine area
 		break;
@@ -44,10 +44,9 @@ EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 				ColoredInterval (En_3o2_ - 20*Width_3o2_, En_3o2_ + 20*Width_3o2_, 4*Width_3o2_); 			//coarse area
 		break;
 	}
-	case (DiffXS): {
+	case (DiffXS): { //not used
 		energy_range_ = ColoredInterval (PHASES_EN_MINIMUM_, 0.1, 1e-3) +
-				ColoredInterval (0.1, 1, 1e-2) +
-				ColoredInterval (1, PHASES_EN_MAXIMUM_, 0.1);
+				ColoredInterval (0.1, 1, 1e-2) + ColoredInterval (1, PHASES_EN_MAXIMUM_, 0.1);
 		break;
 	}
 	case (InelasticXS): {
@@ -55,7 +54,7 @@ EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 		break;
 	}
 	case (ElasticResXS): {
-		energy_range_ = ColoredInterval (XS_EL_EN_MINIMUM_, 0.1, 5e-4) + ColoredInterval (0.1, 1, 1e-3) +
+		energy_range_ = ColoredInterval (XS_EL_EN_MINIMUM_*0.1, 0.1, 5e-4) + ColoredInterval (0.1, 1, 1e-3) +
 				ColoredInterval (1, 10, 5e-2) + ColoredInterval (10, XS_EL_EN_MAXIMUM_, 0.1) +
 				ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/2) + 		//coarse area
 				ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/2) + 		//coarse area
@@ -96,7 +95,7 @@ EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/80); 			//fine area
 		break;
 	}
-	case (PlotDiffXS): {
+	case (PlotDiffXS): {  //used for plotting test of differential to total cross sections
 		energy_range_ = ColoredInterval (1e-4, 0.1, 7e-4) +
 				ColoredInterval (0.1, 1, 7e-3) +
 				ColoredInterval (1, EN_MAXIMUM_, 0.086);
@@ -407,21 +406,24 @@ void ArDataTables::read_data (std::ifstream &inp, DataVector &data, long double 
 	}
 }
 
-ArDataTables::ArDataTables(FunctionTable * table):
+ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table):
 	total_cross_elastic_fname("data_derived/total_cross_section_elastic.dat"),
 	total_cross_resonance_3o2_fname("data_derived/total_cross_section_resonance3o2.dat"),
 	total_cross_resonance_1o2_fname("data_derived/total_cross_section_resonance1o2.dat"),
 	integral_table_fname("data_derived/cross_integrals.dat"),
+	theta_table_fname("data_derived/theta_probabilities.dat"),
 	total_cross_elastic_(1,2), //interpolation with 1st order polynomial
 	total_cross_resonance_3o2_(1,2),
 	total_cross_resonance_1o2_(1,2),
-	integral_table_(table)
+	integral_table_(int_table),
+	theta_table_(th_table)
 {
 	std::cout<<"Constructing Ar data tables"<<std::endl;
 	ensure_file(total_cross_elastic_fname);
 	ensure_file(total_cross_resonance_3o2_fname);
 	ensure_file(total_cross_resonance_1o2_fname);
 	ensure_file(integral_table_fname);
+	ensure_file(theta_table_fname);
 	total_cross_resonance_3o2_.set_out_value(0);
 	total_cross_resonance_1o2_.set_out_value(0);
 
@@ -508,19 +510,52 @@ ArDataTables::ArDataTables(FunctionTable * table):
 		}
 	}
 
+	inp.open(theta_table_fname, std::ios_base::binary);
+	if (!inp.is_open()) {
+		generate_theta_table();
+		str.open(theta_table_fname, std::ios_base::trunc|std::ios_base::binary);
+		theta_table_->write(str);
+		str.close();
+	} else {
+		theta_table_->read(inp);
+		inp.close();
+		if (theta_table_->is_empty()) {
+			generate_theta_table();
+			str.open(theta_table_fname, std::ios_base::trunc|std::ios_base::binary);
+			theta_table_->write(str);
+			str.close();
+		}
+	}
+
 	std::cout<<"Finished constructing Ar data tables"<<std::endl;
 }
 
 void ArDataTables::generate_integral_table(void) //uses tabulated total cross section
 {
 	std::cout<<"Generating cross section integrals..."<<std::endl;
+	/* v1.x-v3.x
 	ColoredRange energy_Y_range = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0, EN_MAXIMUM_, 1e-3) +
 				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
 				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
 				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) + 	//fine area
 				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80);	//fine area
+	*/
+	/* v4.x
+	ColoredRange energy_Y_range = ColoredInterval (0, 0.005, 1e-5) + ColoredInterval (0.005, 1, 1e-4) + ColoredInterval (0, EN_MAXIMUM_, 1e-3) +
+				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
+				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
+				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) + 	//fine area
+				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80);	//fine area
+	*/
+	// v5.x
+	ColoredRange energy_Y_range = ColoredInterval (0, 0.1, 1e-3) + ColoredInterval (0.1, 1, 2e-3) + ColoredInterval (0, EN_MAXIMUM_, 2.5e-3) +
+			ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/2) +	//coarse area
+			ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/2) +	//coarse area
+			ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/20) + 	//fine area
+			ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/20);	//fine area
 	for (long int Ey_i=0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i!=Ey_ind_end_;++Ey_i) {
 		double Ey = energy_Y_range.Value(Ey_i);
+		/* v1.x-v4.x
 		ColoredRange energy_range = ColoredInterval (0, 0.1, 2e-4) + ColoredInterval (0.1, 1, 8e-4) +
 					ColoredInterval (1, 10, 1e-2) + ColoredInterval (10, EN_MAXIMUM_, 0.02) +
 					ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
@@ -531,6 +566,16 @@ void ArDataTables::generate_integral_table(void) //uses tabulated total cross se
 		//^dE defined by characteristics of cross section
 		//dE defiend by sqrt(E/E-Ey) - finer dE when E is closer to Ey
 		energy_range = energy_range + ColoredInterval(Ey, 1.1*Ey, Ey/500.0) + ColoredInterval(1.1*Ey, 10*Ey, Ey/100.0) + ColoredInterval(10*Ey, 50*Ey, Ey/10.0);
+		*/
+		// v5.x
+		ColoredRange energy_range = ColoredInterval (0, 0.1, 1e-3) + ColoredInterval (0.1, 1, 2e-3) +
+					ColoredInterval (1, 10, 2e-2) + ColoredInterval (10, EN_MAXIMUM_, 0.02) +
+					ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/2) +	//coarse area
+					ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/2) +	//coarse area
+					ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/20) + 	//fine area
+					ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/20) +	//fine area
+					ColoredInterval (11.5, EN_MAXIMUM_, 0.003);
+		energy_range = energy_range + ColoredInterval(Ey, 1.1*Ey, Ey/500.0) + ColoredInterval(1.1*Ey, 10*Ey, Ey/10.0) + ColoredInterval(10*Ey, 50*Ey, Ey/1.0);
 		energy_range.Trim(Ey, EN_MAXIMUM_);
 		long double Int = 0;
 		double E = Ey, E_prev = Ey;
@@ -552,15 +597,47 @@ void ArDataTables::generate_integral_table(void) //uses tabulated total cross se
 	}
 }
 
+void ArDataTables::generate_theta_table(void) //uses tabulated total cross section
+{
+	std::cout<<"Generating theta probability function tables..."<<std::endl;
+	ColoredRange energy_Y_range = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0, EN_MAXIMUM_, 1e-3) +
+				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
+				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
+				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) + 	//fine area
+				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80);	//fine area
+	std::vector<double> diff_XS, F, thetas;
+	diff_XS.resize(ANGLE_POINTS_, 0);
+	thetas.resize(ANGLE_POINTS_, 0);
+	F.resize(ANGLE_POINTS_, 0);
+	for (long int Ey_i=0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i!=Ey_ind_end_; ++Ey_i) {
+		double Ey = energy_Y_range.Value(Ey_i);
+		long double (ArAllData::*diff_cross)(long double, long double, int) = 0;
+		diff_cross = &ArAllData::argon_cross_elastic_diff;
+		if (0 == diff_cross) {
+			std::cout<<"Error: no differential cross section function"<<std::endl;
+			break;
+		}
+		for (std::size_t i=0, i_end_=diff_XS.size(); i!=i_end_; ++i) {
+			thetas[i] = i*M_PI/(double)(i_end_-1);
+			F[i]=0;
+			diff_XS[i]=(ArAllData_.*diff_cross)(Ey, thetas[i], 0);
+			if (i!=0) {
+				F[i] = F[i-1] + 0.5*(diff_XS[i]+diff_XS[i-1])*(thetas[i]-thetas[i-1]);//Integral
+			}
+		}
+		for (std::size_t i=0, i_end_=diff_XS.size(); i!=i_end_; ++i)
+			F[i] /= F[i_end_-1];//normalize probability function
+		for (std::size_t th_i=0, th_i_end_=thetas.size(); th_i!=th_i_end_;++th_i)
+			theta_table_->push(thetas[th_i], Ey, F[th_i]);
+	}
+}
+
 long double ArDataTables::TotalCrossSection (double E)
 {
 	long double XS_total = 0;
-	//inefficient way: spending time at searching certain inelastic process, when they are all summed in th end:
-	//for (int i = Event::Elastic, end_ =  Event::Elastic + 2 + ArAllData_.ArExper_.max_process_ID; i!=end_; ++i)
-	//	XS_total+=CrossSection(E, i);
 	XS_total = XS_elastic(E) + XS_resonance_3o2(E) + XS_resonance_1o2(E);
-	for (int i = 0, end_ = ArAllData_.ArExper_.excitations.size(); i != end_; ++i) {
-		XS_total += ArAllData_.ArExper_.excitations[i](E);
+	for (int i = 0, end_ = ArAllData_.ArExper_.ionizations.size(); i != end_; ++i) {
+		XS_total += ArAllData_.ArExper_.ionizations[i](E);
 	}
 	for (int i = 0, end_ = ArAllData_.ArExper_.excitations.size(); i != end_; ++i) {
 		XS_total += ArAllData_.ArExper_.excitations[i](E);
@@ -590,11 +667,6 @@ long double ArDataTables::CrossSection (double E, short type)
 
 long double ArDataTables::XS_elastic(double E)
 {
-	//if (E<EN_MINIMUM) //to avoid troubles. See Kurokawa for the choice of value.
-	//	E = EN_MINIMUM;
-	if (E<XS_EL_EN_MINIMUM_) {
-		return 7.491 + E*(total_cross_elastic_(XS_EL_EN_MINIMUM_, XS_EL_EN_MINIMUM_) - 7.491)/XS_EL_EN_MINIMUM_; //linear behavior
-	}
 	return total_cross_elastic_(E, E);
 }
 
@@ -618,19 +690,23 @@ long double ArDataTables::XS_resonance_1o2(double E)
 	return total_cross_resonance_1o2_(E, E);
 }
 
-double ArDataTables::generate_Theta (double E, short type, double Rand) //TODO: tabulate
+double ArDataTables::generate_Theta (double E, short type, double Rand) //DONE: tabulate
 {
-	if (Rand<0.4)
+	return Rand*M_PI; //TODO: remove
+	/*if (Rand<0.4)
 		return M_PI;
-	return 0;
+	return 0;*/
 	if (type>=Event::Ionization) {//Considered uniform.
 		return Rand*M_PI;
+	}
+	if ((Event::Elastic == type)||(Event::Resonance_3o2 == type)||(Event::Resonance_1o2 == type)) {
+		return theta_table_->find_E(E, Rand);
 	}
 	std::vector<double> diff_XS, F, thetas;
 	diff_XS.resize(ANGLE_POINTS_, 0);
 	thetas.resize(ANGLE_POINTS_, 0);
 	F.resize(ANGLE_POINTS_, 0);
-	long double (ArAllData::*diff_cross)(long double, long double) = 0;
+	long double (ArAllData::*diff_cross)(long double, long double, int) = 0;
 	if (Event::Elastic == type) {
 		diff_cross = &ArAllData::argon_cross_elastic_diff;
 	}
@@ -644,7 +720,7 @@ double ArDataTables::generate_Theta (double E, short type, double Rand) //TODO: 
 		return Rand*M_PI;
 	for (std::size_t i=0, i_end_=diff_XS.size(); i!=i_end_; ++i) {
 		thetas[i] = i*M_PI/(double)(i_end_-1);
-		diff_XS[i]=(ArAllData_.*diff_cross)(E, thetas[i]);
+		diff_XS[i]=(ArAllData_.*diff_cross)(E, thetas[i], 0);
 		if (i!=0) {
 			F[i] = F[i-1] + 0.5*(diff_XS[i]+diff_XS[i-1])*(thetas[i]-thetas[i-1]);//Integral
 		}
@@ -724,32 +800,54 @@ void ArAllData::argon_phase_values_MERT5(long double k, unsigned int l, long dou
 	cos = (tan>0?1.0:-1.0)*sqrt(1/(1+tan*tan));
 }
 
+//mode = 0 or unexpected - standard formula used in simulation, called by default.
+//mode = 1 - calculate MERT5 phases (normally only between EN_MINIMUM_ and THRESH_E_PHASES_)
+//mode = 2 - calculate using extrapolation of experimental phase shifts (normally used only between THRESH_E_PHASES_ and EN_MAXIMUM_)
 //E in eV
-long double ArAllData::argon_cross_elastic_diff (long double E, long double theta) {
+long double ArAllData::argon_cross_elastic_diff (long double E, long double theta, int mode) {
 	//different formulas are used for E<0.24eV and E>0.24eV!
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
-	// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
-	LegendrePolynom P1, P2;
+	void (ArAllData::*phase_values)(long double , unsigned int , long double &, long double &, long double &) = 0;
+	unsigned int L_MAX = 0;
+	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	switch (mode) {
+	case 1: {
+		L_MAX = L_MAX_;
+		phase_values=&ArAllData::argon_phase_values_MERT5;
+		break;
+	}
+	case 2: {
+		L_MAX = ArExper_.max_L(k);
+		phase_values=&ArAllData::argon_phase_values_exp;
+		break;
+	}
+	default: {
+		if (PHASES_EN_MINIMUM_>E)
+			E = PHASES_EN_MINIMUM_;
+		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
+		if (E<THRESH_E_PHASES_) {
+			L_MAX = L_MAX_;
+			phase_values=&ArAllData::argon_phase_values_MERT5;
+		} else {
+			L_MAX = ArExper_.max_L(k);
+			phase_values=&ArAllData::argon_phase_values_exp;
+		}
+		break;
+	}
+	}
 	long double cross = 0;
+	LegendrePolynom P1, P2;
 	long double cos_th = cos(theta);
-	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper_.max_L(k);
 	for (unsigned int l=0; l<=L_MAX; ++l) {
 		long double sin_phase_l = 0;
 		long double cos_phase_l = 1;
 		long double tan_l = 0;
-		if (E<THRESH_E_PHASES_)
-			argon_phase_values_MERT5(k, l, tan_l, sin_phase_l, cos_phase_l);
-		else
-			argon_phase_values_exp(k, l, tan_l, sin_phase_l, cos_phase_l);
+		((*this).*phase_values)(k, l, tan_l, sin_phase_l, cos_phase_l);
 		for (unsigned int f=l; f<=L_MAX; ++f) {
 			long double sin_phase_f = sin_phase_l;
 			long double cos_phase_f = cos_phase_l;
 			long double tan_f = tan_l;
 			if (l!=f) {
-				if (E<THRESH_E_PHASES_)
-					argon_phase_values_MERT5(k, f, tan_f, sin_phase_f, cos_phase_f);
-				else
-					argon_phase_values_exp(k, f, tan_f, sin_phase_f, cos_phase_f);
+				((*this).*phase_values)(k, f, tan_f, sin_phase_f, cos_phase_f);
 			}
 			long double cos_l_f = cos_phase_l*cos_phase_f + sin_phase_l*sin_phase_f;
 			cross+=((l==f)?1.0:2.0)*(2*l+1)*(2*f+1)*sin_phase_l*sin_phase_f*cos_l_f*P1(cos_th, l)*P2(cos_th, f);
@@ -758,15 +856,22 @@ long double ArAllData::argon_cross_elastic_diff (long double E, long double thet
 		}
 	}
 	cross*=2*M_PI/pow(k,2);
-	return cross*a_bohr_SIconst*a_bohr_SIconst; //const is multiplied bt 1e10
+	return cross*a_bohr_SIconst*a_bohr_SIconst; //const is multiplied by 1e10
 }
 
-long double ArAllData::argon_cross_elastic (long double E)
+//mode = 0 or unexpected - standard formula used in simulation, called by default. Using smoothing between MERT5 and experimental XS
+//mode = 1 - calculate using MERT5 phases (normally only between EN_MINIMUM_ and THRESH_E_XS_)
+//mode = 2 - calculate using extrapolation of experimental total XS (normally used only between THRESH_E_XS_ and EN_MAXIMUM_)
+//mode = 3 - calculate using experimental phases (for testing only)
+//mode = 4 - same as 0, but no smoothing
+//below XS_EL_EN_MINIMUM_ linear extrapolation to XS(0)=7.491 (1e-20 m^2) (in default mode)
+long double ArAllData::argon_cross_elastic (long double E, int mode) //Tabulation of this function must be done carefully. Do not forget near 0 case.
 {
-	if (E <THRESH_E_XS_) {
+	long double cross = 0;
+	switch (mode) {
+	case 1:{
 		long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
 		// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
-		long double cross = 0;
 		unsigned int L_MAX = L_MAX_;
 		for (unsigned int l=0; l<=L_MAX; ++l) {
 			long double sin_phase_l = 0;
@@ -776,32 +881,63 @@ long double ArAllData::argon_cross_elastic (long double E)
 			cross+=(2*l+1)*sin_phase_l*sin_phase_l;
 		}
 		cross*=4*M_PI/pow(k,2);
-		return cross*a_bohr_SIconst*a_bohr_SIconst;
-	} else {
-		return ArExper_.total_elastic_cross(a_h_bar_2e_m_e_SIconst*sqrt(E), a_h_bar_2e_m_e_SIconst*sqrt(E));
+		cross*=a_bohr_SIconst*a_bohr_SIconst;
+		break;
 	}
-	return 0;
-}
-
-//for testing only
-long double ArAllData::argon_cross_elastic_from_phases (long double E)
-{
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
-	// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
-	long double cross = 0;
-	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper_.max_L(k);
-	for (unsigned int l=0; l<=L_MAX; ++l) {
-		long double sin_phase_l = 0;
-		long double cos_phase_l = 1;
-		long double tan_l = 0;
-		if (E<THRESH_E_PHASES_)
-			argon_phase_values_MERT5(k, l, tan_l, sin_phase_l, cos_phase_l);
-		else
+	case 2: {
+		cross = ArExper_.total_elastic_cross(a_h_bar_2e_m_e_SIconst*sqrt(E), a_h_bar_2e_m_e_SIconst*sqrt(E));
+		break;
+	}
+	case 3:{
+		long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+		unsigned int L_MAX = ArExper_.max_L(k);;
+		for (unsigned int l=0; l<=L_MAX; ++l) {
+			long double sin_phase_l = 0;
+			long double cos_phase_l = 1;
+			long double tan_l = 0;
 			argon_phase_values_exp(k, l, tan_l, sin_phase_l, cos_phase_l);
-		cross+=(2*l+1)*sin_phase_l*sin_phase_l;
+			cross+=(2*l+1)*sin_phase_l*sin_phase_l;
+		}
+		cross*=4*M_PI/pow(k,2);
+		cross*=a_bohr_SIconst*a_bohr_SIconst;
+		break;
 	}
-	cross*=4*M_PI/pow(k,2);
-	return cross*a_bohr_SIconst*a_bohr_SIconst;
+	case 4: {
+		if (E<XS_EL_EN_MINIMUM_) {
+			cross = 7.491 + E*(argon_cross_elastic(XS_EL_EN_MINIMUM_, 1) - 7.491)/XS_EL_EN_MINIMUM_; //linear behavior. MERT5 is used at XS_EL_EN_MINIMUM_
+		} else {
+			if (E <THRESH_E_XS_) {
+				cross  = argon_cross_elastic(E, 1); //MERT5
+			} else {
+				cross  = argon_cross_elastic(E, 2); //Experiment
+			}
+		}
+		break;
+	}
+	default: {
+#ifndef D_EN_SMOOTH_
+		cross = argon_cross_elastic(E, 4);
+#else
+		if (E<XS_EL_EN_MINIMUM_) {
+			cross = 7.491 + E*(argon_cross_elastic(XS_EL_EN_MINIMUM_, 1) - 7.491)/XS_EL_EN_MINIMUM_; //linear behavior. MERT5 is used at XS_EL_EN_MINIMUM_
+		} else {
+			double E_l = THRESH_E_XS_ - D_EN_SMOOTH_;
+			double E_r = THRESH_E_XS_ + D_EN_SMOOTH_;
+			if (E <E_l) {
+				cross  = argon_cross_elastic(E, 1);//MERT5
+				break;
+			}
+			if (E >E_r){
+				cross  = argon_cross_elastic(E, 2);//Experiment
+				break;
+			}
+			cross = ((E_r - E)*argon_cross_elastic(E, 1) + (E-E_l)*argon_cross_elastic(E, 2))/(E_r-E_l); //linear smoothing between MERT5 and experiment
+		}
+#endif
+		break;
+	}
+	}
+	return cross;
 }
 
 long double ArAllData::argon_back_scatter_prob (long double E)
@@ -909,14 +1045,14 @@ long double ArAllData::argon_TM_backward (long double E)
 	return W/cross;
 }
 
-long double ArAllData::argon_cross_resonance_3o2_diff (long double E, long double theta)
+long double ArAllData::argon_cross_resonance_3o2_diff (long double E, long double theta, int mode)
 {
-	return argon_cross_elastic_diff(E, theta);
+	return argon_cross_elastic_diff(E, theta, mode);
 }
 
-long double ArAllData::argon_cross_resonance_1o2_diff (long double E, long double theta)
+long double ArAllData::argon_cross_resonance_1o2_diff (long double E, long double theta, int mode)
 {
-	return argon_cross_elastic_diff(E, theta);
+	return argon_cross_elastic_diff(E, theta, mode);
 }
 
 long double ArAllData::argon_cross_resonance_3o2 (long double E)
@@ -972,10 +1108,10 @@ long double ArAllData::argon_TM_forward_resonance_1o2 (long double E)
 
 long double ArAllData::argon_TM_backward_resonance_3o2 (long double E)
 {
-	return argon_TM_backward(E);;
+	return argon_TM_backward(E);
 }
 
 long double ArAllData::argon_TM_backward_resonance_1o2 (long double E)
 {
-	return argon_TM_backward(E);;
+	return argon_TM_backward(E);
 }

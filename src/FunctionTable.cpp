@@ -14,14 +14,9 @@ std::pair<long int, long int> FunctionTable::find_Ey_indexes (double Ey) const
 			out.second = out.first;
 			return out;
 		}
-		if (Ey < _Eys.front()) {
+		if (Ey <= _Eys.front()) {
 			out.first = 0;
 			out.second = 0;
-			return out;
-		}
-		if (Ey==_Eys.front()) {
-			out.first = 0;
-			out.second = _Eys.size()>1 ? 1 : 0;
 			return out;
 		}
 		std::size_t left = 0;
@@ -39,8 +34,13 @@ std::pair<long int, long int> FunctionTable::find_Ey_indexes (double Ey) const
 			}
 		}
 		//Ey_index is such, that Ey>_Eys[Ey_index] and Ey<=_Eys[Ey_index+1]
-		out.first = Ey_index;
-		out.second = Ey_index + 1;
+		if (Ey==_Eys[Ey_index+1]) {
+			out.first = Ey_index + 1;
+			out.second = out.first;
+		} else {
+			out.first = Ey_index;
+			out.second = Ey_index + 1;
+		}
 	}
 	return out;
 }
@@ -56,14 +56,9 @@ std::pair<long int, long int> FunctionTable::find_E_indexes (double E, std::size
 			out.second = out.first;
 			return out;
 		}
-		if (E < _Es[Ey_index].front()) {
+		if (E <= _Es[Ey_index].front()) {
 			out.first = 0;
 			out.second = 0;
-			return out;
-		}
-		if (E==_Es[Ey_index].front()) {
-			out.first = 0;
-			out.second = _Es[Ey_index].size()>1 ? 1 : 0;
 			return out;
 		}
 		std::size_t left = 0;
@@ -81,8 +76,13 @@ std::pair<long int, long int> FunctionTable::find_E_indexes (double E, std::size
 			}
 		}
 		//Ey_index is such, that Ey>_Eys[Ey_index] and Ey<=_Eys[Ey_index+1]
-		out.first = E_index;
-		out.second = E_index + 1;
+		if (E==_Eys[E_index+1]) {
+			out.first = E_index + 1;
+			out.second = out.first;
+		} else {
+			out.first = E_index;
+			out.second = E_index + 1;
+		}
 	}
 	return out;
 }
@@ -214,6 +214,7 @@ double FunctionTable::operator ()(double E, double Ey) const
 double FunctionTable::find_E (double Ey, double val) const
 {
 	std::pair<long int, long int> Ey_indexes = find_Ey_indexes(Ey);
+	double out = 0;
 	if (-1==Ey_indexes.first)
 		return -1;
 	if (Ey_indexes.first==Ey_indexes.second) {
@@ -226,7 +227,11 @@ double FunctionTable::find_E (double Ey, double val) const
 		} else {
 			double y0 = _ys[Ey_indexes.first][E_inds.first], y1 = _ys[Ey_indexes.first][E_inds.second];
 			double E0 = _Es[Ey_indexes.first][E_inds.first], E1 = _Es[Ey_indexes.first][E_inds.second];
-			return E0 + (E1-E0)*(val-y0)/(y1-y0);
+			out = E0 + (E1-E0)*(val-y0)/(y1-y0);
+			if (isnan(out)){
+				out = E0;
+			}
+			return out;
 		}
 	} else {
 		std::pair<long int, long int> E_inds_left = find_E_indexes_by_value(val, Ey_indexes.first);
@@ -239,7 +244,11 @@ double FunctionTable::find_E (double Ey, double val) const
 			} else {
 				double y0 = _ys[Ey_indexes.first][E_inds_left.first], y1 = _ys[Ey_indexes.first][E_inds_left.second];
 				double E0 = _Es[Ey_indexes.first][E_inds_left.first], E1 = _Es[Ey_indexes.first][E_inds_left.second];
-				return E0 + (E1-E0)*(val-y0)/(y1-y0);
+				out = E0 + (E1-E0)*(val-y0)/(y1-y0);
+				if (isnan(out)){
+					out = E0;
+				}
+				return out;
 			}
 		}
 		if (-1==E_inds_left.first) {
@@ -248,13 +257,21 @@ double FunctionTable::find_E (double Ey, double val) const
 			} else {
 				double y0 = _ys[Ey_indexes.second][E_inds_right.first], y1 = _ys[Ey_indexes.second][E_inds_right.second];
 				double E0 = _Es[Ey_indexes.second][E_inds_right.first], E1 = _Es[Ey_indexes.second][E_inds_right.second];
-				return E0 + (E1-E0)*(val-y0)/(y1-y0);
+				out = E0 + (E1-E0)*(val-y0)/(y1-y0);
+				if (isnan(out)) {
+					out = E0;
+				}
+				return out;
 			}
 		}
 		if ((E_inds_left.first==E_inds_left.second)&&(E_inds_right.first==E_inds_right.second)) {
 			double E0 = _Es[Ey_indexes.first][E_inds_left.first], E1 = _Es[Ey_indexes.second][E_inds_right.first];
 			double Ey0 = _Eys[Ey_indexes.first], Ey1 = _Eys[Ey_indexes.second];
-			return E0 + (E1-E0)*(Ey-Ey0)/(Ey1-Ey0);
+			out =  E0 + (E1-E0)*(Ey-Ey0)/(Ey1-Ey0);
+			if (isnan(out)) {
+				out = E0;
+			}
+			return out;
 		}
 		if (E_inds_left.first==E_inds_left.second) {//three point linear interpolation
 			double y0_0 = _ys[Ey_indexes.first][E_inds_left.first], y1_0 = _ys[Ey_indexes.second][E_inds_right.first], y1_1 = _ys[Ey_indexes.second][E_inds_right.second];
@@ -265,7 +282,11 @@ double FunctionTable::find_E (double Ey, double val) const
 			double E1 = E0_0 + (Ey-Ey0)*(E1_1-E0_0)/(Ey1-Ey0);
 			double y0 = y0_0 + (Ey-Ey0)*(y1_0-y0_0)/(Ey1-Ey0);
 			double y1 = y0_0 + (Ey-Ey0)*(y1_1-y0_0)/(Ey1-Ey0);
-			return E0 + (E1-E0)*(val-y0)/(y1-y0);
+			out = E0 + (E1-E0)*(val-y0)/(y1-y0);
+			if (isnan(out)) {
+				out = E0;
+			}
+			return out;
 		}
 		if (E_inds_right.first==E_inds_right.second) {//three point linear interpolation
 			double y0_0 = _ys[Ey_indexes.first][E_inds_left.first], y1_0 = _ys[Ey_indexes.second][E_inds_right.first], y0_1 = _ys[Ey_indexes.first][E_inds_left.second];
@@ -276,7 +297,11 @@ double FunctionTable::find_E (double Ey, double val) const
 			double E1 = E0_1 + (Ey-Ey0)*(E1_0-E0_1)/(Ey1-Ey0);
 			double y0 = y0_0 + (Ey-Ey0)*(y1_0-y0_0)/(Ey1-Ey0);
 			double y1 = y0_1 + (Ey-Ey0)*(y1_0-y0_1)/(Ey1-Ey0);
-			return E0 + (E1-E0)*(val-y0)/(y1-y0);
+			out = E0 + (E1-E0)*(val-y0)/(y1-y0);
+			if (isnan(out)) {
+				out = E0;
+			}
+			return out;
 		}
 		//4 point linear interpolation
 		double y0_0 = _ys[Ey_indexes.first][E_inds_left.first], y0_1 = _ys[Ey_indexes.first][E_inds_left.second],
@@ -289,7 +314,11 @@ double FunctionTable::find_E (double Ey, double val) const
 		double E1 = E0_1 + (Ey-Ey0)*(E1_1-E0_1)/(Ey1-Ey0);
 		double y0 = y0_0 + (Ey-Ey0)*(y1_0-y0_0)/(Ey1-Ey0);
 		double y1 = y0_1 + (Ey-Ey0)*(y1_1-y0_1)/(Ey1-Ey0);
-		return E0 + (E1-E0)*(val-y0)/(y1-y0);
+		out = E0 + (E1-E0)*(val-y0)/(y1-y0);
+		if (isnan(out)) {
+			out = E0;
+		}
+		return out;
 	}
 }
 
@@ -471,3 +500,16 @@ bool FunctionTable::is_empty(void) const
 {
 	return _Eys.empty();
 }
+
+void FunctionTable::plot_E_Ey (void)
+{
+	TCanvas *c1 = new TCanvas("E_Ey", "E_Ey", 900, 700);
+	TH2D * hist = new TH2D ("E_Ey points", "E_Ey points", 5000, 0, 5, 5000, 0, 5);
+	for (std::size_t ey = 0, ey_end_ = _Eys.size(); ey!=ey_end_; ++ey) {
+		for (std::size_t e = 0, e_end_ = _Es[ey].size(); e!=e_end_; ++e) {
+			hist->Fill(_Es[ey][e], _Eys[ey]);
+		}
+	}
+	hist->Draw();
+}
+

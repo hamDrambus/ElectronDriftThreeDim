@@ -15,10 +15,19 @@ class Manager
 {
 protected:
 	TRandom * random_generator_;
+	unsigned int start_seed_;
 	TTree * sim_data_;
+	TTree * processes_data_;
+	Long64_t *processes_counters_;
+	Short_t *processes_IDs_;
+	char **processes_legends_;
+	UInt_t processes_size_;
 	Event event_;
 	ArDataTables *ArTables_;
 	int skip_counter_;
+	bool skipping_early_events;
+	Long64_t num_of_events;
+	Long64_t num_of_10millions;
 	//Event current_event;
 
 	void DoStepLength (Event &event);
@@ -45,6 +54,7 @@ public:
 	void SetParameters(double Concetr /*in SI*/, double E /*in SI*/);
 	void SetParameters(double T /*in K*/, double Pressure /*in SI*/, double E /*in SI*/);
 	Manager(ArDataTables *Ar_tables, UInt_t RandomSeed = 42);
+	~Manager();
 	void LoopSimulation(void);
 	void WriteHistory(std::string root_fname);
 	void Test(void);

@@ -10,10 +10,10 @@ void MTManager::ProcessAll(void)
 	for (unsigned int i = 0; i<N_electrons_; ++i) {
 		this->LoopSimulation();
 		if (0 == (i + 1) % incr)
-			std::cout <<"Thread "<<instance_<<": "<< i + 1 << "/" << N_electrons_ << std::endl;
+			std::cout <<"Thread "<<instance_<<": "<< i + 1 << "/" << N_electrons_ <<" Seed "<<start_seed_<<std::endl;
 	}
 	if (0 != N_electrons_%incr) {
-		std::cout << "Thread " << instance_ << ": " << N_electrons_ << "/" << N_electrons_ << std::endl;
+		std::cout << "Thread " << instance_ << ": " << N_electrons_ << "/" << N_electrons_<<" Seed "<<start_seed_ << std::endl;
 	}
 }
 
@@ -32,4 +32,8 @@ void MTManager::Merge(MTManager *with)
 	list->Add(with->sim_data_);
 	sim_data_->Merge(list);
 	with->sim_data_->Reset();
+	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
+		processes_counters_[i]+=with->processes_counters_[i];
+		with->processes_counters_[i] = 0;
+	}
 }

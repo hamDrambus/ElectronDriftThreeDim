@@ -1,29 +1,85 @@
 #include "Manager.h"
 
 Manager::Manager(ArDataTables *Ar_tables, UInt_t RandomSeed) : is_ready_(false), eField_(0), Concentration_(0), Coefficient_(0),
-	skip_counter_(0), ArTables_(Ar_tables)
+	skip_counter_(0), ArTables_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0)
 {
 	random_generator_ = new TRandom1(RandomSeed); //TRandom3 is a default. TRandom1 is slower but better
+	start_seed_ = RandomSeed;
+	processes_size_ = ArTables_->ArAllData_.ArExper_.max_process_ID + 5; //5 = elastic + 2resonances + None + Overthrow
+	processes_counters_ = new Long64_t [processes_size_];
+	processes_IDs_ = new Short_t [processes_size_];
+	processes_legends_ = new char * [processes_size_];
+	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
+		processes_IDs_[i] = i-2;
+		processes_counters_[i] = 0;
+		switch (processes_IDs_[i]) {
+		case (Event::Overflow): {
+			processes_legends_[i] = c_str_cp(std::string("\"Overflow (energy exceeds ")+std::to_string(EN_MAXIMUM_) + " eV)\"");
+			break;
+		}
+		case (Event::None): {
+			processes_legends_[i] = c_str_cp(std::string("\"None\""));
+			break;
+		}
+		case (Event::Elastic): {
+			processes_legends_[i] = c_str_cp(std::string("\"Elastic scattering\""));
+			break;
+		}
+		case (Event::Resonance_3o2): {
+			processes_legends_[i] = c_str_cp(std::string("\"Feshbach resonance 3/2\""));
+			break;
+		}
+		case (Event::Resonance_1o2): {
+			processes_legends_[i] = c_str_cp(std::string("\"Feshbach resonance 1/2\""));
+			break;
+		}
+		default: {
+			InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(processes_IDs_[i]-Event::Ionization);
+			if (NULL!=p) {
+				processes_legends_[i] = c_str_cp(p->get_name());
+			} else {
+				processes_legends_[i] = c_str_cp(std::string("\"?Unknown?\""));
+			}
+		}
+		}
+	}
 	InitTree();
+}
+
+Manager::~Manager()
+{
+	delete [] processes_counters_;
+	delete [] processes_IDs_;
+	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
+		delete [] processes_legends_[i];
+	}
+	delete [] processes_legends_;
+	random_generator_->Delete();
+	if (sim_data_)
+		sim_data_->Delete();
+	if (processes_data_)
+		processes_data_->Delete();
 }
 
 void Manager::InitTree (void)
 {
 	sim_data_ = new TTree("ElectronHistory", "ElectronHistory");
-	sim_data_->Branch("energy_initial", &event_.En_start);
-	sim_data_->Branch("energy_coll", &event_.En_collision);
-	sim_data_->Branch("energy_final", &event_.En_finish);
-	sim_data_->Branch("energy_average", &event_.En_avr);
+	sim_data_->Branch("process_type", &event_.process);
 
 	sim_data_->Branch("time_initial", &event_.time_start);
 	sim_data_->Branch("time_delta", &event_.delta_time);
-	sim_data_->Branch("time_delta_full", &event_.delta_time_full);
-	sim_data_->Branch("process_type", &event_.process);
+	//sim_data_->Branch("time_delta_full", &event_.delta_time_full);
 
-	sim_data_->Branch("position_initial",&event_.pos_start);
-	sim_data_->Branch("position_final",&event_.pos_finish);
-	sim_data_->Branch("position_delta",&event_.delta_x);
-
+	if (0==SKIP_HISTORY_) { //for spectra
+		sim_data_->Branch("energy_initial", &event_.En_start);
+		sim_data_->Branch("energy_coll", &event_.En_collision);
+		sim_data_->Branch("energy_final", &event_.En_finish);
+		//sim_data_->Branch("energy_average", &event_.En_avr);
+	} else { //for V drift
+		sim_data_->Branch("position_final",&event_.pos_finish);
+		//sim_data_->Branch("position_initial",&event_.pos_start);
+		//sim_data_->Branch("position_delta",&event_.delta_x);
+	}
 	sim_data_->Branch("theta_initial", &event_.theta_start);
 	sim_data_->Branch("theta_coll", &event_.theta_collision);
 	sim_data_->Branch("theta_final", &event_.theta_finish);
@@ -35,6 +91,11 @@ void Manager::InitTree (void)
 	sim_data_->Branch("deb_solver_y_right",&event_.deb_solver_y_right);
 	sim_data_->Branch("deb_solver_E_left",&event_.deb_solver_E_left);
 	sim_data_->Branch("deb_solver_E_right",&event_.deb_solver_E_right);*/
+	processes_data_ = new TTree("ElectronProcessCounters", "ElectronProcessCounters");
+	processes_data_->Branch("proc_size", &processes_size_, "proc_size/i");
+	processes_data_->Branch("proc_IDs", processes_IDs_, "proc_IDs[proc_size]/S");
+	processes_data_->Branch("proc_Ns", processes_counters_, "proc_Ns[proc_size]/L");
+	processes_data_->Branch("proc_names", processes_legends_, "proc_names[proc_size]/C");
 }
 
 void Manager::Clear(void)
@@ -42,6 +103,13 @@ void Manager::Clear(void)
 	is_ready_ = false;
 	sim_data_->Delete();
 	skip_counter_ = 0;
+	skipping_early_events = true;
+	num_of_events = 0;
+	num_of_10millions = 0;
+	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
+		processes_IDs_[i] = i-2;
+		processes_counters_[i] = 0;
+	}
 	InitTree();
 }
 
@@ -132,8 +200,13 @@ void Manager::Initialize(Event &event)
 	if (!is_ready_)
 		return;
 	skip_counter_=0;
-	event.CrossSections.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + 2, 0); //2==Elastic + Resonance
-	event.CrossSectionsSum.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + 2, 0);
+	skipping_early_events = true;
+	num_of_events = 0;
+	num_of_10millions = 0;
+	//processes_counters; //preserve
+	start_seed_ = random_generator_->GetSeed();
+	event.CrossSections.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + 3, 0); //3==Elastic + Resonances
+	event.CrossSectionsSum.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + 3, 0);
 	event.En_start = 1 + 3*random_generator_->Uniform();
 	//event.En_start = 3;
 	event.En_collision = 0;
@@ -243,6 +316,8 @@ void Manager::Solve_table (long double LnR, Event &event)
 		INT = INT + LnR;
 	}
 	event.En_collision = ArTables_->integral_table_->find_E(Eny, INT); //TODO: add debug info - uncertainty and overflow - status output variable
+	if (isnan(event.En_collision))
+		event.En_collision = -1;
 	if (event.En_collision<0) {
 		std::cout<<"Manager::Solve_table::Error: found E<0 in table. Eny= "<<Eny<<" Ei= "<<event.En_start<<" Int= "<<INT<<std::endl;
 		event.En_collision = std::min(0.01*event.En_start, 0.001) + event.En_start;
@@ -383,7 +458,7 @@ void Manager::DoScattering(Event &event)
 
 	double R2 = random_generator_->Uniform();
 	event.delta_theta = ArTables_->generate_Theta (event.En_collision, event.process, R2);
-	event.theta_finish = event.delta_theta + event.theta_start;
+	event.theta_finish = event.delta_theta + event.theta_collision;
 	if (event.theta_finish>M_PI)
 		event.theta_finish = 2*M_PI - event.theta_finish;
 	long double gamma_f = e_mass_eVconst/Ar_mass_eVconst;
@@ -431,13 +506,36 @@ void Manager::PostStepAction(Event &event)
 {
 	if (!is_ready_)
 		return;
-	if ((0==skip_counter_)||(IsFinished(event))||(event.process>Event::Elastic)) {
-		sim_data_->Fill();
+	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
+		if (processes_IDs_[i] == event.process) {
+			++processes_counters_[i];
+			break;
+		}
+	}
+	if (event.pos_start>=DRIFT_DISTANCE_HISTORY) {
+		skipping_early_events = false;
 		skip_counter_=0;
 	}
-	++skip_counter_;
 	if (skip_counter_>SKIP_HISTORY_)
 		skip_counter_=0;
+	if ((0==num_of_events)||IsFinished(event)) {
+		sim_data_->Fill();
+		++skip_counter_;
+		++num_of_events;
+		return;
+	}
+	if ((num_of_10millions+1)<=(num_of_events/10000000)) {
+		std::cout<<"Processed "<<(num_of_10millions+1)<<"e7 collisions. Position: "<<event.pos_finish<<std::endl;
+		++num_of_10millions;
+	}
+	if (!skipping_early_events) {
+		if ((0==skip_counter_)||(event.process>Event::Elastic)) {
+			sim_data_->Fill();
+			skip_counter_=0;
+		}
+		++skip_counter_;
+	}
+	++num_of_events;
 }
 
 void Manager::DoGotoNext(Event &event)
@@ -490,26 +588,9 @@ void Manager::WriteHistory(std::string root_fname)
 	file->cd();
 	std::cout<<"Event number: "<<sim_data_->GetEntries()<<std::endl;
 	sim_data_->Write("", TObject::kOverwrite);
+	processes_data_->Fill();
+	processes_data_->Write("", TObject::kOverwrite);
 	file->Close();
-	std::ofstream str;
-	root_fname.pop_back();
-	root_fname.pop_back();
-	root_fname.pop_back();
-	root_fname.pop_back();
-	root_fname.pop_back();
-	str.open(root_fname+"process_legend.txt", std::ios_base::trunc);
-	str<<"//tree->process value | meaning"<<std::endl;
-	str<<Event::Overflow<<"\t\"Overflow (energy exceeds "<<EN_MAXIMUM_<<" eV)\""<<std::endl;
-	str<<Event::None<<"\t\"None\""<<std::endl;
-	str<<Event::Elastic<<"\t\"Elastic scattering\""<<std::endl;
-	str<<Event::Resonance_3o2<<"\t\"Feshbach resonance 3/2\""<<std::endl;
-	str<<Event::Resonance_1o2<<"\t\"Feshbach resonance 1/2\""<<std::endl;
-	for (int proc = Event::Ionization, end_ = ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization; proc!=end_; ++proc) {
-		InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(proc-Event::Ionization);
-		if (NULL!=p)
-			str<<proc<<"\t"<<p->get_name()<<std::endl;
-	}
-	str.close();
 }
 
 void Manager::Test(void)

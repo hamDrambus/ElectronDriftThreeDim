@@ -34,8 +34,9 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 	std::vector<TCondition*> conditions;
 	std::vector<ArDataTables*> ar_data;
 
-	FunctionTable *table = new FunctionTable;
-	ArDataTables ArDataTables_ (table);
+	FunctionTable *table = new FunctionTable; //shared between processes - read only
+	FunctionTable *table_thetas = new FunctionTable; //shared between processes - read only
+	ArDataTables ArDataTables_ (table, table_thetas);
 	if (N_threads > num_of_electrons)
 		N_threads = num_of_electrons;
 	int N_acc = 0;
@@ -56,8 +57,8 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 		pThreads.push_back(new TThread(("MTManager_" + std::to_string(n)).c_str(),
 			&process_runs_in_thread, _submanagers[n]));
 	}
-	MTManager test_man(&ArDataTables_, -1, 1, seed);
-	//test_all(ar_data[1]);
+	//MTManager test_man(&ArDataTables_, -1, 1, seed);
+	//test_all(&ArDataTables_);
 	//test_man.Test();
 	
 	for (int n = 0; n < N_threads; ++n) {
@@ -76,7 +77,8 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 			_submanagers[0]->Merge(_submanagers[n]);
 	}
 	//Merged() into _submanagers[0];
-	_submanagers[0]->WriteHistory(root_fname);
+	if (N_threads>0)
+		_submanagers[0]->WriteHistory(root_fname);
 	
 	for (int n = 0; n < N_threads; ++n) {
 		pThreads[n]->Delete();
@@ -90,14 +92,14 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 }
 
 int main(int argn, char * argv[]) {
-	//int n_par = 0;
-	//char **f = NULL;
+	int n_par = 0;
+	char **f = NULL;
 	//TApplication app("test_app",&n_par,f);
 	std::string a;
-	std::string root_fname = "Output/eData_3Td.root";
+	std::string root_fname = "Output/eData_7.0Td.root";
 	double Td = 7; //=E/N in 1e-21 in Si
-	unsigned int seed = 42;
-	unsigned int num_of_electrons = 1;
+	unsigned int seed = 44;
+	unsigned int num_of_electrons = 0;
 	double pressure = 1.015e5;
 	double temperature = 87;
 	if (argn!=1) {

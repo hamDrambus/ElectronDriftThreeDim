@@ -53,3 +53,14 @@ void ensure_folder(std::string folder)
 	}
 #endif //_WIN32__
 }
+
+char* c_str_cp (const std::string &str)
+{
+	std::size_t i_end_= str.size();
+	char* ret = new char [i_end_+1];
+	for (std::size_t i=0; i!=i_end_; ++i) {
+		ret[i] = str[i];
+	}
+	ret[i_end_] = NULL;
+	return ret;
+}

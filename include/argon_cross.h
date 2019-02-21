@@ -80,15 +80,14 @@ public:
 	void argon_phase_values_exp(long double k, unsigned int l, long double &tan, long double &sin, long double &cos);
 	void argon_phase_values_MERT5(long double k, unsigned int l, long double &tan, long double &sin, long double &cos);
 	//E in eV, theta in radians, output is in m
-	long double argon_cross_elastic_diff(long double E, long double theta);
-	long double argon_cross_elastic(long double E);
-	long double argon_cross_elastic_from_phases(long double E);
+	long double argon_cross_elastic_diff(long double E, long double theta, int mode = 0);
+	long double argon_cross_elastic(long double E, int mode = 0);
 	long double argon_back_scatter_prob(long double E);
 	long double argon_TM_forward(long double E);
 	long double argon_TM_backward(long double E);
 
-	long double argon_cross_resonance_3o2_diff(long double E, long double theta);
-	long double argon_cross_resonance_1o2_diff(long double E, long double theta);
+	long double argon_cross_resonance_3o2_diff(long double E, long double theta, int mode = 0);
+	long double argon_cross_resonance_1o2_diff(long double E, long double theta, int mode = 0);
 	long double argon_cross_resonance_3o2(long double E);
 	long double argon_cross_resonance_1o2(long double E);
 	long double argon_back_resonance_3o2_prob(long double E);
@@ -108,22 +107,25 @@ protected:
 	std::string total_cross_resonance_3o2_fname;
 	std::string total_cross_resonance_1o2_fname;
 	std::string integral_table_fname;
+	std::string theta_table_fname;
 
 	DataVector total_cross_elastic_;
 	DataVector total_cross_resonance_3o2_;
 	DataVector total_cross_resonance_1o2_;
 	void read_data (std::ifstream &inp, DataVector &data, long double y_factor = 1);
 	void generate_integral_table(void);
+	void generate_theta_table(void);
 public:
-	FunctionTable *integral_table_; //shared between threads after it is initialized
-	ArDataTables(FunctionTable * table);
+	FunctionTable *integral_table_;	//shared between threads after it is initialized
+	FunctionTable *theta_table_; 	//shared between threads after it is initialized
+	ArDataTables(FunctionTable * int_table, FunctionTable * th_table);
 	long double CrossSection (double E, short type);
 	long double TotalCrossSection (double E);
 	long double XS_elastic(double E);
 	long double XS_resonance_3o2(double E);
 	long double XS_resonance_1o2(double E);
 
-	double generate_Theta (double E, short type, double Rand); //TODO: tabulate
+	double generate_Theta (double E, short type, double Rand); //DONE: tabulate
 
 	void setOrder(int order);
 	void setNused(int N);
