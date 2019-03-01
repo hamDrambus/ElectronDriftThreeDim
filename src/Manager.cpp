@@ -208,7 +208,7 @@ void Manager::Initialize(Event &event)
 	event.CrossSections.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + 3, 0); //3==Elastic + Resonances
 	event.CrossSectionsSum.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + 3, 0);
 	event.En_start = 1 + 3*random_generator_->Uniform();
-	//event.En_start = 3;
+	//event.En_start = 8;
 	event.En_collision = 0;
 	event.En_finish = 0;
 	event.pos_start = 0;
@@ -327,6 +327,7 @@ void Manager::Solve_table (long double LnR, Event &event)
 	} else {
 		event.theta_collision = acos(sqrt((event.En_collision-Eny)/event.En_collision));
 	}
+	INT+=1;
 }
 
 //Solve with high accuracy integral
@@ -458,18 +459,28 @@ void Manager::DoScattering(Event &event)
 
 	double R2 = random_generator_->Uniform();
 	event.delta_theta = ArTables_->generate_Theta (event.En_collision, event.process, R2);
-	event.theta_finish = event.delta_theta + event.theta_collision;
-	if (event.theta_finish>M_PI)
-		event.theta_finish = 2*M_PI - event.theta_finish;
+	double phi = random_generator_->Uniform()*2.0*M_PI;
+	double cos_th_f = std::cos(event.delta_theta)*std::cos(event.theta_collision) + std::sin(event.delta_theta)*std::sin(event.theta_collision)*std::cos(phi);
+	if (cos_th_f<-1.0) //just in case of precision problems
+		cos_th_f = -1.0;
+	if (cos_th_f>1.0)
+		cos_th_f = 1.0;
+	event.theta_finish = std::acos(cos_th_f);// event.theta_collision + (R3<0.5 ? event.delta_theta: -event.delta_theta); - v7.x - 2D implementation
 	long double gamma_f = e_mass_eVconst/Ar_mass_eVconst;
 	double EnergyLoss = 2*(1-cos(event.delta_theta))*event.En_collision*gamma_f /pow(1 + gamma_f, 2);
 	switch (event.process) {
 		case (Event::Resonance_3o2): {
 			EnergyLoss *=RESONANCE_EN_LOSS_FACTOR_;
+#ifdef RESONANCE_EN_LOSS_
+			EnergyLoss = RESONANCE_EN_LOSS_;
+#endif
 			break;
 		}
 		case (Event::Resonance_1o2): {
 			EnergyLoss *=RESONANCE_EN_LOSS_FACTOR_;
+#ifdef RESONANCE_EN_LOSS_
+			EnergyLoss = RESONANCE_EN_LOSS_;
+#endif
 			break;
 		}
 		case (Event::Elastic): {

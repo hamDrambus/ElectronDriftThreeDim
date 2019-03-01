@@ -949,7 +949,7 @@ void test_resonance_cross (ArDataTables *ArTables)
 void test_all (ArDataTables *ArTables)
 {
 	/*
-	std::cout<<"Testing polynimial fit:"<<std::endl;
+	std::cout<<"Testing polynomial fit:"<<std::endl;
 	test_polynomial_fit ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 	*/

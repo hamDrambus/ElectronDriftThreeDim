@@ -1,25 +1,24 @@
 {
-    TH1D* histE = new TH1D ("EnergyC [eV]","EnergyC [eV]",300,0, 5);
-    TH1D* hist_dE = new TH1D ("Energy increase in resonance [eV]","Energy increase in resonance [eV]",300,-2.0, 2.0);
-    TH1D* hist_dE_abs = new TH1D ("Energy abs increase in resonance [eV]","Energy abs increase in resonance [eV]",300,0.0, 2.0);
-    TH1D* hist_Eloss = new TH1D ("Energy loss in resonance [eV]","Energy loss in resonance [eV]",500,0, 0.0007);
+    gStyle->SetStatY(0.9);
+    gStyle->SetStatX(0.9);
+    TH1D* histE = new TH1D ("EnergyC [eV]","EnergyC [eV]",300,0, 15);
+    TH1D* hist_dE = new TH1D ("Energy increase in resonance [eV]","Energy increase in resonance [eV]",300,-0.2, 0.2);
+    TH1D* hist_dE_abs = new TH1D ("Energy abs increase in resonance [eV]","Energy abs increase in resonance [eV]",300,0.0, 0.2);
+    TH1D* hist_Eloss = new TH1D ("Energy loss in resonance [eV]","Energy loss in resonance [eV]",500,0, 0.5);
     TH1D* hist_dT = new TH1D ("dTime [s]","dTime [s]",300,4e-16, 1e-12);
-    TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 1e-5);
+    TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
     TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
     TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",300,0, 1e-5);
-    TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 5);
-    TH1D* hist_theta = new TH1D ("Scatter angle near 1eV","Scatter angle near 1eV",300, 0, 3.1416);
-	TH2D* hist_E_Ey = new TH2D ("E Ey","E Ey",300, 0, 5, 300, 0, 5);
+    TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 15);
+    TH1D* hist_theta = new TH1D ("Scatter angle near 10 eV","Scatter angle near 10 eV",300, 0, 3.1416);
+    //TH1D* hist_Ey = new TH1D ("Ey [eV]", "Ey [eV]",300, 0, 15);
+    //TH2D* hist_E_Ey = new TH2D ("E Ey","E Ey",300, 0, 5, 300, 0, 5);
     
     int DEF_W = 900, DEF_H = 700;
     double E_at_time = 1e-11;
     double dt = 6e-12;
     double DRIFT_DISTANCE = 3e-3;
-    std::string fname1("Output/v05.1/eData_7.0Td.root");
-    TCanvas *c_12 = new TCanvas ("c Ec(t)", "c Ec(t)", DEF_W, DEF_H);
-    TGraph *gr_Ec_t = new TGraph ();
-    TCanvas *c_13 = new TCanvas ("c xf(t)", "c xf(t)", DEF_W, DEF_H);
-    TGraph *gr_x_t = new TGraph ();
+    std::string fname1("Output/v08.8/eData_7.0Td.root");
     double En_start;
     double En_collision;
     double En_finish;
@@ -77,17 +76,16 @@
                 histE->Fill(En_collision);
                 hist_dT->Fill(delta_time);
                 hist_dl->Fill(delta_l);
-                //histEAvr->Fill(En_collision, delta_time);
-                histEAvr->Fill(En_start*std::sin(theta_start)*std::sin(theta_start));
-                hist_E_Ey->Fill(En_start, En_start*std::sin(theta_start)*std::sin(theta_start));
+                histEAvr->Fill(En_collision, delta_time);
+                //histEy->Fill(En_start*std::sin(theta_start)*std::sin(theta_start));
+                //hist_E_Ey->Fill(En_start, En_start*std::sin(theta_start)*std::sin(theta_start));
                 //if ((std::fabs(En_collision)<11.5)&&((std::fabs(En_collision)>10.8))) {
-                //if ((1==process)||(2==process)) {
-		{
+                if ((1==process)||(2==process)) {
                     hist_dE->Fill(std::fabs(En_collision) - std::fabs(En_start));
                     hist_dE_abs->Fill(std::fabs(En_collision - En_start));
                     hist_Eloss->Fill(std::fabs(En_collision)- std::fabs(En_finish));
                 }
-                if ((En_collision<1.05)&&(En_collision>0.95)) {
+                if ((En_collision<10.05)&&(En_collision>9.95)) {
                     hist_theta->Fill(delta_theta);
                 }
                 switch (process) {
@@ -200,7 +198,7 @@
             hist_dl->Draw();
             TCanvas *c_5 = new TCanvas ("e energy average", "e energy average", DEF_W, DEF_H);
             histEAvr->Draw();
-            TCanvas *c_6 = new TCanvas ("Scatter angle at 1eV", "Scatter angle at 1eV", DEF_W, DEF_H);
+            TCanvas *c_6 = new TCanvas ("Scatter angle at 10eV", "Scatter angle at 10eV", DEF_W, DEF_H);
             hist_theta->Draw();
             TCanvas *c_7 = new TCanvas ("e delta E in resonance [eV]", "e delta E in resonance [eV]", DEF_W, DEF_H);
             hist_dE->Draw();
@@ -208,94 +206,21 @@
             hist_Eloss->Draw();
             TCanvas *c_9 = new TCanvas ("e delta E abs in resonance [eV]", "e delta E abs in resonance [eV]", DEF_W, DEF_H);
             hist_dE_abs->Draw();
-            TCanvas *c_14 = new TCanvas ("E Ey [eV]", "E Ey[eV]", DEF_W, DEF_H);
-            hist_E_Ey->Draw();            
+            //TCanvas *c_14 = new TCanvas ("E Ey [eV]", "E Ey[eV]", DEF_W, DEF_H);
+            //hist_E_Ey->Draw();
+            //TCanvas *c_15 = new TCanvas ("Ey [eV]", "Ey[eV]", DEF_W, DEF_H);
+            //hist_Ey->Draw();         
             std::cout<<"Drift distance: "<<DRIFT_DISTANCE<<std::endl;
-            std::cout<<"Num of elastic: "<<num_of_elastic<<std::endl;
-            std::cout<<"Num of resonance: "<<num_of_resonance<<std::endl;
             std::cout<<"Num of overflow: "<<num_of_overflow<<std::endl;
-            std::cout<<"Num of ionizations: "<<num_of_ions<<std::endl;
             std::cout<<"Num of excitations: "<<num_of_excitations<<std::endl;
+            std::cout<<"Num of resonance: "<<num_of_resonance<<std::endl;
+            std::cout<<"Num of ionizations: "<<num_of_ions<<std::endl;
+            std::cout<<"Num of elastic: "<<num_of_elastic<<std::endl;
             std::cout<<"Num of electrons: "<<num_of_electrons<<std::endl;
         }
     }
 }
 
-//uses canvases and graphs defined above
-void Plot_e (int n_of_e) {
-    //std::cout<<"Plot_e("<<n_of_e<<")"<<std::endl;
-    
-    double En_start;
-    double En_collision;
-    double En_finish;
-    //bool velocity_start; //1 - along z. 0 - against
-    //bool velocity_finish; //1 - along z. 0 - against
-    double En_avr;
-    double pos_start;
-    double pos_finish;
-    double delta_x;
-    double time_start;
-    double delta_time;
-    double delta_time_full;
-    short process; //enum ProcessType : short {None = 0, Elastic = 1, Resonance = 2, Overflow = 3};
-    
-    long int num_of_electrons =0; 
-    std::vector<double> Ec_, t_, x_; //for plotting Ec(t) 
-    TFile * file = new TFile (fname1.c_str());
-    if (0==file){
-        std::cout<<"File not opened"<<std::endl;
-        return;
-    }
-    if (!file->IsOpen()){
-        std::cout<<"File not opened"<<std::endl;
-        return;
-    }
-    TTree * tree = (TTree*) file->Get("ElectronHistory");
-        
-    tree->SetBranchAddress("energy_initial", &En_start);
-    tree->SetBranchAddress("energy_final", &En_finish);
-    tree->SetBranchAddress("energy_coll", &En_collision);
-    tree->SetBranchAddress("energy_average", &En_avr);
-        
-    //tree->SetBranchAddress("velocity_initial", &velocity_start);
-    //tree->SetBranchAddress("velocity_final", &velocity_finish);
-    tree->SetBranchAddress("time_initial", &time_start);
-    tree->SetBranchAddress("time_delta", &delta_time);
-    tree->SetBranchAddress("time_delta_full", &delta_time_full);
-    tree->SetBranchAddress("process_type", &process);
-        
-    tree->SetBranchAddress("position_initial",&pos_start);
-    tree->SetBranchAddress("position_final",&pos_finish);
-    tree->SetBranchAddress("position_delta",&delta_x);
-        
-    unsigned long int _end_ = tree->GetEntries();
-    for (unsigned long int i=0;(i!=_end_)&&(num_of_electrons<=n_of_e);++i){
-        tree->GetEntry(i);
-        if (((i==(_end_-1))||time_start==0.0)&&i!=0) {
-            ++num_of_electrons;
-        } 
-        if (n_of_e==num_of_electrons) {
-        t_.push_back(time_start);
-        Ec_.push_back(std::fabs(En_collision));
-        x_.push_back(pos_finish);
-        }
-        //if (!((pos_finish<DRIFT_DISTANCE)&&(pos_finish>-10*DRIFT_DISTANCE))) {
-    }
-    std::cout<<"Size: "<<t_.size()<<std::endl;
-    gr_Ec_t->Set(t_.size());
-    gr_x_t->Set(t_.size());
-    for (int i=0, end_ = t_.size(); i!=end_; ++i) {
-        gr_Ec_t->SetPoint(i, t_[i], Ec_[i]);
-        gr_x_t->SetPoint(i, t_[i], x_[i]);
-    }
-    c_12->cd();
-    gr_Ec_t->Draw("ALP");
-    //c_12->Update();
-
-    c_13->cd();
-    gr_x_t->Draw("ALP");
-    //c_13->Update();
-}
  
 
 

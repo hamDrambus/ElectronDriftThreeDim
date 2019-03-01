@@ -18,7 +18,7 @@
 	int DEF_W = 900, DEF_H = 700;
 	std::vector<double> DRIFT_DISTANCE = {3e-3, 3e-3, 3e-3, 3e-3};
 	std::string fname_0("../OneDimSimulation/Output/v13.1/eData_7.0Td");
-	std::string fname_1("Output/v01.1/eData_7.0Td");
+	std::string fname_1("Output/v08.1/eData_7.0Td");
 	
 	double En_start;
 	double En_collision;
@@ -103,7 +103,7 @@
 				hist_dE->Fill(En_collision - En_start);
 			}
 			hist_dE_abs->Fill(std::fabs(En_collision - En_start));
-			hist_Eloss->Fill(En_collision-En_finish);
+			hist_Eloss->Fill(std::fabs(En_collision)- std::fabs(En_finish));
 		    }
 		}
 	    

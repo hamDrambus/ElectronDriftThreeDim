@@ -39,19 +39,18 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 	ArDataTables ArDataTables_ (table, table_thetas);
 	if (N_threads > num_of_electrons)
 		N_threads = num_of_electrons;
-	int N_acc = 0;
+	int N_extra = num_of_electrons % (N_threads>0 ? N_threads: 1);
+	std::vector<int> N_e(N_threads, 0);
+	for (int n = 0; n < N_threads; ++n) { //distribute electrons among the processes as evenly as possible
+		N_e[n] = num_of_electrons / N_threads + ((N_extra>0) ? 1 : 0);
+		--N_extra;
+	}
 	for (int n = 0; n < N_threads; ++n) {
 		mutexes.push_back(new TMutex());
 		conditions.push_back(new TCondition(mutexes[n]));
 		thread_mutexes.push_back(new TMutex());
 		ar_data.push_back(new ArDataTables(ArDataTables_)); //copy, no repeated readings and table constructions.
-		if (n == (N_threads - 1)) {
-			_submanagers.push_back(new MTManager(ar_data[n], n, num_of_electrons - N_acc, seed + n));
-		} else {
-			int N_e = num_of_electrons / N_threads;
-			N_acc += N_e;
-			_submanagers.push_back(new MTManager(ar_data[n], n, N_e, seed + n));
-		}
+		_submanagers.push_back(new MTManager(ar_data[n], n, N_e[n], seed + n));
 		_submanagers[n]->setCondition(conditions[n]);
 		_submanagers[n]->setThreadMutex(thread_mutexes[n]);
 		pThreads.push_back(new TThread(("MTManager_" + std::to_string(n)).c_str(),

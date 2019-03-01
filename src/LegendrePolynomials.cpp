@@ -47,6 +47,67 @@ long double LegendrePolynom::operator ()(long double x, unsigned int l) {
 	return P_last;
 }
 
+AssociatedLegendrePolynom::AssociatedLegendrePolynom() {
+	l_last = 0;
+	l_last1 = 0;
+	m_last = 0;
+	P_last = 1;
+	P_last1 = 1;
+	x_last = 1;
+}
+
+long double AssociatedLegendrePolynom::operator ()(long double x, unsigned int l, unsigned int m) {
+	if (m>l)
+		return 0;
+	if (x==x_last) {
+		if ((l==l_last1)&&(m==m_last))
+			return P_last1;
+		if ((l==l_last)&&(m==m_last))
+			return P_last;
+		if ((l>l_last)&&(m==m_last)) {
+			//iterate till l_last==l since l=l_last
+			long double mem = 0;
+			for (unsigned int i=(l_last+1);i<=l;++i) {
+				mem = ((2*i-1)*x*P_last-(i-1 + m)*P_last1)/(i-m);
+				P_last1 = P_last;
+				P_last = mem;
+				l_last1 = l_last; //==i-1
+				l_last = i;
+			}
+			return P_last;
+		}
+		//in case l<l_last iterate since l=0:
+	}
+	l_last = m+1;
+	l_last1 = m;
+	m_last = m;
+	x_last = x;
+	//P_l_l = (-1)^l*(2l-1)!!(1-x^2)^l/2
+	//P_l+1_l = x(2l+1)P_l_l
+	unsigned int factor = 1, temp =2*m-1;
+	while (temp>0) {
+		factor*=temp;
+		temp-=2;
+	}
+	P_last1 = factor*((m%2==0) ? 1.0 : -1.0)*std::pow(1-x*x, m/2.0);
+	P_last1 = x*(2*m+1)*P_last1;
+	//iterate since l=0
+	if (l_last1==l)
+		return P_last1;
+	if (l_last==l)
+		return P_last;
+	long double mem = 0;
+	for (unsigned int i=m+2;i<=l;++i) {
+		mem = ((2*i-1)*x*P_last-(i-1 + m)*P_last1)/(i-m);
+		P_last1 = P_last;
+		P_last = mem;
+		l_last1 = l_last; //==i-1
+		l_last = i;
+	}
+	return P_last;
+}
+
+
 //this formula is obtained by polynomial expansion of legendre polynomials
 //Integral from -1 to 0
 long double Int_PlPl_1_0 (unsigned int n, unsigned int k)

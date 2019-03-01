@@ -18,6 +18,21 @@ public:
 	long double operator ()(long double x, unsigned int l);
 };
 
+class AssociatedLegendrePolynom //uses recurrence relation, plus saves values for 2 maximum ls for faster evaluation of the next l (faster performance for the same x and rising l)
+{
+protected:
+	//these are for caching (improves speed for P(x) for the same x and rising l)
+	unsigned int l_last;
+	unsigned int l_last1;
+	unsigned int m_last;
+	long double P_last;
+	long double P_last1;
+	long double x_last;
+public:
+	AssociatedLegendrePolynom();
+	long double operator ()(long double x, unsigned int l, unsigned int m);
+};
+
 long double Int_PlPl_1_0 (unsigned int n, unsigned int k);
 long double Int_PlPl_0_1 (unsigned int n, unsigned int k);
 long double Int_PlPl_transf_1_0 (unsigned int n, unsigned int k);

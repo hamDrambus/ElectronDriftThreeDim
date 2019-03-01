@@ -14,8 +14,10 @@
 #include <errno.h>
 #include <sys/stat.h>
 #endif
+#include <math.h>
+#include <ctgmath>
 
-#define THREADS_NUMBER_ 4
+#define THREADS_NUMBER_ 6
 #define L_MAX_ 10
 #define XS_EL_EN_MAXIMUM_ 20.0
 #define XS_EL_EN_MINIMUM_ 1e-3
@@ -38,17 +40,22 @@
 //^ MERT5 and experimental totalXS
 #define EN_MAXIMUM_ 16.0
 //^
-#define ANGLE_POINTS_ 51
+#define ANGLE_POINTS_ 101
+//#define ANGLE_UNIFORM_
+//TODO: temporary for v9.x
 #define EN_CUT_ 0.0
 #define En_3o2_ 11.103
 #define En_1o2_ 11.270
 #define Width_3o2_ 2.3e-3
 #define Width_1o2_ 2.2e-3
+//#define Width_3o2_ 2.0e-2
+//#define Width_1o2_ 2.0e-2
 //^in eV
 #define RESONANCE_EN_LOSS_FACTOR_ 1.0
-#define DRIFT_DISTANCE_ 1e-2
+//#define RESONANCE_EN_LOSS_ 1e-1
+#define DRIFT_DISTANCE_ 3e-3
 //^in m
-#define DRIFT_DISTANCE_HISTORY 9.6e-3
+#define DRIFT_DISTANCE_HISTORY 0
 //^in m. Write info about electron only starting from this position
 #define SKIP_HISTORY_ 0
 
@@ -94,8 +101,8 @@ struct Event
 	double time_start;
 	double delta_time;
 	double delta_time_full; //with resonance delay
-	enum ProcessType : short {None = -1, Elastic = 0, Resonance_3o2 = 1, Resonance_1o2 = 2, Ionization = 3, Overflow = -2};
-	short process; //3 is ionization and from 4 to max are excitations (process = ID + 3).
+	enum ProcessType : short {None = -1, Elastic = 0, Ionization = 1, Overflow = -2};
+	short process; //1 is ionization and from 2 to max are excitations (process = ID + 1).
 	std::vector<double> CrossSections; //for each process starting from Elastic=1
 	std::vector<double> CrossSectionsSum; //helper for random process selection
 	//Debug info:

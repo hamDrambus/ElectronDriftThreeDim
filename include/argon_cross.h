@@ -9,8 +9,6 @@
 #include <fstream>
 #include <vector>
 #define _USE_MATH_DEFINES
-#include <math.h>
-#include <ctgmath>
 #include "global_definitions.h"
 #include "PolynomialFit.h"
 #include "FunctionTable.h"
@@ -20,7 +18,7 @@
 class EnergyScanner
 {
 public:
-	enum ScanType: short {ElasticXS, Resonance_3o2_XS, Resonance_1o2_XS, ResonancesXS,
+	enum ScanType: short {ElasticXS,
 			Resonance_3o2_DiffXS, Resonance_1o2_DiffXS, ResonancesDiffXS,
 			DiffXS,	InelasticXS, ElasticResXS, XSIntegral, PlotElastic,
 			PlotResonance_3o2, PlotResonance_1o2, PlotResonances,
@@ -103,9 +101,7 @@ class ArDataTables //loads data from default files if presented. If not then val
 public:
 	ArAllData ArAllData_;
 protected:
-	std::string total_cross_elastic_fname;
-	std::string total_cross_resonance_3o2_fname;
-	std::string total_cross_resonance_1o2_fname;
+	std::string total_cross_elastic_fname; //contains Feshbach resonances
 	std::string integral_table_fname;
 	std::string theta_table_fname;
 

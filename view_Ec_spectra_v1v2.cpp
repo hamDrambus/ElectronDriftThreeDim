@@ -1,5 +1,5 @@
  {
-	double EN_MIN_=0;
+	double EN_MIN_=10;
 	double EN_MAX_=14;
 	int NN = 300;
 	TH1D* histE_0 = new TH1D ("EnergyC 7.0 Td [eV] normal res.","EnergyC 7.0 Td [eV] normal res.",NN,EN_MIN_, EN_MAX_);
@@ -15,10 +15,10 @@
 	
 	int DEF_W = 900, DEF_H = 700;
 	std::vector<double> DRIFT_DISTANCE = {3e-3, 3e-3, 3e-3, 3e-3};
-	std::string fname_0("Output/v01.1/eData_0.3Td");
-	std::string fname_1("Output/v01.1/eData_1.7Td");
-	std::string fname_2("Output/v01.1/eData_4.6Td");
-	std::string fname_3("Output/v01.1/eData_8.3Td");
+	std::string fname_0("Output/v08.1/eData_7.0Td");
+	std::string fname_1("Output/v08.6/eData_7.0Td");
+	std::string fname_2("Output/v08.7/eData_7.0Td");
+	std::string fname_3("Output/v08.8/eData_7.0Td");
 	std::string fname_4("Output/v15.5/eData_7.0Td");
 	
 	double En_start;
@@ -113,29 +113,30 @@
 		unsigned long int _end_ = tree->GetEntries();
 		for (unsigned long int i=0;i!=_end_;++i){
 		    tree->GetEntry(i);
+		    //histE->Fill(std::fabs(En_collision), delta_time);
 		    histE->Fill(std::fabs(En_collision));
 		}
 	    }
 	    int bin_cutoff = 0;
 	    double bin_cutoff_val = 0;
 	    for (int bin = 1, bin_end = histE->GetNbinsX()+1; bin!=bin_end; ++bin) {
-		if (histE->GetBinCenter(bin)>0.4){
+		if (histE->GetBinCenter(bin)>0.4) {
 	           bin_cutoff = bin;
 	           bin_cutoff_val = histE->GetBinContent(bin);
 	           break;
 		}
 	    }
-	    double slope = bin_cutoff_val/pow(histE->GetBinCenter(bin_cutoff),1.0);
+	    /*double slope = bin_cutoff_val/pow(histE->GetBinCenter(bin_cutoff),0.5);
 	    for (int bin = 1; bin!=bin_cutoff; ++bin) { //remove peak at 0 by y=slope*sqrt(E)
-		histE->SetBinContent(bin, slope*pow(histE->GetBinCenter(bin), 1.0));
-	    }
+		histE->SetBinContent(bin, slope*pow(histE->GetBinCenter(bin), 0.5));
+	    }*/
 	    //normalization of spectrum; like in Buzulutzkov paper
 	    double Norm =0;
 	    for (int bin = 1, bin_end = histE->GetNbinsX()+1; bin!=bin_end; ++bin) {
-		Norm+=histE->GetBinContent(bin)*pow(histE->GetBinCenter(bin),0.2)*histE->GetBinWidth(bin);
+		Norm+=histE->GetBinContent(bin)*pow(histE->GetBinCenter(bin),0.0)*histE->GetBinWidth(bin);
 	    }
 	    for (int bin = 1, bin_end = histE->GetNbinsX()+1; bin!=bin_end; ++bin) {
-		histE->SetBinContent(bin, histE->GetBinContent(bin)/(Norm*pow(histE->GetBinCenter(bin),0.2)));
+		histE->SetBinContent(bin, histE->GetBinContent(bin)/(Norm*pow(histE->GetBinCenter(bin),0.0)));
 		max_val = std::max(max_val, (double) histE->GetBinContent(bin));
 	    }
 	}
@@ -144,9 +145,10 @@
 	gStyle->SetGridColor(14);
 	gStyle->SetGridWidth(1);
 	gStyle->SetOptStat("");
-	TCanvas *c_ = new TCanvas ("Collision E spectra_", "Collision E spectra_", DEF_W, DEF_H);
+	TCanvas *c_ = new TCanvas ("Average over time E spectra_", "Average over time E spectra_", DEF_W, DEF_H);
 	c_->SetGrid();
 	c_->SetTicks();
+	//gPad->SetLogy();//Log Y
 	TLegend *legend = new TLegend( 0.55, 0.65, 0.9, 0.9);
 	//legend->SetHeader("");
 	legend->SetMargin(0.25);
@@ -156,25 +158,25 @@
 	frame->Draw();
 	
 	histE_0->SetLineWidth(2);
-	histE_0->SetLineColor(kYellow-3);
-	histE_0->Draw("csame");
+	histE_0->SetLineColor(kRed);//(kYellow-3);
+	histE_0->Draw("hist cpsame");
 	histE_1->SetLineWidth(2);
-	histE_1->SetLineColor(kRed);
-	histE_1->Draw("csame");
+	histE_1->SetLineColor(kBlack);//(kRed);
+	histE_1->Draw("hist cpsame");
 	histE_2->SetLineWidth(2);
 	histE_2->SetLineColor(kBlue);
-	histE_2->Draw("csame");
+	histE_2->Draw("hist cpsame");
 	histE_3->SetLineWidth(2);
-	histE_3->SetLineColor(kBlack);
-	histE_3->Draw("csame");
+	histE_3->SetLineColor(kGreen);//(kBlack);
+	histE_3->Draw("hist cpsame");
 	histE_4->SetLineWidth(2);
 	//histE_4->SetLineColor(6);
 	//histE_4->Draw("csame");
 	
-	legend->AddEntry(histE_0, (std::string("0.3 Td")).c_str(), "l");
-	legend->AddEntry(histE_1, (std::string("1.7 Td")).c_str(), "l");
-	legend->AddEntry(histE_2, (std::string("4.6 Td")).c_str(), "l");
-	legend->AddEntry(histE_3, (std::string("8.3 Td")).c_str(), "l");
+	legend->AddEntry(histE_0, (std::string("7.0 Td Normal <E loss> = 2.3e-4 eV")).c_str(), "l");
+	legend->AddEntry(histE_1, (std::string("7.0 Td x4.348, <Eloss> = 1.03e-3 eV")).c_str(), "l");
+	legend->AddEntry(histE_2, (std::string("7.0 Td x43.48, <Eloss> = 1.01e-2 eV")).c_str(), "l");
+	legend->AddEntry(histE_3, (std::string("7.0 Td x434.8, <Eloss> = 1.01e-1 eV")).c_str(), "l");
 	//legend->AddEntry(histE_4, (std::string("7.0 Td, W=3e-2 eV, Loss=150x")).c_str(), "l");
 	
 	frame->Draw("sameaxis");
