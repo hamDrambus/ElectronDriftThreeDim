@@ -42,8 +42,7 @@
 //^
 #define ANGLE_POINTS_ 101
 //#define ANGLE_UNIFORM_
-//TODO: temporary for v9.x
-#define EN_CUT_ 0.0
+//^TODO: temporary for v9.x
 #define En_3o2_ 11.103
 #define En_1o2_ 11.270
 #define Width_3o2_ 2.3e-3
@@ -101,7 +100,7 @@ struct Event
 	double time_start;
 	double delta_time;
 	double delta_time_full; //with resonance delay
-	enum ProcessType : short {None = -1, Elastic = 0, Ionization = 1, Overflow = -2};
+	enum ProcessType : short {Overflow = -2, None = -1, Elastic = 0, Ionization = 1}; //Manager and Ar XS functions depend on this.
 	short process; //1 is ionization and from 2 to max are excitations (process = ID + 1).
 	std::vector<double> CrossSections; //for each process starting from Elastic=1
 	std::vector<double> CrossSectionsSum; //helper for random process selection

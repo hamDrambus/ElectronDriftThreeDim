@@ -5,12 +5,12 @@ Manager::Manager(ArDataTables *Ar_tables, UInt_t RandomSeed) : is_ready_(false),
 {
 	random_generator_ = new TRandom1(RandomSeed); //TRandom3 is a default. TRandom1 is slower but better
 	start_seed_ = RandomSeed;
-	processes_size_ = ArTables_->ArAllData_.ArExper_.max_process_ID + 5; //5 = elastic + 2resonances + None + Overthrow
+	processes_size_ = ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization - Event::Overflow; //3 = elastic + None + Overthrow
 	processes_counters_ = new Long64_t [processes_size_];
 	processes_IDs_ = new Short_t [processes_size_];
 	processes_legends_ = new char * [processes_size_];
 	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
-		processes_IDs_[i] = i-2;
+		processes_IDs_[i] = i + Event::Overflow;
 		processes_counters_[i] = 0;
 		switch (processes_IDs_[i]) {
 		case (Event::Overflow): {
@@ -25,14 +25,14 @@ Manager::Manager(ArDataTables *Ar_tables, UInt_t RandomSeed) : is_ready_(false),
 			processes_legends_[i] = c_str_cp(std::string("\"Elastic scattering\""));
 			break;
 		}
-		case (Event::Resonance_3o2): {
+		/*case (Event::Resonance_3o2): {
 			processes_legends_[i] = c_str_cp(std::string("\"Feshbach resonance 3/2\""));
 			break;
 		}
 		case (Event::Resonance_1o2): {
 			processes_legends_[i] = c_str_cp(std::string("\"Feshbach resonance 1/2\""));
 			break;
-		}
+		}*/
 		default: {
 			InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(processes_IDs_[i]-Event::Ionization);
 			if (NULL!=p) {
@@ -107,7 +107,7 @@ void Manager::Clear(void)
 	num_of_events = 0;
 	num_of_10millions = 0;
 	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
-		processes_IDs_[i] = i-2;
+		processes_IDs_[i] = i + Event::Overflow;
 		processes_counters_[i] = 0;
 	}
 	InitTree();
@@ -205,8 +205,8 @@ void Manager::Initialize(Event &event)
 	num_of_10millions = 0;
 	//processes_counters; //preserve
 	start_seed_ = random_generator_->GetSeed();
-	event.CrossSections.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + 3, 0); //3==Elastic + Resonances
-	event.CrossSectionsSum.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + 3, 0);
+	event.CrossSections.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization, 0); //+1 for Elastic
+	event.CrossSectionsSum.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization, 0);
 	event.En_start = 1 + 3*random_generator_->Uniform();
 	//event.En_start = 8;
 	event.En_collision = 0;
@@ -432,9 +432,6 @@ void Manager::DoStepLength(Event &event)
 	long double up_limit = event.delta_time*eField_*sqrt(e_charge_SIconst/(2*e_mass_SIconst*event.En_start));
 	event.delta_l = Path_integral(up_limit, event.theta_start) - Path_integral(0, event.theta_start);
 	event.delta_l*=2*event.En_start/eField_;
-	//!!!ENERGY CUT!!! TODO:remove
-	event.En_collision = (event.En_collision<EN_CUT_) ? EN_CUT_: event.En_collision;
-	//!!!ENERGY CUT!!! TODO:remove
 	event_ = event;
 }
 
@@ -443,7 +440,8 @@ void Manager::DoScattering(Event &event)
 	if (!is_ready_)
 		return;
 	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i) {
-		event.CrossSections[i] = ArTables_->CrossSection(std::fabs(event.En_collision), i);//process type == index in cross section array.
+		event.CrossSections[i] = ArTables_->CrossSection(std::fabs(event.En_collision), i + Event::Elastic);
+		//^process type == index in cross section array.
 		event.CrossSectionsSum[i] = std::max(event.CrossSections[i], 0.0) + ((i==0) ? 0.0 : event.CrossSectionsSum[i-1]);
 	}
 	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i)
@@ -453,7 +451,7 @@ void Manager::DoScattering(Event &event)
 	double R1 = random_generator_->Uniform();
 	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i)
 		if (R1<event.CrossSectionsSum[i]) {
-			event.process = i;
+			event.process = i + Event::Elastic;
 			break;
 		}
 
@@ -469,20 +467,8 @@ void Manager::DoScattering(Event &event)
 	long double gamma_f = e_mass_eVconst/Ar_mass_eVconst;
 	double EnergyLoss = 2*(1-cos(event.delta_theta))*event.En_collision*gamma_f /pow(1 + gamma_f, 2);
 	switch (event.process) {
-		case (Event::Resonance_3o2): {
-			EnergyLoss *=RESONANCE_EN_LOSS_FACTOR_;
 #ifdef RESONANCE_EN_LOSS_
-			EnergyLoss = RESONANCE_EN_LOSS_;
 #endif
-			break;
-		}
-		case (Event::Resonance_1o2): {
-			EnergyLoss *=RESONANCE_EN_LOSS_FACTOR_;
-#ifdef RESONANCE_EN_LOSS_
-			EnergyLoss = RESONANCE_EN_LOSS_;
-#endif
-			break;
-		}
 		case (Event::Elastic): {
 			break;
 		}
@@ -502,12 +488,12 @@ void Manager::DoScattering(Event &event)
 	}
 	event.En_finish = event.En_collision - EnergyLoss;
 	event.delta_time_full = event.delta_time;
-	if (event.process == Event::Resonance_3o2) {
+	/*if (event.process == Event::Resonance_3o2) {
 		event.delta_time_full += random_generator_->Exp(h_bar_eVconst/Width_3o2_);
 	}
 	if (event.process == Event::Resonance_1o2) {
 		event.delta_time_full += random_generator_->Exp(h_bar_eVconst/Width_1o2_);
-	}
+	}*/
 	if (is_overflow)
 		event.process = Event::Overflow;
 	event_ = event;
@@ -580,7 +566,6 @@ bool Manager::IsFinished(Event &event)
 		return true;
 	//return sim_data_->GetEntries()>=100;
 	return !(event.pos_finish < DRIFT_DISTANCE_);
-	//return !((event.pos_finish < DRIFT_DISTANCE_)&&(event.pos_finish> -10*DRIFT_DISTANCE_));
 }
 
 void Manager::LoopSimulation(void)
