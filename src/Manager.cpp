@@ -228,7 +228,7 @@ void Manager::Initialize(Event &event)
 	event_ = event;
 }
 
-void Manager::Solve (long double LnR, Event &event) //TODO: tabulate
+void Manager::Solve (long double LnR, Event &event)
 {
 	event.deb_log_rand = LnR;
 	long double Eny = event.En_start*sin(event.theta_start)*sin(event.theta_start);
@@ -467,9 +467,13 @@ void Manager::DoScattering(Event &event)
 	long double gamma_f = e_mass_eVconst/Ar_mass_eVconst;
 	double EnergyLoss = 2*(1-cos(event.delta_theta))*event.En_collision*gamma_f /pow(1 + gamma_f, 2);
 	switch (event.process) {
-#ifdef RESONANCE_EN_LOSS_
-#endif
 		case (Event::Elastic): {
+#ifdef RESONANCE_EN_LOSS_
+			double width_factor = std::pow(Width_3o2_/2.0, 2)/(std::pow(Width_3o2_/2.0, 2) + std::pow((event.En_collision-En_3o2_)/2.0, 2));
+			width_factor += std::pow(Width_1o2_/2.0, 2)/(std::pow(Width_1o2_/2.0, 2) + std::pow((event.En_collision-En_1o2_)/2.0, 2));
+			width_factor *= 0.5*RESONANCE_EN_LOSS_;
+			EnergyLoss+=width_factor;
+#endif
 			break;
 		}
 		case (Event::Ionization): {

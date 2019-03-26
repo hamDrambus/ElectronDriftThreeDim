@@ -1,10 +1,6 @@
 #ifndef ARGON_CROSS_H
 #define ARGON_CROSS_H
 
-/*	TODO: add comprehensive explanation of used data and calculations of cross sections
- *
- */
-
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -58,7 +54,8 @@ class ArExperimental
 protected:
 	void read_inelastic(std::ifstream &inp, std::vector<InelasticProcess> &to);
 public:
-	std::vector<DataVector> phase_shifts_; //TODO: account for phase plus and phase minus
+	std::vector<DataVector> phase_shifts_pos_;
+	std::vector<DataVector> phase_shifts_neg_;
 	DataVector total_elastic_cross;
 	std::vector<InelasticProcess> excitations;
 	std::vector<InelasticProcess> ionizations;
@@ -67,7 +64,7 @@ public:
 	ArExperimental(void);
 	InelasticProcess * FindInelastic(short ID);
 	unsigned int max_L (long double k);
-	long double phase_shift (long double k, unsigned int l);
+	void phase_shift (long double k, unsigned int l, long double &ps_pos, long double &ps_neg);
 };
 
 /*This class reads some experimental values from ./data

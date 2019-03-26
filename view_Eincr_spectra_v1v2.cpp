@@ -4,21 +4,28 @@
 	int NN = 300;
 	TH1D* hist_dE_0 = new TH1D ("Energy increase in resonance 1dim [eV]","Energy increase in resonance 1dim [eV]",NN,-EN_MAX_, EN_MAX_);
 	TH1D* hist_dE_1 = new TH1D ("Energy increase in resonance 3dim [eV]","Energy increase in resonance 3dim [eV]",NN,-EN_MAX_, EN_MAX_);
+	TH1D* hist_dE_2 = new TH1D ("Energy increase in resonance 3dim uniform [eV]","Energy increase in resonance 3dim uniform [eV]",NN,-EN_MAX_, EN_MAX_);
 	TH1D* hist_dE_abs_0 = new TH1D ("Energy abs increase in resonance 1dim [eV]","Energy abs increase in resonance 1dim [eV]",NN,0.0, EN_MAX_);
 	TH1D* hist_dE_abs_1 = new TH1D ("Energy abs increase in resonance 3dim [eV]","Energy abs increase in resonance 3dim [eV]",NN,0.0, EN_MAX_);
+	TH1D* hist_dE_abs_2 = new TH1D ("Energy abs increase in resonance 3dim uniform [eV]","Energy abs increase in resonance 3dim uniform [eV]",NN,0.0, EN_MAX_);
 	TH1D* hist_Eloss_0 = new TH1D ("Energy loss in resonance 1dim [eV]","Energy loss in resonance 1dim [eV]",NN,0, EN_LOSS_MAX_);
 	TH1D* hist_Eloss_1 = new TH1D ("Energy loss in resonance 3dim [eV]","Energy loss in resonance 3dim [eV]",NN,0, EN_LOSS_MAX_);
+	TH1D* hist_Eloss_2 = new TH1D ("Energy loss in resonance 3dim uniform [eV]","Energy loss in resonance 3dim unifrom [eV]",NN,0, EN_LOSS_MAX_);
 	hist_dE_0->SetStats(false);
 	hist_dE_1->SetStats(false);
+	hist_dE_2->SetStats(false);
 	hist_dE_abs_0->SetStats(false);
 	hist_dE_abs_1->SetStats(false);
+	hist_dE_abs_2->SetStats(false);
 	hist_Eloss_0->SetStats(false);
 	hist_Eloss_1->SetStats(false);
-	
+	hist_Eloss_2->SetStats(false);
+
 	int DEF_W = 900, DEF_H = 700;
 	std::vector<double> DRIFT_DISTANCE = {3e-3, 3e-3, 3e-3, 3e-3};
 	std::string fname_0("../OneDimSimulation/Output/v13.1/eData_7.0Td");
 	std::string fname_1("Output/v08.1/eData_7.0Td");
+	std::string fname_2("Output/v11.1/eData_7.0Td");
 	
 	double En_start;
 	double En_collision;
@@ -35,7 +42,7 @@
 	double max_val_dE = 0;
 	double max_val_dE_abs = 0;
 	double max_val_Eloss = 0;
-	for (int nhist = 0; nhist<2;++nhist) {
+	for (int nhist = 0; nhist<3;++nhist) {
 	    TH1D* hist_dE = NULL;
 	    TH1D* hist_dE_abs = NULL;
 	    TH1D* hist_Eloss = NULL;
@@ -54,6 +61,13 @@
 		    hist_dE_abs = hist_dE_abs_1;
 		    hist_Eloss = hist_Eloss_1;
 		    fname = fname_1;
+		    break;
+		}
+		case 2: {
+		    hist_dE = hist_dE_2;
+		    hist_dE_abs = hist_dE_abs_2;
+		    hist_Eloss = hist_Eloss_2;
+		    fname = fname_2;
 		    break;
 		}
 	    }
@@ -106,7 +120,6 @@
 			hist_Eloss->Fill(std::fabs(En_collision)- std::fabs(En_finish));
 		    }
 		}
-	    
 	    for (int bin = 1, bin_end = hist_dE->GetNbinsX()+1; bin!=bin_end; ++bin) {
 		max_val_dE = std::max(max_val_dE, (double) hist_dE->GetBinContent(bin));
 	    }
@@ -141,9 +154,13 @@
 	hist_dE_1->SetLineWidth(2);
 	hist_dE_1->SetLineColor(kBlack);
 	hist_dE_1->Draw("csame");
+	hist_dE_2->SetLineWidth(2);
+	hist_dE_2->SetLineColor(kBlue);
+	hist_dE_2->Draw("csame");
 	
 	legend_dE->AddEntry(hist_dE_0, (std::string("7.0 Td 1D Mean = ")+std::to_string(hist_dE_0->GetMean())).c_str(), "l");
 	legend_dE->AddEntry(hist_dE_1, (std::string("7.0 Td 3D Mean = ")+std::to_string(hist_dE_1->GetMean())).c_str(), "l");
+	legend_dE->AddEntry(hist_dE_2, (std::string("7.0 Td 3D fixed Mean = ")+std::to_string(hist_dE_2->GetMean())).c_str(), "l");
 	
 	frame_dE->Draw("sameaxis");
 	legend_dE->Draw("same");
@@ -166,9 +183,13 @@
 	hist_dE_abs_1->SetLineWidth(2);
 	hist_dE_abs_1->SetLineColor(kBlack);
 	hist_dE_abs_1->Draw("csame");
+	hist_dE_abs_2->SetLineWidth(2);
+	hist_dE_abs_2->SetLineColor(kBlue);
+	hist_dE_abs_2->Draw("csame");
 	
 	legend_dE_abs->AddEntry(hist_dE_abs_0, (std::string("7.0 Td 1D Mean =")+std::to_string(hist_dE_abs_0->GetMean())).c_str(), "l");
 	legend_dE_abs->AddEntry(hist_dE_abs_1, (std::string("7.0 Td 3D Mean = ")+std::to_string(hist_dE_abs_1->GetMean())).c_str(), "l");
+	legend_dE_abs->AddEntry(hist_dE_abs_2, (std::string("7.0 Td 3D fixed Mean = ")+std::to_string(hist_dE_abs_2->GetMean())).c_str(), "l");
 	
 	frame_dE_abs->Draw("sameaxis");
 	legend_dE_abs->Draw("same");
@@ -191,9 +212,13 @@
 	hist_Eloss_1->SetLineWidth(2);
 	hist_Eloss_1->SetLineColor(kBlack);
 	hist_Eloss_1->Draw("csame");
+	hist_Eloss_2->SetLineWidth(2);
+	hist_Eloss_2->SetLineColor(kBlue);
+	hist_Eloss_2->Draw("csame");
 	
 	legend_Eloss->AddEntry(hist_Eloss_0, (std::string("7.0 Td 1D Mean =")+std::to_string(hist_Eloss_0->GetMean())).c_str(), "l");
 	legend_Eloss->AddEntry(hist_Eloss_1, (std::string("7.0 Td 3D Mean =")+std::to_string(hist_Eloss_1->GetMean())).c_str(), "l");
+	legend_Eloss->AddEntry(hist_Eloss_2, (std::string("7.0 Td 3D fixed Mean =")+std::to_string(hist_Eloss_2->GetMean())).c_str(), "l");
 	
 	frame_Eloss->Draw("sameaxis");
 	legend_Eloss->Draw("same");

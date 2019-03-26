@@ -40,9 +40,9 @@
 //^ MERT5 and experimental totalXS
 #define EN_MAXIMUM_ 16.0
 //^
-#define ANGLE_POINTS_ 101
+#define ANGLE_POINTS_ 1001
 //#define ANGLE_UNIFORM_
-//^TODO: temporary for v9.x
+//^temporary for v9.x
 #define En_3o2_ 11.103
 #define En_1o2_ 11.270
 #define Width_3o2_ 2.3e-3

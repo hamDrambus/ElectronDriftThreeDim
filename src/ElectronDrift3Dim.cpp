@@ -17,11 +17,12 @@ void process_runs_in_thread(void* manager)
 	((MTManager*)manager)->ProcessAll();
 	TCondition* cond = ((MTManager*)manager)->getCondition();
 	TMutex* mutex = ((MTManager*)manager)->getThreadMutex();
-	if (0 != mutex->TryLock()) {//means that the main thread is waiting for the signal
+	if (0 != mutex->TryLock()) {//means that the main thread is waiting for the signal. No signal is needed otherwise because the main thread is too delayed
 		cond->Signal();
 		//std::cout << "Signal()" << std::endl;
 	}
 	//std::cout << "Exiting thread" << std::endl;
+
 }
 
 void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, double concentration, double field, std::string root_fname) {
@@ -29,13 +30,15 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 		N_threads = 1;
 	std::vector<TThread*> pThreads;
 	std::vector<MTManager*> _submanagers;
-	std::vector<TMutex*> mutexes;
-	std::vector<TMutex*> thread_mutexes;
+	std::vector<TMutex*> mutexes; //for conditions
+	std::vector<TMutex*> thread_mutexes; //for determining whether thread finished execution
 	std::vector<TCondition*> conditions;
 	std::vector<ArDataTables*> ar_data;
 
 	FunctionTable *table = new FunctionTable; //shared between processes - read only
 	FunctionTable *table_thetas = new FunctionTable; //shared between processes - read only
+	//TODO: It is currently implied that calling FunctionTable methods is thread-safe because there is only reading and no changes in their internal states.
+	//It would be better to fix this fact in the code explicitly (cost methods, locks, etc.)
 	ArDataTables ArDataTables_ (table, table_thetas);
 	if (N_threads > num_of_electrons)
 		N_threads = num_of_electrons;
@@ -57,6 +60,7 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 			&process_runs_in_thread, _submanagers[n]));
 	}
 	//MTManager test_man(&ArDataTables_, -1, 1, seed);
+	//ArDataTables_.ArAllData_.argon_cross_elastic_diff(0.1, 0.5);
 	//test_all(&ArDataTables_);
 	//test_man.Test();
 	
@@ -66,12 +70,12 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 	}
 	//TThread::Ps();
 	for (int n = 0; n < N_threads; ++n) {
-		if (0 != thread_mutexes[n]->TryLock()) { //thread is already executed, so no wait required
-		}
-		else {
+		if (0 == thread_mutexes[n]->TryLock()) { //child thread is not executed yet, so waiting for it.
 			conditions[n]->Wait();
 		}
 		thread_mutexes[n]->UnLock();
+
+		//pThreads[n]->Join(); //does not work because threads are detached. Implemented with one condition and one mutex per thread.
 		if (0 != n)
 			_submanagers[0]->Merge(_submanagers[n]);
 	}
@@ -93,7 +97,8 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 int main(int argn, char * argv[]) {
 	int n_par = 0;
 	char **f = NULL;
-	//TApplication app("test_app",&n_par,f);
+	TThread::Initialize();
+	TApplication app("test_app",&n_par,f);
 	std::string a;
 	std::string root_fname = "Output/eData_7.0Td.root";
 	double Td = 7; //=E/N in 1e-21 in Si

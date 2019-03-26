@@ -84,13 +84,13 @@ long double AssociatedLegendrePolynom::operator ()(long double x, unsigned int l
 	x_last = x;
 	//P_l_l = (-1)^l*(2l-1)!!(1-x^2)^l/2
 	//P_l+1_l = x(2l+1)P_l_l
-	unsigned int factor = 1, temp =2*m-1;
+	long int factor = 1, temp =2*m-1;
 	while (temp>0) {
 		factor*=temp;
 		temp-=2;
 	}
 	P_last1 = factor*((m%2==0) ? 1.0 : -1.0)*std::pow(1-x*x, m/2.0);
-	P_last1 = x*(2*m+1)*P_last1;
+	P_last = x*(2*m+1)*P_last1;
 	//iterate since l=0
 	if (l_last1==l)
 		return P_last1;

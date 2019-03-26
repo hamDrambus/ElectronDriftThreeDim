@@ -7,7 +7,7 @@
 #include "TVectorD.h"
 
 //parameters are [0]+[1]*x+[2]*x^2+...
-class PolynomialFit {
+class PolynomialFit { //TODO: storing _last_coefs is useless. (affects multithreading, there is need to store separate copies of DataVector for each thread)
 protected:
 	Int_t _order;
 	TVectorD _last_coefs;
@@ -28,7 +28,8 @@ public:
 
 //Wraps PolynomialFit: stores raw data, N points used in every fit and last region (cache_n_from, cache_n_to) in which fit/interpolation took place.
 //The latter is required for optimization, because polynomial coefficients are not updated unless necessary (x moved from previous region)
-class DataVector {
+class DataVector { //TODO: cache is useless in practice, but affects multithreading, there is need to store separate copies of DataVector for each thread.
+	//TODO: either remove altogether, or event better determine automatically when its usage is correct (make this optional as well)
 protected:
 	std::vector<double> xs;
 	std::vector<double> ys;

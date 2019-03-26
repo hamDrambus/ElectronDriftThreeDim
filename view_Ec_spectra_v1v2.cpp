@@ -1,5 +1,5 @@
  {
-	double EN_MIN_=10;
+	double EN_MIN_=0;
 	double EN_MAX_=14;
 	int NN = 300;
 	TH1D* histE_0 = new TH1D ("EnergyC 7.0 Td [eV] normal res.","EnergyC 7.0 Td [eV] normal res.",NN,EN_MIN_, EN_MAX_);
@@ -15,10 +15,10 @@
 	
 	int DEF_W = 900, DEF_H = 700;
 	std::vector<double> DRIFT_DISTANCE = {3e-3, 3e-3, 3e-3, 3e-3};
-	std::string fname_0("Output/v08.1/eData_7.0Td");
-	std::string fname_1("Output/v08.6/eData_7.0Td");
-	std::string fname_2("Output/v08.7/eData_7.0Td");
-	std::string fname_3("Output/v08.8/eData_7.0Td");
+	std::string fname_0("Output/v11.1/eData_7.0Td");
+	std::string fname_1("Output/v11.4/eData_7.0Td");
+	std::string fname_2("Output/v09.1/eData_1.0Td");
+	std::string fname_3("Output/v09.1/eData_7.0Td");
 	std::string fname_4("Output/v15.5/eData_7.0Td");
 	
 	double En_start;
@@ -35,7 +35,7 @@
 
 	
 	double max_val = 0;
-	for (int nhist = 0; nhist<4;++nhist) {
+	for (int nhist = 0; nhist<2;++nhist) {
 	    TH1D* histE = NULL;
 	    std::string fname;
 	    switch (nhist) 
@@ -173,10 +173,10 @@
 	//histE_4->SetLineColor(6);
 	//histE_4->Draw("csame");
 	
-	legend->AddEntry(histE_0, (std::string("7.0 Td Normal <E loss> = 2.3e-4 eV")).c_str(), "l");
-	legend->AddEntry(histE_1, (std::string("7.0 Td x4.348, <Eloss> = 1.03e-3 eV")).c_str(), "l");
-	legend->AddEntry(histE_2, (std::string("7.0 Td x43.48, <Eloss> = 1.01e-2 eV")).c_str(), "l");
-	legend->AddEntry(histE_3, (std::string("7.0 Td x434.8, <Eloss> = 1.01e-1 eV")).c_str(), "l");
+	legend->AddEntry(histE_0, (std::string("7.0 Td 3D")).c_str(), "l");
+	legend->AddEntry(histE_1, (std::string("7.0 Td increased E loss 3D")).c_str(), "l");
+	//legend->AddEntry(histE_2, (std::string("1.0 Td 3D uniform")).c_str(), "l");
+	//legend->AddEntry(histE_3, (std::string("7.0 Td 3D uniform")).c_str(), "l");
 	//legend->AddEntry(histE_4, (std::string("7.0 Td, W=3e-2 eV, Loss=150x")).c_str(), "l");
 	
 	frame->Draw("sameaxis");

@@ -24,7 +24,6 @@ void test_TM_forward (ArDataTables *ArTables);
 void test_TM_backward (ArDataTables *ArTables);
 void test_total_cross_all (ArDataTables *ArTables);
 void test_data_table (ArDataTables *ArTables);
-void test_resonance_cross (ArDataTables *ArTables);
 void test_all(ArDataTables *ArTables);
 
 #endif

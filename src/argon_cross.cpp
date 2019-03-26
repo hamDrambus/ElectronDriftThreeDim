@@ -43,12 +43,7 @@ EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 	}
 	case (PlotElastic): {
 		//from 1e-3 eV to 0.1 eV with step 5e-4 eV, etc.
-		energy_range_ = ColoredInterval (XS_EL_EN_MINIMUM_, 0.1, 3e-4) + ColoredInterval (0.1, 1, 9e-4) +
-			ColoredInterval (1, 10, 3e-2) + ColoredInterval (10, XS_EL_EN_MAXIMUM_, 0.086)+
-			ColoredInterval(En_1o2_ - 110 * Width_1o2_, En_1o2_ + 110 * Width_1o2_, Width_1o2_ / 3) + 	//coarse area
-			ColoredInterval(En_3o2_ - 110 * Width_3o2_, En_3o2_ + 110 * Width_3o2_, Width_3o2_ / 3) + 	//coarse area
-			ColoredInterval(En_1o2_ - 15 * Width_1o2_, En_1o2_ + 15 * Width_1o2_, Width_1o2_ / 80) + 	//fine area
-			ColoredInterval(En_3o2_ - 15 * Width_3o2_, En_3o2_ + 15 * Width_3o2_, Width_3o2_ / 80); 	//fine area;
+		energy_range_ = ColoredInterval (XS_EL_EN_MINIMUM_, 0.1, 3e-4) + ColoredInterval (0.1, 1, 9e-4);
 		break;
 	}
 	case (PlotResonance_3o2): {
@@ -71,11 +66,11 @@ EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 	case (PlotDiffXS): {  //used for plotting test of differential to total cross sections
 		energy_range_ = ColoredInterval (1e-4, 0.1, 7e-4) +
 				ColoredInterval (0.1, 1, 7e-3) +
-				ColoredInterval (1, EN_MAXIMUM_, 0.086)+
-			ColoredInterval(En_1o2_ - 110 * Width_1o2_, En_1o2_ + 110 * Width_1o2_, Width_1o2_ / 3) + 	//coarse area
-			ColoredInterval(En_3o2_ - 110 * Width_3o2_, En_3o2_ + 110 * Width_3o2_, Width_3o2_ / 3) + 	//coarse area
-			ColoredInterval(En_1o2_ - 15 * Width_1o2_, En_1o2_ + 15 * Width_1o2_, Width_1o2_ / 80) + 	//fine area
-			ColoredInterval(En_3o2_ - 15 * Width_3o2_, En_3o2_ + 15 * Width_3o2_, Width_3o2_ / 80); 	//fine area
+				ColoredInterval (1, EN_MAXIMUM_, 0.086);
+			//ColoredInterval(En_1o2_ - 110 * Width_1o2_, En_1o2_ + 110 * Width_1o2_, Width_1o2_ / 3) + 	//coarse area
+			//ColoredInterval(En_3o2_ - 110 * Width_3o2_, En_3o2_ + 110 * Width_3o2_, Width_3o2_ / 3) + 	//coarse area
+			//ColoredInterval(En_1o2_ - 15 * Width_1o2_, En_1o2_ + 15 * Width_1o2_, Width_1o2_ / 80) + 	//fine area
+			//ColoredInterval(En_3o2_ - 15 * Width_3o2_, En_3o2_ + 15 * Width_3o2_, Width_3o2_ / 80); 	//fine area
 		break;
 	}
 	case (PlotInelasticXS): {
@@ -84,10 +79,10 @@ EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 		break;
 	}
 	case (PlotElasticResXS): {
-		energy_range_ = ColoredInterval (1e-4, 0.1, 2e-4) + ColoredInterval (0.1, 1, 7e-4) +
+		energy_range_ = ColoredInterval (XS_EL_EN_MINIMUM_, 0.1, 3e-4) + ColoredInterval (0.1, 1, 9e-4) +
 				ColoredInterval (1, 10, 7e-3) + ColoredInterval (10, XS_EL_EN_MAXIMUM_, 0.016) +
-				ColoredInterval (En_1o2_ - 110*Width_1o2_, std::min(XS_EL_EN_MAXIMUM_, En_1o2_ + 110*Width_1o2_), Width_1o2_/5) +	//coarse area
-				ColoredInterval (En_3o2_ - 110*Width_3o2_, std::min(XS_EL_EN_MAXIMUM_, En_3o2_ + 110*Width_3o2_), Width_3o2_/5) +	//coarse area
+				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(XS_EL_EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
+				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(XS_EL_EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
 				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(XS_EL_EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) +//fine area
 				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(XS_EL_EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80);//fine area
 		break;
@@ -195,19 +190,23 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 	inp.close();
 	for (int l=0;l<6;++l)
 		if (l<4) {
-			phase_shifts_.push_back(DataVector(3,4)); /*interpolation by 3rd order polynomial because there's data for 11eV*/
-			phase_shifts_.back().use_rightmost(true);
+			phase_shifts_pos_.push_back(DataVector(3,4)); /*interpolation by 3rd order polynomial because there's data for 11eV*/
+			phase_shifts_pos_.back().use_rightmost(true);
+			phase_shifts_neg_.push_back(DataVector(3,4));
+			phase_shifts_neg_.back().use_rightmost(true);
 		} else {
-			phase_shifts_.push_back(DataVector(3,5)); /*fit by 3rd order polynomial TODO: tests, tests*/
-			phase_shifts_.back().use_rightmost(true);
+			phase_shifts_pos_.push_back(DataVector(3,5)); /*fit by 3rd order polynomial TODO: tests, tests*/
+			phase_shifts_pos_.back().use_rightmost(true);
+			phase_shifts_neg_.push_back(DataVector(3,4));
+			phase_shifts_neg_.back().use_rightmost(true);
 		}
 	inp.open("data/McEachranArPhaseShifts.dat");
+	unsigned int MAX_L = 6; //L == (MAX_L-1) is the last one
 	while (!inp.eof()) {
 		std::getline(inp, line);
+		bool positive = true;
 		if (line.size()>=2) {
 			if ((line[0]=='/')&&(line[1]=='/'))
-				continue;
-			if ((line[0]=='\t')&&(line[1]=='\t')) //negative phase shifts are ignored
 				continue;
 		}
 		word = strtoken(line, "\t ");
@@ -215,12 +214,34 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 			break;
 		double k = std::stod(word);
 		//now process string "double\tdouble\tdouble\t..."
-		//\t\t means that the double is omitted
+		//\t\t means that the double is omitted in the table
 		std::vector<double> vals;
 		std::vector<bool> is_d;//is double presented in the table
-		vals.resize(9,0);
-		is_d.resize(9, false);
-		for (int l=0;l<9;++l) {
+		vals.resize(MAX_L, 0);
+		is_d.resize(MAX_L, false);
+		for (int l=0;l<MAX_L;++l) {
+			if (line.empty())
+				break;
+			if (line[0]=='\t') { //value is omitted in the table
+				line.erase(line.begin());
+				continue;
+			} //now line does not start with \t
+			word = strtoken(line,"\t"); //removes one \t after value
+			vals[l] = std::stod(word);
+			is_d[l] = true;
+		}
+		line.clear();
+		std::getline(inp, line);
+		if (line.size()>=2) {
+			if ((line[0]!='\t')||(line[1]!='\t')) //Not a line with negative phase shifts.
+				continue;
+			line.erase(line.begin(), line.begin()+5);//remove four '\t' for k and L=0 (\t'k'\t'L=0'\t but k and L are substituted for \t for this line
+		}
+		std::vector<double> vals_1;
+		std::vector<bool> is_d_1;
+		vals_1.resize(MAX_L-1,0);
+		is_d_1.resize(MAX_L-1, false);
+		for (int l=0; l<(MAX_L-1); ++l) {
 			if (line.empty())
 				break;
 			if (line[0]=='\t') { //value is omitted in the table
@@ -229,12 +250,19 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 			}
 			//now line does not start with \t
 			word = strtoken(line,"\t"); //removes one \t after value
-			vals[l] = std::stod(word);
-			is_d[l] = true;
+			vals_1[l] = std::stod(word);
+			is_d_1[l] = true;
 		}
-		for (int l=0;l<6;++l) {
-			if (is_d[l])
-				phase_shifts_[l].push(k, vals[l]);
+		for (int l=0; l<MAX_L; ++l) {
+			if (is_d[l]) {
+				if (0==l)
+					phase_shifts_neg_[l].push(k, vals[l]);
+				phase_shifts_pos_[l].push(k, vals[l]);
+			}
+		}
+		for (int l=0; l<(MAX_L-1); ++l) {
+			if (is_d_1[l])
+				phase_shifts_neg_[l+1].push(k, vals_1[l]);
 		}
 	}
 	inp.close();
@@ -353,14 +381,26 @@ InelasticProcess * ArExperimental::FindInelastic(short ID)
 
 unsigned int ArExperimental::max_L (long double k)
 {
-	return phase_shifts_.size()-1;
+	return std::max(phase_shifts_pos_.size(), phase_shifts_neg_.size())-1;
 }
 
-long double ArExperimental::phase_shift (long double k, unsigned int l)
+void ArExperimental::phase_shift (long double k, unsigned int l, long double &ps_pos,  long double &ps_neg)
 {
-	if (l>max_L(k))
-		return 0;
-	return phase_shifts_[l](k, k);
+	if (l>max_L(k)) {
+		ps_pos = 0;
+		ps_neg = 0;
+		return;
+	}
+	if (l<phase_shifts_pos_.size()) {
+		ps_pos = phase_shifts_pos_[l](k, k);
+		if (l<phase_shifts_neg_.size())
+			ps_neg = phase_shifts_neg_[l](k, k);
+		else
+			ps_neg = ps_pos;
+	} else {
+		ps_neg = phase_shifts_neg_[l](k, k);
+		ps_pos = ps_neg;
+	}
 }
 
 ArAllData::ArAllData(void)
@@ -368,12 +408,14 @@ ArAllData::ArAllData(void)
 //k is in atomic units
 void ArAllData::argon_phase_values_exp(long double k, unsigned int l, long double &ps_p, long double &ps_n)
 {
-	double angle = ArExper_.phase_shift(k, l); //TODO: add delta +- from experiment
-	ps_p = ps_n = angle;
+	long double angle_pos, angle_neg;
+	ArExper_.phase_shift(k, l, angle_pos, angle_neg);
+	ps_p = angle_pos;
+	ps_n = angle_neg;
 	if (1 == l) {
 		long double E = std::pow(k / a_h_bar_2e_m_e_SIconst, 2.0);//recalculation from atomic units to energy
-		long double cot3o2 = 2 * (E - En_3o2_) / Width_3o2_;
-		long double cot1o2 = 2 * (E - En_1o2_) / Width_1o2_;
+		long double cot3o2 = -2 * (E - En_3o2_) / Width_3o2_;
+		long double cot1o2 = -2 * (E - En_1o2_) / Width_1o2_;
 		long double cos3o2 = cot3o2 / std::sqrt(1 + cot3o2*cot3o2);
 		long double cos1o2 = cot1o2 / std::sqrt(1 + cot1o2*cot1o2);
 		ps_p += std::acos(cos3o2);
@@ -459,15 +501,15 @@ long double ArAllData::argon_cross_elastic_diff(long double E, long double theta
 			if (l != f) {
 				((*this).*phase_values)(k, f, ph_f_p, ph_f_n);
 			}
-			ph_l_p *= 2.0; //all cosines are taken from double angles
-			ph_l_n *= 2.0;
-			ph_f_p *= 2.0;
-			ph_f_n *= 2.0;
-			long double F_l_f = (l + 1)*(f + 1)*cos(ph_l_p - ph_f_p) + (l + 1)*(f)*cos(ph_l_p - ph_f_n) + (l)*(f + 1)*cos(ph_l_n - ph_f_p) +
-				l*f*cos(ph_l_n - ph_f_n) - (l + 1)*(2 * f + 1)*cos(ph_l_p) - (2 * l + 1)*(f + 1)*cos(ph_f_p) +
-				(2 * l + 1)*(2 * f + 1) - (l)*(2 * f + 1)*cos(ph_l_n) - (2 * l + 1)*(f)*cos(ph_f_n);
+			long double l_p = ph_l_p * 2.0; //all cosines are taken from double angles
+			long double l_n = ph_l_n * 2.0;
+			long double f_p = ph_f_p * 2.0;
+			long double f_n = ph_f_n * 2.0;
+			long double F_l_f = (l + 1)*(f + 1)*cos(l_p - f_p) + (l + 1)*(f)*cos(l_p - f_n) + (l)*(f + 1)*cos(l_n - f_p) +
+				l*f*cos(l_n - f_n) - (l + 1)*(2 * f + 1)*cos(l_p) - (2 * l + 1)*(f + 1)*cos(f_p) +
+				(2 * l + 1)*(2 * f + 1) - (l)*(2 * f + 1)*cos(l_n) - (2 * l + 1)*(f)*cos(f_n);
 			long double G_l_f = ((0 == l) ? 0 :
-				cos(ph_l_p - ph_f_p) - cos(ph_l_n - ph_f_p) - cos(ph_l_p - ph_f_n) + cos(ph_l_n - ph_f_n));
+				cos(l_p - f_p) - cos(l_n - f_p) - cos(l_p - f_n) + cos(l_n - f_n));
 			if (l != f) { //Nondiagonal sum is reduced because f starts from l instead of 0.
 				F_l_f *= 2.0;
 				G_l_f *= 2.0;
@@ -478,6 +520,7 @@ long double ArAllData::argon_cross_elastic_diff(long double E, long double theta
 		}
 	}
 	cross *= M_PI / (2.0*pow(k, 2));
+	cross = std::max(cross, (long double)0);
 	return cross*a_bohr_SIconst*a_bohr_SIconst; //const is multiplied by 1e10
 }
 
@@ -594,7 +637,6 @@ long double ArAllData::argon_back_scatter_prob(long double E)
 			long double cos_l_f = cos(phase_l_p - phase_f_p);
 			W += ((l == f) ? 1.0 : 2.0)*(2 * l + 1)*(2 * f + 1)*sin(phase_l_p)*sin(phase_f_p)*cos_l_f*Int_PlPl(l, f, -1, 0, 1e-5);
 			//((l==f)?1.0:2.0) because sum by f starts not from 0 but from l
-			//TODO: implment positive and negative phaseshifts
 		}
 		cross += (2 * l + 1)*sin(phase_l_p)*sin(phase_l_p);
 	}
@@ -628,7 +670,6 @@ long double ArAllData::argon_TM_forward(long double E)
 			long double cos_l_f = cos(phase_l_p - phase_f_p);
 			W += ((l == f) ? 1.0 : 2.0)*(2 * l + 1)*(2 * f + 1)*sin(phase_l_p)*sin(phase_f_p)*cos_l_f*Int_PlPl_transf(l, f, 0, 1, 1e-5);
 			//((l==f)?1.0:2.0) because sum by f starts not from 0 but from l
-			//TODO: implment positive and negative phaseshifts
 			cross += ((l == f) ? 1.0 : 2.0)*(2 * l + 1)*(2 * f + 1)*sin(phase_l_p)*sin(phase_f_p)*cos_l_f*Int_PlPl(l, f, 0, 1, 1e-5);
 		}
 	}
@@ -662,7 +703,6 @@ long double ArAllData::argon_TM_backward(long double E)
 			long double cos_l_f = cos(phase_l_p - phase_f_p);
 			W += ((l == f) ? 1.0 : 2.0)*(2 * l + 1)*(2 * f + 1)*sin(phase_l_p)*sin(phase_f_p)*cos_l_f*Int_PlPl_transf(l, f, -1, 0, 1e-5);
 			//((l==f)?1.0:2.0) because sum by f starts not from 0 but from l
-			//TODO: implment positive and negative phaseshifts
 			cross += ((l == f) ? 1.0 : 2.0)*(2 * l + 1)*(2 * f + 1)*sin(phase_l_p)*sin(phase_f_p)*cos_l_f*Int_PlPl(l, f, -1, 0, 1e-5);
 		}
 	}
@@ -672,17 +712,17 @@ long double ArAllData::argon_TM_backward(long double E)
 long double ArAllData::argon_cross_resonance_3o2(long double E)
 {
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E);
-	double angle = ArExper_.phase_shift(k, 1); //TODO: add delta +- from experiment
-	double ps_p = angle;
-	double ps_n = angle;
-	long double cot3o2 = 2 * (E - En_3o2_) / Width_3o2_;
-	long double cot1o2 = 2 * (E - En_1o2_) / Width_1o2_;
+	long double ps_p_0, ps_n_0;
+	ArExper_.phase_shift(k, 1, ps_p_0, ps_n_0);
+	long double ps_p = ps_p_0, ps_n = ps_n_0;
+	long double cot3o2 = -2 * (E - En_3o2_) / Width_3o2_;
+	long double cot1o2 = -2 * (E - En_1o2_) / Width_1o2_;
 	long double cos3o2 = cot3o2 / std::sqrt(1 + cot3o2*cot3o2);
 	long double cos1o2 = cot1o2 / std::sqrt(1 + cot1o2*cot1o2);
 	ps_p += std::acos(cos3o2);
 	ps_n += std::acos(cos1o2);
 
-	long double cross = 2 * (pow(sin(ps_p), 2) - pow(sin(angle), 2));
+	long double cross = 2 * (pow(sin(ps_p), 2) - pow(sin(ps_p_0), 2));
 	cross *= 4.0*M_PI / pow(k, 2);
 	return cross * a_bohr_SIconst * a_bohr_SIconst;
 }
@@ -690,17 +730,17 @@ long double ArAllData::argon_cross_resonance_3o2(long double E)
 long double ArAllData::argon_cross_resonance_1o2(long double E)
 {
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E);
-	double angle = ArExper_.phase_shift(k, 1); //TODO: add delta +- from experiment
-	double ps_p = angle;
-	double ps_n = angle;
-	long double cot3o2 = 2 * (E - En_3o2_) / Width_3o2_;
-	long double cot1o2 = 2 * (E - En_1o2_) / Width_1o2_;
+	long double ps_p_0, ps_n_0;
+	ArExper_.phase_shift(k, 1, ps_p_0, ps_n_0);
+	long double ps_p = ps_p_0, ps_n = ps_n_0;
+	long double cot3o2 = -2 * (E - En_3o2_) / Width_3o2_;
+	long double cot1o2 = -2 * (E - En_1o2_) / Width_1o2_;
 	long double cos3o2 = cot3o2 / std::sqrt(1 + cot3o2*cot3o2);
 	long double cos1o2 = cot1o2 / std::sqrt(1 + cot1o2*cot1o2);
 	ps_p += std::acos(cos3o2);
 	ps_n += std::acos(cos1o2);
 
-	long double cross = (pow(sin(ps_n), 2) - pow(sin(angle), 2));
+	long double cross = (pow(sin(ps_n), 2) - pow(sin(ps_n_0), 2));
 	cross *= 4.0*M_PI / pow(k, 2);
 	return cross * a_bohr_SIconst * a_bohr_SIconst;
 }
@@ -733,7 +773,7 @@ ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table):
 	integral_table_(int_table),
 	theta_table_(th_table)
 {
-	std::cout<<"Constructing Ar data tables"<<std::endl;
+	std::cout<<"Loading Ar data tables"<<std::endl;
 	ensure_file(total_cross_elastic_fname);
 	ensure_file(integral_table_fname);
 	ensure_file(theta_table_fname);
@@ -745,6 +785,7 @@ ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table):
 	read_data(inp, total_cross_elastic_); //Cross section is stored in 1e-20 m^2 in both files and this program
 	inp.close();
 	if (total_cross_elastic_.size()<total_cross_elastic_.getNused()) {
+		std::cout<<"Failed to load \""<<total_cross_elastic_fname<<"\""<<std::endl;
 		std::cout<<"Calculating total elastic cross section..."<<std::endl;
 		total_cross_elastic_.clear();
 		str.open(total_cross_elastic_fname, std::ios_base::trunc);
@@ -764,6 +805,7 @@ ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table):
 
 	inp.open(integral_table_fname, std::ios_base::binary);
 	if (!inp.is_open()) {
+		std::cout<<"Failed to load \""<<integral_table_fname<<"\""<<std::endl;
 		generate_integral_table();
 		str.open(integral_table_fname, std::ios_base::trunc|std::ios_base::binary);
 		integral_table_->write(str);
@@ -772,6 +814,7 @@ ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table):
 		integral_table_->read(inp);
 		inp.close();
 		if (integral_table_->is_empty()) {
+			std::cout<<"Failed to load \""<<integral_table_fname<<"\""<<std::endl;
 			generate_integral_table();
 			str.open(integral_table_fname, std::ios_base::trunc|std::ios_base::binary);
 			integral_table_->write(str);
@@ -781,6 +824,7 @@ ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table):
 
 	inp.open(theta_table_fname, std::ios_base::binary);
 	if (!inp.is_open()) {
+		std::cout<<"Failed to load \""<<theta_table_fname<<"\""<<std::endl;
 		generate_theta_table();
 		str.open(theta_table_fname, std::ios_base::trunc|std::ios_base::binary);
 		theta_table_->write(str);
@@ -789,6 +833,7 @@ ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table):
 		theta_table_->read(inp);
 		inp.close();
 		if (theta_table_->is_empty()) {
+			std::cout<<"Failed to load \""<<theta_table_fname<<"\""<<std::endl;
 			generate_theta_table();
 			str.open(theta_table_fname, std::ios_base::trunc|std::ios_base::binary);
 			theta_table_->write(str);
@@ -796,7 +841,7 @@ ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table):
 		}
 	}
 
-	std::cout<<"Finished constructing Ar data tables"<<std::endl;
+	std::cout<<"Finished loading Ar data tables"<<std::endl;
 }
 
 void ArDataTables::generate_integral_table(void) //uses tabulated total cross section
@@ -872,10 +917,10 @@ void ArDataTables::generate_theta_table(void) //uses tabulated total cross secti
 {
 	std::cout<<"Generating theta probability function tables..."<<std::endl;
 	ColoredRange energy_Y_range = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0, EN_MAXIMUM_, 1e-3) +
-				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
-				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
-				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) + 	//fine area
-				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80);	//fine area
+				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/10) +	//coarse area
+				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/10) +	//coarse area
+				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/200) + 	//fine area
+				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/200);		//fine area
 	std::vector<double> diff_XS, F, thetas;
 	diff_XS.resize(ANGLE_POINTS_, 0);
 	thetas.resize(ANGLE_POINTS_, 0);

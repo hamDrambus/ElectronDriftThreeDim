@@ -112,13 +112,41 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 	std::string fname_phase_fit = "tests/phase_shifts_fit_exp.txt";
 
 	std::ofstream str;
-	for (unsigned int l=0; l<ArTables->ArAllData_.ArExper_.phase_shifts_.size();++l) {
+	std::vector<DataVector> *ps_pos, *ps_neg;
+	ps_pos = &(ArTables->ArAllData_.ArExper_.phase_shifts_pos_);
+	ps_neg = &(ArTables->ArAllData_.ArExper_.phase_shifts_neg_);
+	for (unsigned int l=0, l_end_ = std::max(ps_pos->size(), ps_neg->size()); l!=l_end_; ++l) {
 		std::string fname = fname_McEachran + std::to_string(l) + ".txt";
 		str.open(fname, std::ios_base::trunc);
 		str<<"E[eV]\tphase shift "<<l<<std::endl;
-		for (std::size_t i = 0, i_end = ArTables->ArAllData_.ArExper_.phase_shifts_[l].size(); i!=i_end; ++i)
-			str<< pow(ArTables->ArAllData_.ArExper_.phase_shifts_[l].getX(i)/a_h_bar_2e_m_e_SIconst, 2)<<
-				"\t"<< ArTables->ArAllData_.ArExper_.phase_shifts_[l].getY(i)<<std::endl;
+		if ((l<ps_pos->size())&&(l<ps_neg->size())) {
+			double k_l_neg_written = -DBL_MAX;
+			for (std::size_t i = 0, i_end_ = (*ps_pos)[l].size(); i!=i_end_; ++i) {//write in file either PS_l+ (E1) or PS_l- (E2) and when E1==E2, use their average.
+				//ps_pos[l] and ps_neg[l] are supposed to be sorted by energy (k).
+				double k = (*ps_pos)[l].getX(i);
+				double PS_l = (*ps_pos)[l].getY(i);
+				for (std::size_t j = 0, j_end_ = (*ps_neg)[l].size(); j!=j_end_; ++j) {
+					if (((*ps_neg)[l].getX(j)<k)&&((*ps_neg)[l].getX(j)>k_l_neg_written)){
+						str<< pow((*ps_neg)[l].getX(j)/a_h_bar_2e_m_e_SIconst, 2)<< "\t"<< (*ps_neg)[l].getY(j)<<std::endl;
+						k_l_neg_written = (*ps_neg)[l].getX(j);
+					}
+					if ((*ps_neg)[l].getX(j)==k) {
+						PS_l = (PS_l * (l+1) + l*(*ps_neg)[l].getY(j))/(2.0*l + 1); //weighted average!.
+						break;
+					}
+				}
+				str<< pow(k/a_h_bar_2e_m_e_SIconst, 2)<< "\t"<< PS_l<<std::endl;
+			}
+		}
+		if (l<ps_pos->size()) { //only ps_pos is present
+			for (std::size_t i = 0, i_end_ = (*ps_pos)[l].size(); i!=i_end_; ++i) {
+				str<< pow((*ps_pos)[l].getX(i)/a_h_bar_2e_m_e_SIconst, 2)<< "\t"<< (*ps_pos)[l].getY(i)<<std::endl;
+			}
+		} else { //only ps_neg is present
+			for (std::size_t i = 0, i_end_ = (*ps_neg)[l].size(); i!=i_end_; ++i) {
+				str<< pow((*ps_neg)[l].getX(i)/a_h_bar_2e_m_e_SIconst, 2)<< "\t"<< (*ps_neg)[l].getY(i)<<std::endl;
+			}
+		}
 		str.close();
 	}
 
@@ -134,8 +162,18 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 				break;
 			k = sqrt(E)*a_h_bar_2e_m_e_SIconst;
 			str<<E<<"\t";
-			for (std::size_t l = 0, l_end = ArTables->ArAllData_.ArExper_.phase_shifts_.size(); l!=l_end; ++l)
-				str<< ArTables->ArAllData_.ArExper_.phase_shifts_[l](k,k)<<"\t";
+			for (std::size_t l = 0, l_end_ = std::max(ps_pos->size(), ps_neg->size()); l!=l_end_; ++l) {
+				double PS_l;
+				if ((l<ps_pos->size())&&(l<ps_neg->size())) {
+					PS_l = ((*ps_pos)[l](k,k) * (l+1) + l*(*ps_neg)[l](k, k))/(2.0*l + 1); //weighted average!.;
+				}
+				if (l<ps_pos->size()) { //only ps_pos is present
+					PS_l = (*ps_pos)[l](k,k);
+				} else { 				//only ps_neg is present
+					PS_l = (*ps_neg)[l](k,k);
+				}
+				str<< PS_l<<"\t";
+			}
 			str<<std::endl;
 		}
 		str.close();
@@ -153,7 +191,7 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 				break;
 			k = sqrt(E)*a_h_bar_2e_m_e_SIconst;
 			str<<E<<"\t";
-			for (std::size_t l = 0, l_end = ArTables->ArAllData_.ArExper_.phase_shifts_.size(); l!=l_end; ++l) {
+			for (std::size_t l = 0, l_end = std::max(ps_pos->size(), ps_neg->size()); l!=l_end; ++l) {
 				long double ps_p, ps_n;
 				ArTables->ArAllData_.argon_phase_values_MERT5(k, l, ps_p, ps_n);
 				str<<ps_p<<"\t";
@@ -163,7 +201,7 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 		str.close();
 	}
 
-	for (std::size_t l = 0, l_end = ArTables->ArAllData_.ArExper_.phase_shifts_.size(); l!=l_end; ++l) {
+	for (std::size_t l = 0, l_end = std::max(ps_pos->size(), ps_neg->size()); l!=l_end; ++l) {
 		std::string name = std::string("tests/test_phase_shift_") + std::to_string(l) + ".sc";
 		str.open(name, std::ios_base::trunc);
 		str<<"set logscale x"<<std::endl;
@@ -205,6 +243,16 @@ void test_legendre_polynomial(void)
 	std::cout<<"Wolfram alpha:\t 0"<<std::endl;
 	std::cout<<"Pl(7,1) =\t "<<Pl(1, 7)<<std::endl;
 	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
+	AssociatedLegendrePolynom APl;
+	std::cout<<"Associated Legendre polynomials:"<<std::endl;
+	std::cout<<"APl(3, 3, 0.36) =\t"<<APl(0.36, 3, 3)<<std::endl;
+	std::cout<<"Wolfram alpha:\t -12.18062527"<<std::endl;
+	std::cout<<"APl(2, 1, -0.36) =\t"<<APl(-0.36, 2, 1)<<std::endl;
+	std::cout<<"Wolfram alpha:\t 1.0075884874"<<std::endl;
+	std::cout<<"APl(1, 1, -0.36) =\t"<<APl(-0.36, 1, 1)<<std::endl;
+	std::cout<<"Wolfram alpha:\t -0.93295230317"<<std::endl;
+	std::cout<<"APl(10, 1, 0.27) =\t"<<APl(0.27, 10, 1)<<std::endl;
+	std::cout<<"Wolfram alpha:\t -0.73106380723"<<std::endl;
 }
 
 void test_legendre_intregral (void)
@@ -564,68 +612,94 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 	std::string fname_tot = "tests/total_elastic_from_diff.txt";
 	std::string fname_angle_profiles = "tests/diff_cross_elastic_profiles.txt";
 	std::ofstream str;
-	str.open(fname_diff, std::ios_base::trunc);
-	str<<"theta[deg]\tXS[1e-20m^2]"<<std::endl;
-	for (int i=0; i<600; ++i) {
-		double th = i*(M_PI)/599;
-		str<<th*180/M_PI<<"\t"<< ArTables->ArAllData_.argon_cross_elastic_diff(10.0, th)<<std::endl;
-	}
-	str.close();
-
-	str.open(fname_tot_MERT5, std::ios_base::trunc);
-	str<<"E[eV]\tXS from diff MERT5 [1e-20m^2]\tXS tot MERT5 PS [1e-20m^2]"<<std::endl;
 	int err;
-	{
-		EnergyScanner eScan(EnergyScanner::PlotDiffXS);
-		while (true) {
-			double E = eScan.Next(err);
-			if ((0!=err)||(E>2.0))
-				break;
-			long double integral = 0;
-			for (int j=0;j<10001; ++j)
-				integral+=(M_PI/10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0, 1)*sin(j*M_PI/10000.0);
-			str<<E<<"\t"<<integral<<"\t"<< ArTables->ArAllData_.argon_cross_elastic(E, 1)<<std::endl;
-		}
-	}
-	str.close();
 
-	str.open(fname_tot_EXP, std::ios_base::trunc);
-	str<<"E[eV]\tXS from diff EXP [1e-20m^2]\tXS tot EXP [1e-20m^2]"<<std::endl;
-	{
-		EnergyScanner eScan(EnergyScanner::PlotDiffXS);
-		while (true) {
-			double E = eScan.Next(err);
-			if ((0!=err))
-				break;
-			if (E<0.5)
-				continue;
-			long double integral = 0;
-			for (int j=0;j<10001; ++j)
-				integral+=(M_PI/10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0, 2)*sin(j*M_PI/10000.0);
-			str<<E<<"\t"<<integral<<"\t"<< ArTables->ArAllData_.argon_cross_elastic(E, 2)<<std::endl;
+/*	{
+		str.open(fname_diff, std::ios_base::trunc);
+		str<<"theta[deg]\tXS[1e-20m^2]"<<std::endl;
+		for (int i=0; i<600; ++i) {
+			double th = i*(M_PI)/599;
+			str<<th*180/M_PI<<"\t"<< ArTables->ArAllData_.argon_cross_elastic_diff(10.0, th)<<std::endl;
 		}
+		str.close();
+		std::string name = "tests/test_diff_XS_elastic.sc";
+		str.open(name, std::ios_base::trunc);
+		str<<"plot \""<<fname_diff<<"\" u 1:2 title \"Diff. XS at 10 eV\""<<std::endl;
+		str<<"pause -1"<<std::endl;
+		str.close();
+		INVOKE_GNUPLOT(name);
 	}
-	str.close();
+*/
+	{
+		str.open(fname_tot_MERT5, std::ios_base::trunc);
+		str<<"E[eV]\tXS from diff MERT5 [1e-20m^2]\tXS tot MERT5 PS [1e-20m^2]"<<std::endl;
+		{
+			EnergyScanner eScan(EnergyScanner::PlotDiffXS);
+			while (true) {
+				double E = eScan.Next(err);
+				if ((0!=err)||(E>2.0))
+					break;
+				long double integral = 0;
+				for (int j=0;j<10001; ++j)
+					integral+=(M_PI/10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0, 1)*sin(j*M_PI/10000.0);
+				str<<E<<"\t"<<integral<<"\t"<< ArTables->ArAllData_.argon_cross_elastic(E, 1)<<std::endl;
+			}
+		}
+		str.close();
 
-	str.open(fname_tot, std::ios_base::trunc);
-	str<<"E[eV]\tXS from diff [1e-20m^2]\tXS tot [1e-20m^2]"<<std::endl;
-	{
-		EnergyScanner eScan(EnergyScanner::PlotDiffXS);
-		while (true) {
-			double E = eScan.Next(err);
-			if ((0!=err))
-				break;
-			long double integral = 0;
-			for (int j=0;j<10001; ++j)
-				integral+=(M_PI/10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0)*sin(j*M_PI/10000.0);
-			str<<E<<"\t"<<integral<<"\t"<< ArTables->ArAllData_.argon_cross_elastic(E)<<std::endl;
+		str.open(fname_tot_EXP, std::ios_base::trunc);
+		str<<"E[eV]\tXS from diff EXP [1e-20m^2]\tXS tot EXP [1e-20m^2]"<<std::endl;
+		{
+			EnergyScanner eScan(EnergyScanner::PlotDiffXS);
+			while (true) {
+				double E = eScan.Next(err);
+				if ((0!=err))
+					break;
+				if (E<0.5)
+					continue;
+				long double integral = 0;
+				for (int j=0;j<10001; ++j)
+					integral+=(M_PI/10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0, 2)*sin(j*M_PI/10000.0);
+				str<<E<<"\t"<<integral<<"\t"<< ArTables->ArAllData_.argon_cross_elastic(E, 2)<<std::endl;
+			}
 		}
+		str.close();
+
+		str.open(fname_tot, std::ios_base::trunc);
+		str<<"E[eV]\tXS from diff [1e-20m^2]\tXS tot [1e-20m^2]"<<std::endl;
+		{
+			EnergyScanner eScan(EnergyScanner::PlotDiffXS);
+			while (true) {
+				double E = eScan.Next(err);
+				if ((0!=err))
+					break;
+				long double integral = 0;
+				for (int j=0;j<10001; ++j)
+					integral+=(M_PI/10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0)*sin(j*M_PI/10000.0);
+				str<<E<<"\t"<<integral<<"\t"<< ArTables->ArAllData_.argon_cross_elastic(E)<<std::endl;
+			}
+		}
+		str.close();
+
+		std::string name = "tests/test_diff_XS_elastic_by_total.sc";
+		str.open(name, std::ios_base::trunc);
+		str<<"set logscale x"<<std::endl;
+		str<<"set logscale y"<<std::endl;
+		str<<"set key top left"<<std::endl;
+		str<<"plot \""<<fname_tot_MERT5<<"\" u 1:2 title \"total from MERT5 diff. XS\""<<std::endl;
+		str<<"replot \""<<fname_tot_MERT5<<"\" u 1:3 title \"total from MERT5 phases\""<<std::endl;
+		str<<"replot \""<<fname_tot_EXP<<"\" u 1:2 lc rgb \"#000000\" title \"total from EXP diff. XS\""<<std::endl;
+		str<<"replot \""<<fname_tot_EXP<<"\" u 1:3 title \"total from EXP\""<<std::endl;
+		str<<"replot \""<<fname_tot<<"\" u 1:2 w lines title \"total XS from diff. (mixed)\""<<std::endl;
+		str<<"replot \""<<fname_tot<<"\" u 1:3 w lines title \"total XS (mixed)\""<<std::endl;
+		str<<"pause -1"<<std::endl;
+		str.close();
+		INVOKE_GNUPLOT(name);
 	}
-	str.close();
-	
-	str.open(fname_angle_profiles, std::ios_base::trunc);
-	str << "E[eV]\tXS diff 22.5deg [1e-20m^2]\tXS diff 45deg\tXS diff 90deg\XS diff 112.5deg\tXS diff 135deg" << std::endl;
+
 	{
+		str.open(fname_angle_profiles, std::ios_base::trunc);
+		str << "E[eV]\tXS diff 22.5deg [1e-20m^2]\tXS diff 45deg\tXS diff 90deg\XS diff 112.5deg\tXS diff 135deg" << std::endl;
 		EnergyScanner eScan(EnergyScanner::PlotResonances);
 		double th0 = 22.5*(M_PI) / 180;
 		double th1 = 45*(M_PI) / 180;
@@ -642,40 +716,21 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th3) << "\t" 
 				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th4) <<std::endl;
 			}
+		str.close();
+		std::string name = "tests/test_diff_XS_elastic_profiles.sc";
+		str.open(name, std::ios_base::trunc);
+		str << "set key top right" << std::endl;
+		str << "set xlabel \"E [eV]\"" << std::endl;
+		str << "plot \"" << fname_angle_profiles << "\" u 1:2 w l title \"diff. XS 22.5 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:3 w l title \"diff. XS 45 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:4 w l lc rgb \"#000000\" title \"diff. XS 90 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:5 w l title \"diff. XS 112.5 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:6 w l title \"diff. XS 135.5 deg.\"" << std::endl;
+		str << "pause -1" << std::endl;
+		str.close();
+		INVOKE_GNUPLOT(name);
 	}
-	str.close();
 
-	std::string name = "tests/test_diff_XS_elastic.sc";
-	str.open(name, std::ios_base::trunc);
-	str<<"plot \""<<fname_diff<<"\" u 1:2 title \"Diff. XS at 10 eV\""<<std::endl;
-	str<<"pause -1"<<std::endl;
-	str.close();
-	INVOKE_GNUPLOT(name);
-	name = "tests/test_diff_XS_elastic_by_total.sc";
-	str.open(name, std::ios_base::trunc);
-	str<<"set logscale x"<<std::endl;
-	str<<"set logscale y"<<std::endl;
-	str<<"set key top left"<<std::endl;
-	str<<"plot \""<<fname_tot_MERT5<<"\" u 1:2 title \"total from MERT5 diff. XS\""<<std::endl;
-	str<<"replot \""<<fname_tot_MERT5<<"\" u 1:3 title \"total from MERT5 phases\""<<std::endl;
-	str<<"replot \""<<fname_tot_EXP<<"\" u 1:2 lc rgb \"#000000\" title \"total from EXP diff. XS\""<<std::endl;
-	str<<"replot \""<<fname_tot_EXP<<"\" u 1:3 title \"total from EXP\""<<std::endl;
-	str<<"replot \""<<fname_tot<<"\" u 1:2 w lines title \"total XS from diff. (mixed)\""<<std::endl;
-	str<<"replot \""<<fname_tot<<"\" u 1:3 w lines title \"total XS (mixed)\""<<std::endl;
-	str<<"pause -1"<<std::endl;
-	str.close();
-	INVOKE_GNUPLOT(name);
-	name = "tests/test_diff_XS_elastic_profiles.sc";
-	str.open(name, std::ios_base::trunc);
-	str << "set key top right" << std::endl;
-	str << "set xlabel \"E [eV]\"" << std::endl;
-	str << "plot \"" << fname_angle_profiles << "\" u 1:2 w l title \"diff. XS 22.5{/Symbol \260}\"" << std::endl;
-	str << "replot \"" << fname_angle_profiles << "\" u 1:3 w l title \"diff. XS 45{/Symbol \260}\"" << std::endl;
-	str << "replot \"" << fname_angle_profiles << "\" u 1:4 w l lc rgb \"#000000\" title \"diff. XS 90{/Symbol \260}\"" << std::endl;
-	str << "replot \"" << fname_angle_profiles << "\" u 1:5 w l title \"diff. XS 112.5{/Symbol \260}\"" << std::endl;
-	str << "replot \"" << fname_angle_profiles << "\" u 1:6 w l title \"diff. XS 135.5{/Symbol \260}\"" << std::endl;
-	str << "pause -1" << std::endl;
-	str.close();
 }
 
 void test_backward_scatter_prob (ArDataTables *ArTables)
@@ -829,6 +884,27 @@ void test_total_cross_all (ArDataTables *ArTables)
 		str.close();
 	}
 
+	{
+		EnergyScanner eScan(EnergyScanner::PlotResonances);
+		std::string fname_XS = "tests/resonance_XS.txt";
+		str.open(fname_XS, std::ios_base::trunc);
+		str<<"E[eV]\tXS resonance total [1e-20 m^2]"<<std::endl;
+		int err;
+		while (true) {
+			double E = eScan.Next(err);
+			if (0!=err)
+				break;
+			str<<E<<"\t"<<ArTables->ArAllData_.argon_cross_elastic(E)<<std::endl;
+		}
+		str.close();
+		std::string name = "tests/test_resonance_XS.sc";
+		str.open(name, std::ios_base::trunc);
+		str<<"plot \""<<fname_XS<<"\" u 1:2 title \"Resonance XS from function\""<<std::endl;
+		str<<"pause -1"<<std::endl;
+		str.close();
+		INVOKE_GNUPLOT(name);
+	}
+
 	std::string name = "tests/test_XS_all.sc";
 	str.open(name, std::ios_base::trunc);
 	str<<"set logscale x"<<std::endl;
@@ -857,7 +933,7 @@ void test_total_cross_all (ArDataTables *ArTables)
 
 }
 
-//Dependent on previous tests.
+//Not dependent on previous tests.
 //This function tests that interpolation/fit of ArDataTables works properly.
 void test_data_table (ArDataTables *ArTables)
 {
@@ -866,20 +942,19 @@ void test_data_table (ArDataTables *ArTables)
 	{
 		EnergyScanner eScan(EnergyScanner::PlotElasticResXS);
 		std::string fname_XS = "tests/table_total_elastic_XS.txt";
-		std::string fname_XS1 = "tests/total_elastic_from_diff.txt";
 		str.open(fname_XS, std::ios_base::trunc);
-		str<<"E[eV]\tXS elastic and resonance total [1e-20 m^2]"<<std::endl;
+		str<<"E[eV]\tXS elastic and resonance total [1e-20 m^2]\tXS elastic from function"<<std::endl;
 		while (true) {
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<<"\t"<<ArTables->XS_elastic(E)<<std::endl;
+			str<<E<<"\t"<<ArTables->XS_elastic(E)<<"\t"<<ArTables->ArAllData_.argon_cross_elastic(E)<<std::endl;
 		}
 		str.close();
 		std::string name = "tests/test_table_XS.sc";
 		str.open(name, std::ios_base::trunc);
 		str<<"set logscale x"<<std::endl;
-		str<<"plot \""<<fname_XS1<<"\" u 1:3 w lines title \"XS from function\""<<std::endl;
+		str<<"plot \""<<fname_XS<<"\" u 1:3 w lines title \"XS from function\""<<std::endl;
 		str<<"replot \""<<fname_XS<<"\" u 1:2 title \"XS from table\""<<std::endl;
 		str<<"pause -1"<<std::endl;
 		str.close();
@@ -891,27 +966,25 @@ void test_data_table (ArDataTables *ArTables)
 		ths = new Double_t [400];
 		XSs = new Double_t [400];
 		double Int = 0;
-		double Energy = 1.0;
+		double Energy = 10.0;//En_3o2_ - 0.5*Width_3o2_;
 		for (int i=0; i<400; ++i) {
 			ths[i] = i*M_PI/399.0;
 			XSs[i] = ArTables->ArAllData_.argon_cross_elastic_diff(Energy, ths[i]);
 			if (i!=0)
 				Int+=0.5*(XSs[i]+XSs[i-1])*(ths[i]-ths[i-1]);
 		}
-		for (int i=0; i<400; ++i)
-			XSs[i] /= Int;
-
 		TCanvas *c1 = new TCanvas((std::string("diff. XS ")+std::to_string(Energy) +"eV").c_str(),
 				(std::string("diff. XS ")+std::to_string(Energy) +"eV").c_str(), 900, 700);
 		TGraph *gr = new TGraph(400, ths, XSs);
 		TH1D * hist = new TH1D ((std::string("generated thetas ")+std::to_string(Energy) +"eV").c_str(),
 				(std::string("generated thetas ")+std::to_string(Energy) +"eV").c_str(), 300, 0, M_PI);
 		TRandom *random_generator_ = new TRandom1(42);
-		for (int h = 0; h<500000; ++h)
+		for (int h = 0; h<100000; ++h)
 			hist->Fill(ArTables->generate_Theta(Energy, Event::Elastic, random_generator_->Uniform()));
 		double Norm =0;
 		for (int bin = 0, bin_end = hist->GetNbinsX()+1; bin!=bin_end; ++bin)
 			Norm+=hist->GetBinContent(bin)*hist->GetBinWidth(bin);
+		Norm/=Int;
 		for (int bin = 0, bin_end = hist->GetNbinsX()+1; bin!=bin_end; ++bin)
 			hist->SetBinContent(bin, hist->GetBinContent(bin)/(Norm));
 
@@ -922,19 +995,18 @@ void test_data_table (ArDataTables *ArTables)
 	{
 		EnergyScanner eScan(EnergyScanner::PlotResonances);
 		std::string fname_XS = "tests/table_resonance_XS.txt";
-		std::string fname_XS1 = "tests/resonance_XS.txt";
 		str.open(fname_XS, std::ios_base::trunc);
-		str<<"E[eV]\tXS resonances + elastic total [1e-20 m^2]"<<std::endl;
+		str<<"E[eV]\tXS resonances + elastic total [1e-20 m^2]\tXS total from function"<<std::endl;
 		while (true) {
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<<"\t"<<ArTables->XS_elastic(E)<<std::endl;
+			str<<E<<"\t"<<ArTables->XS_elastic(E)<<"\t"<<ArTables->ArAllData_.argon_cross_elastic(E)<<std::endl;
 		}
 		str.close();
 		std::string name = "tests/test_table_resonance_XS.sc";
 		str.open(name, std::ios_base::trunc);
-		str<<"plot \""<<fname_XS1<<"\" u 1:2 title \"Resonance XS from function\""<<std::endl;
+		str<<"plot \""<<fname_XS<<"\" u 1:3 title \"Resonance XS from function\""<<std::endl;
 		str<<"replot \""<<fname_XS<<"\" u 1:2 title \"Resonance XS from table\""<<std::endl;
 		str<<"pause -1"<<std::endl;
 		str.close();
@@ -950,32 +1022,7 @@ void test_data_table (ArDataTables *ArTables)
 		str.close();
 		INVOKE_GNUPLOT(name);
 	}
-	ArTables->integral_table_->plot_E_Ey();
-}
-
-void test_resonance_cross (ArDataTables *ArTables)
-{
-	std::ofstream str;
-	{
-		EnergyScanner eScan(EnergyScanner::PlotResonances);
-		std::string fname_XS = "tests/resonance_XS.txt";
-		str.open(fname_XS, std::ios_base::trunc);
-		str<<"E[eV]\tXS resonance total [1e-20 m^2]"<<std::endl;
-		int err;
-		while (true) {
-			double E = eScan.Next(err);
-			if (0!=err)
-				break;
-			str<<E<<"\t"<<ArTables->ArAllData_.argon_cross_elastic(E)<<std::endl;
-		}
-		str.close();
-		std::string name = "tests/test_resonance_XS.sc";
-		str.open(name, std::ios_base::trunc);
-		str<<"plot \""<<fname_XS<<"\" u 1:2 title \"Resonance XS from function\""<<std::endl;
-		str<<"pause -1"<<std::endl;
-		str.close();
-		INVOKE_GNUPLOT(name);
-	}
+	//ArTables->integral_table_->plot_E_Ey();
 }
 
 void test_all (ArDataTables *ArTables)
@@ -997,15 +1044,15 @@ void test_all (ArDataTables *ArTables)
 	/*std::cout<<"Testing factor helping class:"<<std::endl;
 	test_factor_helper ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-
+	*/
 	std::cout<<"Testing legendre polynomials:"<<std::endl;
 	test_legendre_polynomial ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-
+/*
 	std::cout<<"Testing colored intervals:"<<std::endl;
 	test_colored_interval ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-	*//*
+
 	std::cout<<"Testing integrals of legendre polynomials:"<<std::endl;
 	test_legendre_intregral ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
