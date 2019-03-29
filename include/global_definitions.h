@@ -51,7 +51,7 @@
 //#define Width_1o2_ 2.0e-2
 //^in eV
 #define RESONANCE_EN_LOSS_FACTOR_ 1.0
-//#define RESONANCE_EN_LOSS_ 1e-1
+#define RESONANCE_EN_LOSS_ 2.5e-2
 #define DRIFT_DISTANCE_ 3e-3
 //^in m
 #define DRIFT_DISTANCE_HISTORY 0

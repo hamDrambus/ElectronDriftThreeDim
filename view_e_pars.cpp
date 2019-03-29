@@ -4,7 +4,7 @@
     TH1D* histE = new TH1D ("EnergyC [eV]","EnergyC [eV]",300,0, 15);
     TH1D* hist_dE = new TH1D ("Energy increase in resonance [eV]","Energy increase in resonance [eV]",300,-0.2, 0.2);
     TH1D* hist_dE_abs = new TH1D ("Energy abs increase in resonance [eV]","Energy abs increase in resonance [eV]",300,0.0, 0.2);
-    TH1D* hist_Eloss = new TH1D ("Energy loss in resonance [eV]","Energy loss in resonance [eV]",500,0, 0.02);
+    TH1D* hist_Eloss = new TH1D ("Energy loss in resonance [eV]","Energy loss in resonance [eV]",500,0, 0.003);
     TH1D* hist_dT = new TH1D ("dTime [s]","dTime [s]",300,4e-16, 1e-12);
     TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
     TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
@@ -18,7 +18,7 @@
     double E_at_time = 1e-11;
     double dt = 6e-12;
     double DRIFT_DISTANCE = 3e-3;
-    std::string fname1("Output/v11.4/eData_7.0Td.root");
+    std::string fname1("Output/v11.6/eData_7.0Td.root");
     double En_start;
     double En_collision;
     double En_finish;
