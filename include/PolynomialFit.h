@@ -2,9 +2,12 @@
 #define POLYNOMIAL_FIT_H
 
 #include <iostream>
+#include <fstream>
+#include <string>
 #include <TMath.h>
 #include "TMatrixD.h"
 #include "TVectorD.h"
+#include "global_definitions.h"
 
 //parameters are [0]+[1]*x+[2]*x^2+...
 class PolynomialFit { //TODO: storing _last_coefs is useless. (affects multithreading, there is need to store separate copies of DataVector for each thread)
@@ -42,7 +45,7 @@ protected:
 	bool use_left, use_right, is_set_left, is_set_right;
 	double left_value, right_value;
 public:
-	DataVector(Int_t fit_order, Int_t N_used);
+	DataVector(Int_t fit_order = 1, Int_t N_used = 2);
 	DataVector(std::vector < double> &xx, std::vector<double> &yy, Int_t fit_order, Int_t N_used);
 	~DataVector();
 
@@ -72,6 +75,10 @@ public:
 	std::size_t size (void);
 	double getX(std::size_t n);
 	double getY(std::size_t n);
+
+	//save/load full state except cache from file
+	void read(std::ifstream& str);
+	void write(std::ofstream& str, std::string comment="");
 protected:
 	void get_indices(double point, int &n_min, int &n_max); //[n_min, n_max] are used, not [n_min,n_max). N_used==n_max-n_min+1>=order+1
 	double calculate(double x);

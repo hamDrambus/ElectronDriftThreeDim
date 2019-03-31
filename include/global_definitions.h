@@ -19,27 +19,31 @@
 
 #define THREADS_NUMBER_ 6
 #define L_MAX_ 10
+//All energies in the program are in eV.
 #define XS_EL_EN_MAXIMUM_ 20.0
 #define XS_EL_EN_MINIMUM_ 1e-3
 #define PHASES_EN_MAXIMUM_ 12
 #define PHASES_EN_MINIMUM_ 5e-3
 #define THRESH_E_PHASES_ 0.24
-//^MERT 5 is applied only below this energy for backward probability and TM factors
+//^MERT 5 is applied only below this energy for differential cross-section
 #define THRESH_E_XS_ 1.0
 //^MERT 5 is applied only below this energy for total cross section
 /* These 2 thresholds are different because MERT5 excellently fits experimental total XS up until 1 eV (considering uncertainties).
- * MERT5 fit parameters are taken for the used experimental total XS (Kurokawa et al.)
- * On the other hand phase shift values obtained from experimental differential XS and MERT5 have discrepancy
- * from around 0.24 eV and above. Because of this P backward and TM have discontinuity.
- * Hence, even though MERT5 have right phase shifts around 1eV, situation is following:
- * From 5e-3 to 0.24 eV MERT5 PS are used for Pb and TM and diff. XS.
- * From 5e-3 to 1 eV MERT5 PS are used for total elastic XS.
- * Experimental PS are used otherwise.
+ * On the other hand, phase shift values (PSs) obtained from experimental differential XS and MERT5 have discrepancy
+ * from around 0.24 eV and above. Because of this P backward and TM (i.e. diff.XS) have discontinuity.
+ * Hence, even though MERT5 have right total XS around 1eV, situation is following:
+ * From 5e-3 to 0.24 eV MERT5 PSs are used for Pb and TM and diff. XS.
+ * From 5e-3 to 1 eV MERT5 PSs are used for total elastic XS.
+ * Otherwise, experimental PSs are used for diff. XS
+ * and experimental total XS is used for total elstic XS instead of experimental PSs.
+ * Feshbach resonances are added on top extrapolated exp. elastic XS using theoretical resonance phaseshifs (see Franz, et al. 2008)
+ * MERT5 fit parameters are taken from Kurokawa, et al 2011.
  */
 #define D_EN_SMOOTH_ 0.1
-//^ MERT5 and experimental totalXS
+//^ MERT5 and experimental totalXS have small discontinuity at 1eV.
 #define EN_MAXIMUM_ 16.0
-//^
+//^maximum electron energy available in the programm. Limited by elastic diff and total XS data. The limit is required for tabulation.
+//^In practive e reaches only about 14eV at 7Td.
 #define ANGLE_POINTS_ 1001
 //#define ANGLE_UNIFORM_
 //^temporary for v9.x
@@ -51,12 +55,14 @@
 //#define Width_1o2_ 2.0e-2
 //^in eV
 #define RESONANCE_EN_LOSS_FACTOR_ 1.0
-#define RESONANCE_EN_LOSS_ 2.5e-2
+#define RESONANCE_NBrS_XS_ 0.5
+//#define RESONANCE_EN_LOSS_ 1e-2
 #define DRIFT_DISTANCE_ 3e-3
 //^in m
 #define DRIFT_DISTANCE_HISTORY 0
-//^in m. Write info about electron only starting from this position
+//^in m. Write info about electron only starting from this position (first and last drift event are always written)
 #define SKIP_HISTORY_ 0
+#define TEST_VERSION_
 
 const long double e_charge_SIconst = 1.60217662e-19; //in coulombs (SI)
 const long double e_mass_SIconst = 9.10938356e-31; //in kg (SI)
@@ -99,8 +105,11 @@ struct Event
 	double delta_x;
 	double time_start;
 	double delta_time;
-	double delta_time_full; //with resonance delay
-	enum ProcessType : short {Overflow = -2, None = -1, Elastic = 0, Ionization = 1}; //Manager and Ar XS functions depend on this.
+	double delta_time_full; //with scattering (Wigner) time delay
+
+	double photon_En;
+
+	enum ProcessType : short {Overflow = -2, None = -1, Elastic = 0, ResNBrS =1, Ionization = 2}; //Manager and Ar XS functions depend on this.
 	short process; //1 is ionization and from 2 to max are excitations (process = ID + 1).
 	std::vector<double> CrossSections; //for each process starting from Elastic=1
 	std::vector<double> CrossSectionsSum; //helper for random process selection

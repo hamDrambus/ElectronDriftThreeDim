@@ -25,14 +25,10 @@ Manager::Manager(ArDataTables *Ar_tables, UInt_t RandomSeed) : is_ready_(false),
 			processes_legends_[i] = c_str_cp(std::string("\"Elastic scattering\""));
 			break;
 		}
-		/*case (Event::Resonance_3o2): {
-			processes_legends_[i] = c_str_cp(std::string("\"Feshbach resonance 3/2\""));
+		case (Event::ResNBrS): {
+			processes_legends_[i] = c_str_cp(std::string("\"Resonance NBrS\""));
 			break;
 		}
-		case (Event::Resonance_1o2): {
-			processes_legends_[i] = c_str_cp(std::string("\"Feshbach resonance 1/2\""));
-			break;
-		}*/
 		default: {
 			InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(processes_IDs_[i]-Event::Ionization);
 			if (NULL!=p) {
@@ -85,6 +81,8 @@ void Manager::InitTree (void)
 	sim_data_->Branch("theta_final", &event_.theta_finish);
 	sim_data_->Branch("theta_delta", &event_.delta_theta);
 	sim_data_->Branch("path_delta", &event_.delta_l);
+
+	sim_data_->Branch("photon_energy", &event_.photon_En);
 
 	/*sim_data_->Branch("deb_log_rand",&event_.deb_log_rand);
 	sim_data_->Branch("deb_solver_y_left",&event_.deb_solver_y_left);
@@ -224,6 +222,8 @@ void Manager::Initialize(Event &event)
 	event.theta_finish = 0;
 	event.delta_theta = 0;
 	event.delta_l = 0;
+
+	event.photon_En = 0;
 
 	event_ = event;
 }
@@ -448,15 +448,15 @@ void Manager::DoScattering(Event &event)
 		event.CrossSectionsSum[i] /= event.CrossSectionsSum[end_-1];
 
 	bool is_overflow = (event.process==Event::Overflow);
-	double R1 = random_generator_->Uniform();
+	double R2 = random_generator_->Uniform();
 	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i)
-		if (R1<event.CrossSectionsSum[i]) {
+		if (R2<event.CrossSectionsSum[i]) {
 			event.process = i + Event::Elastic;
 			break;
 		}
 
-	double R2 = random_generator_->Uniform();
-	event.delta_theta = ArTables_->generate_Theta (event.En_collision, event.process, R2);
+	double R3 = random_generator_->Uniform();
+	event.delta_theta = ArTables_->generate_theta (event.En_collision, event.process, R2);
 	double phi = random_generator_->Uniform()*2.0*M_PI;
 	double cos_th_f = std::cos(event.delta_theta)*std::cos(event.theta_collision) + std::sin(event.delta_theta)*std::sin(event.theta_collision)*std::cos(phi);
 	if (cos_th_f<-1.0) //just in case of precision problems
@@ -466,6 +466,7 @@ void Manager::DoScattering(Event &event)
 	event.theta_finish = std::acos(cos_th_f);// event.theta_collision + (R3<0.5 ? event.delta_theta: -event.delta_theta); - v7.x - 2D implementation
 	long double gamma_f = e_mass_eVconst/Ar_mass_eVconst;
 	double EnergyLoss = 2*(1-cos(event.delta_theta))*event.En_collision*gamma_f /pow(1 + gamma_f, 2);
+	double time_delay = 0;
 	switch (event.process) {
 		case (Event::Elastic): {
 #ifdef RESONANCE_EN_LOSS_
@@ -474,6 +475,14 @@ void Manager::DoScattering(Event &event)
 			width_factor *= 0.5*RESONANCE_EN_LOSS_;
 			EnergyLoss+=width_factor;
 #endif
+			double R5 = random_generator_->Uniform();
+			time_delay = ArTables_->generate_time_delay(event.En_collision, event.delta_theta, event.process, R5);
+			break;
+		}
+		case (Event::ResNBrS): {
+			double R5 = random_generator_->Uniform();
+			EnergyLoss = ArTables_->generate_ResNBrS_En_loss(event.En_collision, event.delta_theta, R5);
+			event.photon_En = EnergyLoss;
 			break;
 		}
 		case (Event::Ionization): {
@@ -491,13 +500,7 @@ void Manager::DoScattering(Event &event)
 		}
 	}
 	event.En_finish = event.En_collision - EnergyLoss;
-	event.delta_time_full = event.delta_time;
-	/*if (event.process == Event::Resonance_3o2) {
-		event.delta_time_full += random_generator_->Exp(h_bar_eVconst/Width_3o2_);
-	}
-	if (event.process == Event::Resonance_1o2) {
-		event.delta_time_full += random_generator_->Exp(h_bar_eVconst/Width_1o2_);
-	}*/
+	event.delta_time_full = event.delta_time + time_delay;
 	if (is_overflow)
 		event.process = Event::Overflow;
 	event_ = event;
@@ -550,6 +553,7 @@ void Manager::DoGotoNext(Event &event)
 		event.delta_x = 0;
 		event.delta_time_full = 0;
 		event.theta_start = event.theta_finish;
+		event.photon_En = 0;
 	}
 	event_ = event;
 }

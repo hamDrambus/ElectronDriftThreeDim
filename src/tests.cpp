@@ -614,22 +614,37 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 	std::ofstream str;
 	int err;
 
-/*	{
-		str.open(fname_diff, std::ios_base::trunc);
-		str<<"theta[deg]\tXS[1e-20m^2]"<<std::endl;
-		for (int i=0; i<600; ++i) {
-			double th = i*(M_PI)/599;
-			str<<th*180/M_PI<<"\t"<< ArTables->ArAllData_.argon_cross_elastic_diff(10.0, th)<<std::endl;
+	{
+		Double_t *ths, *XSs;
+		ths = new Double_t[400];
+		XSs = new Double_t[400];
+		double Int = 0;
+		double Energy = 10.0;//En_3o2_ - 0.5*Width_3o2_;
+		for (int i = 0; i<400; ++i) {
+			ths[i] = i*M_PI / 399.0;
+			XSs[i] = ArTables->ArAllData_.argon_cross_elastic_diff(Energy, ths[i]);
+			if (i != 0)
+				Int += 0.5*(XSs[i] + XSs[i - 1])*(ths[i] - ths[i - 1]);
 		}
-		str.close();
-		std::string name = "tests/test_diff_XS_elastic.sc";
-		str.open(name, std::ios_base::trunc);
-		str<<"plot \""<<fname_diff<<"\" u 1:2 title \"Diff. XS at 10 eV\""<<std::endl;
-		str<<"pause -1"<<std::endl;
-		str.close();
-		INVOKE_GNUPLOT(name);
+		TCanvas *c1 = new TCanvas((std::string("diff. XS ") + std::to_string(Energy) + "eV").c_str(),
+			(std::string("diff. XS ") + std::to_string(Energy) + "eV").c_str(), 900, 700);
+		TGraph *gr = new TGraph(400, ths, XSs);
+		TH1D * hist = new TH1D((std::string("generated thetas ") + std::to_string(Energy) + "eV").c_str(),
+			(std::string("generated thetas ") + std::to_string(Energy) + "eV").c_str(), 300, 0, M_PI);
+		TRandom *random_generator_ = new TRandom1(42);
+		for (int h = 0; h<100000; ++h)
+			hist->Fill(ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform()));
+		double Norm = 0;
+		for (int bin = 0, bin_end = hist->GetNbinsX() + 1; bin != bin_end; ++bin)
+			Norm += hist->GetBinContent(bin)*hist->GetBinWidth(bin);
+		Norm /= Int;
+		for (int bin = 0, bin_end = hist->GetNbinsX() + 1; bin != bin_end; ++bin)
+			hist->SetBinContent(bin, hist->GetBinContent(bin) / (Norm));
+
+		hist->Draw();
+		gr->Draw("L");
 	}
-*/
+
 	{
 		str.open(fname_tot_MERT5, std::ios_base::trunc);
 		str<<"E[eV]\tXS from diff MERT5 [1e-20m^2]\tXS tot MERT5 PS [1e-20m^2]"<<std::endl;
@@ -733,6 +748,208 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 
 }
 
+void test_J_L_probabilities(ArDataTables *ArTables)
+{
+	std::string fname_diff = "tests/diff_cross_elastic_10eV_Pjl.txt";
+	std::string fname_tot = "tests/total_elastic_from_diff_Pjl.txt";
+	std::string fname_angle_profiles = "tests/diff_cross_elastic_profiles_Pjl.txt";
+	std::ofstream str;
+	int err;
+	{
+		double E = En_3o2_-0.05;
+		unsigned int N_th = 600;
+		int N_lz = 0;
+		double I_lz = 0;
+		double I_gz = 0;
+		for (int i = 0; i<=N_th; ++i) {
+			double theta = i*M_PI / N_th;
+			double k = a_h_bar_2e_m_e_SIconst*sqrt(E);
+			for (int L = 0; L < ArTables->ArAllData_.ArExper_.max_L(k); ++L) {
+				double prob = ArTables->ArAllData_.argon_scatter_probability_j(E, theta, 2 * L + 1, 2 * L);
+				if (prob < 0) {
+					++N_lz;
+					I_lz += prob;
+				} else
+					I_gz += prob;
+				if (L > 0) {
+					prob = ArTables->ArAllData_.argon_scatter_probability_j(E, theta, 2 * L - 1, 2 * L);
+					if (prob < 0) {
+						++N_lz;
+						I_lz += prob;
+					} else
+					I_gz += prob;
+				}
+			}
+		}
+		std::cout << "Test of probability of scattering through defined J L " << std::endl;
+		std::cout << "E = " << E << "; N_theta = "<< N_th << std::endl;
+		std::cout << "Num of negative probabilities: "<< N_lz << std::endl;
+		std::cout << "Sum of negative probabilities: " << I_lz << std::endl;
+		std::cout << "Sum of positive probabilities: " << I_gz << std::endl;
+	}
+
+	{
+		str.open(fname_diff, std::ios_base::trunc);
+		str<<"theta[deg]\tdiff.XS_standard[1e-20m^2]\tdiff.XS_Pjl[1e-20m^2]"<<std::endl;
+		for (int i=0; i<600; ++i) {
+			double th = i*(M_PI)/599;
+			str<<th*180/M_PI<<"\t"<< ArTables->ArAllData_.argon_cross_elastic_diff(10.0, th)<<"\t"<< ArTables->ArAllData_.argon_cross_elastic_diff(10.0, th, 3) <<std::endl;
+		}
+		str.close();
+		std::string name = "tests/test_diff_XS_elastic_10eV_Pjl.sc";
+		str.open(name, std::ios_base::trunc);
+		str<<"plot \""<<fname_diff<<"\" u 1:2 title \"Diff. XS at 10 eV\""<<std::endl;
+		str << "plot \"" << fname_diff << "\" u 1:3 title \"Diff. XS at 10 eV using l-j probabilities\"" << std::endl;
+		str<<"pause -1"<<std::endl;
+		str.close();
+		INVOKE_GNUPLOT(name);
+	}
+	
+	{
+		str.open(fname_tot, std::ios_base::trunc);
+		str << "E[eV]\tXS tot [1e-20m^2]\tXS from diff [1e-20m^2]\tXS from diff Pjl [1e-20m^2]" << std::endl;
+		{
+			EnergyScanner eScan(EnergyScanner::PlotDiffXS);
+			while (true) {
+				double E = eScan.Next(err);
+				if ((0 != err))
+					break;
+				long double integral = 0;
+				long double integral2 = 0;
+				for (int j = 0; j < 10001; ++j) {
+					integral += (M_PI / 10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI / 10000.0)*sin(j*M_PI / 10000.0);
+					integral2 += (M_PI / 10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI / 10000.0, 3)*sin(j*M_PI / 10000.0);
+				}
+				str << E << "\t" << ArTables->ArAllData_.argon_cross_elastic(E)<<"\t" << integral << "\t" << integral2 << std::endl;
+			}
+		}
+		str.close();
+
+		std::string name = "tests/test_diff_XS_elastic_by_total_Pjl.sc";
+		str.open(name, std::ios_base::trunc);
+		str << "set logscale x" << std::endl;
+		str << "set logscale y" << std::endl;
+		str << "set key top left" << std::endl;
+		str << "plot \"" << fname_tot << "\" u 1:2 w lines title \"total XS\"" << std::endl;
+		str << "replot \"" << fname_tot << "\" u 1:3 w lines title \"total XS from diff.\"" << std::endl;
+		str << "replot \"" << fname_tot << "\" u 1:3 w lines title \"total XS from diff. by Pjl\"" << std::endl;
+		str << "pause -1" << std::endl;
+		str.close();
+		INVOKE_GNUPLOT(name);
+	}
+
+	{
+		str.open(fname_angle_profiles, std::ios_base::trunc);
+		str << "E[eV]\tXS diff 22.5deg [1e-20m^2]\tXS diff 45deg\tXS diff 90deg\XS diff 112.5deg\tXS diff 135deg"; 
+		str << "\tXS diff Pjl 22.5deg\tXS diff Pjl 45deg\tXS diff Pjl 90deg\XS diff Pjl 112.5deg\tXS diff Pjl 135deg" << std::endl;
+		EnergyScanner eScan(EnergyScanner::PlotResonances);
+		double th0 = 22.5*(M_PI) / 180;
+		double th1 = 45 * (M_PI) / 180;
+		double th2 = 90 * (M_PI) / 180;
+		double th3 = 112.5*(M_PI) / 180;
+		double th4 = 135 * (M_PI) / 180;
+		while (true) {
+			double E = eScan.Next(err);
+			if ((0 != err))
+				break;
+			str << E << "\t" << ArTables->ArAllData_.argon_cross_elastic_diff(E, th0) << "\t"
+				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th1) << "\t"
+				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th2) << "\t"
+				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th3) << "\t"
+				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th4) << "\t"
+				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th0, 3) << "\t"
+				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th1, 3) << "\t"
+				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th2, 3) << "\t"
+				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th3, 3) << "\t"
+				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th4, 3) << std::endl;
+		}
+		str.close();
+		std::string name = "tests/test_diff_XS_elastic_profiles_Pjl.sc";
+		str.open(name, std::ios_base::trunc);
+		str << "set key top right" << std::endl;
+		str << "set xlabel \"E [eV]\"" << std::endl;
+		str << "plot \"" << fname_angle_profiles << "\" u 1:2 w l title \"diff. XS 22.5 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:3 w l title \"diff. XS 45 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:4 w l lc rgb \"#000000\" title \"diff. XS 90 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:5 w l title \"diff. XS 112.5 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:6 w l title \"diff. XS 135.5 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:7 w l title \"diff. XS Pjl 22.5 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:8 w l title \"diff. XS Pjl 45 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:9 w l title \"diff. Pjl XS 90 deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:10 w l title \"diff. XS 112.5 Pjl deg.\"" << std::endl;
+		str << "replot \"" << fname_angle_profiles << "\" u 1:11 w l title \"diff. XS 135.5 Pjl deg.\"" << std::endl;
+		str << "pause -1" << std::endl;
+		str.close();
+		INVOKE_GNUPLOT(name);
+	}
+}
+
+void test_time_delay(ArDataTables *ArTables)
+{
+	std::vector<double> Es = {11.05, 11.1, 11.1025, 11.1038 , 11.2708};
+	for (std::size_t i = 0, i_end_ = Es.size(); i != i_end_; ++i) {
+		double Energy = Es[i];
+		std::string title = std::string("time delay ") + std::to_string(Energy) + "eV";
+		TCanvas *c1 = new TCanvas(title.c_str(), title.c_str(), 900, 700);
+		TPaveText* pave_text = new TPaveText(0.1, 0.9, 0.5, 0.75, "");
+		std::string hist_title = (std::string("Time delay for scatter at ") + std::to_string(Energy) + "eV");
+		TH1D * hist = new TH1D(hist_title.c_str(), hist_title.c_str(), 300, 0, 1.05*h_bar_eVconst/std::min(Width_1o2_, Width_3o2_));
+		TRandom *random_generator_ = new TRandom1(42);
+		unsigned long int N0 = 0, Nn0 = 0;
+		for (int h = 0; h < 100000; ++h) {
+			double theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
+			double delay = ArTables->generate_time_delay_untabulated(Energy, theta, Event::Elastic, random_generator_->Uniform());
+			if (0 != delay) {
+				hist->Fill(delay);
+				++Nn0;
+			} else {
+				++N0;
+			}
+		}
+		pave_text->AddText((std::string("N with 0 delay = ") + std::to_string(N0)).c_str());
+		pave_text->AddText((std::string("N with non 0 delay = ") + std::to_string(Nn0)).c_str());
+		hist->Draw();
+		pave_text->Draw("same");
+	}
+
+	for (std::size_t i = 0, i_end_ = Es.size(); i != i_end_; ++i) {
+		double Energy = En_3o2_;
+		std::string title = std::string("time delay table") + std::to_string(Energy) + "eV";
+		TCanvas *c1 = new TCanvas(title.c_str(), title.c_str(), 900, 700);
+		TLegend* legend = new TLegend(0.50, 0.75, 0.9, 0.9);
+		//legend->SetHeader("");
+		legend->SetMargin(0.25);
+		std::string hist_title = (std::string("Time delay for scatter at ") + std::to_string(Energy) + "eV");
+		std::string hist_title2 = (std::string("Tabulated time delay for scatter at ") + std::to_string(Energy) + "eV");
+		TH1D * hist = new TH1D(hist_title.c_str(), hist_title.c_str(), 300, 0, 1.05*h_bar_eVconst / std::min(Width_1o2_, Width_3o2_));
+		TH1D * hist2 = new TH1D(hist_title.c_str(), hist_title.c_str(), 300, 0, 1.05*h_bar_eVconst / std::min(Width_1o2_, Width_3o2_));
+		TRandom *random_generator_ = new TRandom1(42);
+		unsigned long int N0_1 = 0, Nn0_1 = 0, N0_2 = 0, Nn0_2 = 0;
+		for (int h = 0; h < 100000; ++h) {
+			double theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
+			double delay1 = ArTables->generate_time_delay_untabulated(Energy, theta, Event::Elastic, random_generator_->Uniform());
+			if (0 != delay1) {
+				hist->Fill(delay1);
+				++Nn0_1;
+			} else {
+				++N0_1;
+			}
+			double delay2 = ArTables->generate_time_delay(Energy, theta, Event::Elastic, random_generator_->Uniform());
+			if (0 != delay2) {
+				hist2->Fill(delay2);
+				++Nn0_2;
+			} else {
+				++N0_2;
+			}
+		}
+		legend->AddEntry(hist, (std::string("Ndelayed = ") + std::to_string(Nn0_1) + ", Ntot = "+std::to_string(Nn0_1+ N0_1)).c_str(), "l");
+		legend->AddEntry(hist2, (std::string("Tabulated. Ndelayed = ") + std::to_string(Nn0_2) + ", Ntot = " + std::to_string(Nn0_2 + N0_2)).c_str(), "l");
+		hist->Draw();
+		hist2->Draw("same");
+		legend->Draw("same");
+	}
+}
+
 void test_backward_scatter_prob (ArDataTables *ArTables)
 {
 	std::string fname = "tests/backward_scattering_prob.txt";
@@ -816,6 +1033,7 @@ void test_total_cross_all (ArDataTables *ArTables)
 	std::ofstream str, str1;
 
 	std::string fname_XS = "tests/total_elastic_and_resonances_XS.txt";
+	std::string fname_XS_res = "tests/total_resonances_XS.txt";
 	std::string fname_XS_ext = "tests/excitation_XS.txt";
 	std::string fname_XS_ext2 = "tests/excitation_XS2.txt";
 	int err;
@@ -823,7 +1041,7 @@ void test_total_cross_all (ArDataTables *ArTables)
 		EnergyScanner EnRange(EnergyScanner::PlotAllXS);
 		str.open(fname_XS, std::ios_base::trunc);
 		str<<std::scientific;
-		str<<"E[eV]\tXS elastic+Feshbach resonances total [1e-20 m^2]"<<std::endl;
+		str<<"E[eV]\tXS elastic+Feshbach resonances total [1e-20 m^2]\tXS elastic total from table"<<std::endl;
 		str1.open(fname_XS_ext, std::ios_base::trunc);
 		str1<<std::scientific;
 		str1<<"E[eV]\tXS S ext.[1e-20 m^2]\tXS P ext.\tXS sum ext.\tXS ion."<<std::endl;
@@ -831,7 +1049,8 @@ void test_total_cross_all (ArDataTables *ArTables)
 			double E = EnRange.Next(err);
 			if (0!=err)
 				break;
-			str<<E<<"\t"<<ArTables->XS_elastic(E)<<std::endl;
+
+			str<<E<<"\t"<<ArTables->ArAllData_.argon_cross_elastic(E) <<"\t"<<ArTables->XS_elastic(E)<<std::endl;
 			double XS_S=0, XS_P=0, XS_EXT=0, XS_ION=0;
 			for (int j =0, end_ = ArTables->ArAllData_.ArExper_.ionizations.size(); j!=end_; ++j) {
 				XS_ION+= ArTables->ArAllData_.ArExper_.ionizations[j](E);
@@ -852,6 +1071,26 @@ void test_total_cross_all (ArDataTables *ArTables)
 		}
 		str.close();
 		str1.close();
+		std::string name = "tests/test_table_XS.sc";
+		str.open(name, std::ios_base::trunc);
+		str << "set logscale x" << std::endl;
+		str << "plot \"" << fname_XS << "\" u 1:2 w lines title \"XS from function\"" << std::endl;
+		str << "replot \"" << fname_XS << "\" u 1:3 title \"XS from table\"" << std::endl;
+		str << "pause -1" << std::endl;
+		str.close();
+		INVOKE_GNUPLOT(name);
+		name = "tests/test_XS_all.sc";
+		str.open(name, std::ios_base::trunc);
+		str << "set logscale x" << std::endl;
+		str << "set logscale y" << std::endl;
+		str << "plot \"" << fname_XS << "\" u 1:2 w lines lc rgb \"#000000\" title \"XS elastic + Fishbach resonance\"" << std::endl;
+		str << "replot \"" << fname_XS_ext << "\" u 1:2 w lines lc rgb \"#0000CC\" title \"XS S excitation\"" << std::endl;
+		str << "replot \"" << fname_XS_ext << "\" u 1:3 w lines lc rgb \"#10CA73\" title \"XS P excitation\"" << std::endl;
+		str << "replot \"" << fname_XS_ext << "\" u 1:4 w lines lc rgb \"#D90F2B\" title \"XS sum excitation\"" << std::endl;
+		str << "replot \"" << fname_XS_ext << "\" u 1:5 w lines lc rgb \"#D90FD0\" title \"XS ionization\"" << std::endl;
+		str << "pause -1" << std::endl;
+		str.close();
+		INVOKE_GNUPLOT(name);
 	}
 
 	{
@@ -882,147 +1121,40 @@ void test_total_cross_all (ArDataTables *ArTables)
 			str<<E<<"\t"<<XS_S<<"\t"<<XS_P<<"\t"<<XS_EXT<<"\t"<<XS_ION<<std::endl;
 		}
 		str.close();
+		std::string name = "tests/test_XS_ext.sc";
+		str.open(name, std::ios_base::trunc);
+		str << "set logscale x" << std::endl;
+		str << "set logscale y" << std::endl;
+		str << "plot \"" << fname_XS << "\" u 1:2 w lines lc rgb \"#000000\" title \"XS elastic + Fishbach resonance\"" << std::endl;
+		str << "replot \"" << fname_XS_ext2 << "\" u 1:2 w lines lc rgb \"#0000CC\" title \"XS S excitation\"" << std::endl;
+		str << "replot \"" << fname_XS_ext2 << "\" u 1:3 w lines lc rgb \"#10CA73\" title \"XS P excitation\"" << std::endl;
+		str << "replot \"" << fname_XS_ext2 << "\" u 1:4 w lines lc rgb \"#D90F2B\" title \"XS sum excitation\"" << std::endl;
+		str << "replot \"" << fname_XS_ext2 << "\" u 1:5 w lines lc rgb \"#D90FD0\" title \"XS ionization\"" << std::endl;
+		str << "pause -1" << std::endl;
+		str.close();
+		INVOKE_GNUPLOT(name);
 	}
 
 	{
 		EnergyScanner eScan(EnergyScanner::PlotResonances);
-		std::string fname_XS = "tests/resonance_XS.txt";
-		str.open(fname_XS, std::ios_base::trunc);
-		str<<"E[eV]\tXS resonance total [1e-20 m^2]"<<std::endl;
+		str.open(fname_XS_res, std::ios_base::trunc);
+		str<<"E[eV]\tXS resonance[1e-20 m^2]\tXS resonance from table"<<std::endl;
 		int err;
 		while (true) {
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<<"\t"<<ArTables->ArAllData_.argon_cross_elastic(E)<<std::endl;
+			str<<E<< "\t" << ArTables->ArAllData_.argon_cross_elastic(E)<<"\t"<<ArTables->XS_elastic(E)<<std::endl;
 		}
 		str.close();
 		std::string name = "tests/test_resonance_XS.sc";
 		str.open(name, std::ios_base::trunc);
-		str<<"plot \""<<fname_XS<<"\" u 1:2 title \"Resonance XS from function\""<<std::endl;
+		str<<"plot \"" << fname_XS_res << "\" u 1:3 w l lc rgb \"#000000\" title \"Resonance XS from table\"" << std::endl;
+		str<<"replot \""<< fname_XS_res <<"\" u 1:2 w p lc rgb \"#FF0000\" title \"Resonance XS from function\""<<std::endl;
 		str<<"pause -1"<<std::endl;
 		str.close();
 		INVOKE_GNUPLOT(name);
 	}
-
-	std::string name = "tests/test_XS_all.sc";
-	str.open(name, std::ios_base::trunc);
-	str<<"set logscale x"<<std::endl;
-	str<<"set logscale y"<<std::endl;
-	str<<"plot \""<<fname_XS<<"\" u 1:2 w lines lc rgb \"#000000\" title \"XS elastic + Fishbach resonance\""<<std::endl;
-	str<<"replot \""<<fname_XS_ext<<"\" u 1:2 w lines lc rgb \"#0000CC\" title \"XS S excitation\""<<std::endl;
-	str<<"replot \""<<fname_XS_ext<<"\" u 1:3 w lines lc rgb \"#10CA73\" title \"XS P excitation\""<<std::endl;
-	str<<"replot \""<<fname_XS_ext<<"\" u 1:4 w lines lc rgb \"#D90F2B\" title \"XS sum excitation\""<<std::endl;
-	str<<"replot \""<<fname_XS_ext<<"\" u 1:5 w lines lc rgb \"#D90FD0\" title \"XS ionization\""<<std::endl;
-	str<<"pause -1"<<std::endl;
-	str.close();
-	INVOKE_GNUPLOT(name);
-
-	name = "tests/test_XS_ext.sc";
-	str.open(name, std::ios_base::trunc);
-	str<<"set logscale x"<<std::endl;
-	str<<"set logscale y"<<std::endl;
-	str<<"plot \""<<fname_XS<<"\" u 1:2 w lines lc rgb \"#000000\" title \"XS elastic + Fishbach resonance\""<<std::endl;
-	str<<"replot \""<<fname_XS_ext2<<"\" u 1:2 w lines lc rgb \"#0000CC\" title \"XS S excitation\""<<std::endl;
-	str<<"replot \""<<fname_XS_ext2<<"\" u 1:3 w lines lc rgb \"#10CA73\" title \"XS P excitation\""<<std::endl;
-	str<<"replot \""<<fname_XS_ext2<<"\" u 1:4 w lines lc rgb \"#D90F2B\" title \"XS sum excitation\""<<std::endl;
-	str<<"replot \""<<fname_XS_ext2<<"\" u 1:5 w lines lc rgb \"#D90FD0\" title \"XS ionization\""<<std::endl;
-	str<<"pause -1"<<std::endl;
-	str.close();
-	INVOKE_GNUPLOT(name);
-
-}
-
-//Not dependent on previous tests.
-//This function tests that interpolation/fit of ArDataTables works properly.
-void test_data_table (ArDataTables *ArTables)
-{
-	int err;
-	std::ofstream str;
-	{
-		EnergyScanner eScan(EnergyScanner::PlotElasticResXS);
-		std::string fname_XS = "tests/table_total_elastic_XS.txt";
-		str.open(fname_XS, std::ios_base::trunc);
-		str<<"E[eV]\tXS elastic and resonance total [1e-20 m^2]\tXS elastic from function"<<std::endl;
-		while (true) {
-			double E = eScan.Next(err);
-			if (0!=err)
-				break;
-			str<<E<<"\t"<<ArTables->XS_elastic(E)<<"\t"<<ArTables->ArAllData_.argon_cross_elastic(E)<<std::endl;
-		}
-		str.close();
-		std::string name = "tests/test_table_XS.sc";
-		str.open(name, std::ios_base::trunc);
-		str<<"set logscale x"<<std::endl;
-		str<<"plot \""<<fname_XS<<"\" u 1:3 w lines title \"XS from function\""<<std::endl;
-		str<<"replot \""<<fname_XS<<"\" u 1:2 title \"XS from table\""<<std::endl;
-		str<<"pause -1"<<std::endl;
-		str.close();
-		INVOKE_GNUPLOT(name);
-	}
-
-	{
-		Double_t *ths, *XSs;
-		ths = new Double_t [400];
-		XSs = new Double_t [400];
-		double Int = 0;
-		double Energy = 10.0;//En_3o2_ - 0.5*Width_3o2_;
-		for (int i=0; i<400; ++i) {
-			ths[i] = i*M_PI/399.0;
-			XSs[i] = ArTables->ArAllData_.argon_cross_elastic_diff(Energy, ths[i]);
-			if (i!=0)
-				Int+=0.5*(XSs[i]+XSs[i-1])*(ths[i]-ths[i-1]);
-		}
-		TCanvas *c1 = new TCanvas((std::string("diff. XS ")+std::to_string(Energy) +"eV").c_str(),
-				(std::string("diff. XS ")+std::to_string(Energy) +"eV").c_str(), 900, 700);
-		TGraph *gr = new TGraph(400, ths, XSs);
-		TH1D * hist = new TH1D ((std::string("generated thetas ")+std::to_string(Energy) +"eV").c_str(),
-				(std::string("generated thetas ")+std::to_string(Energy) +"eV").c_str(), 300, 0, M_PI);
-		TRandom *random_generator_ = new TRandom1(42);
-		for (int h = 0; h<100000; ++h)
-			hist->Fill(ArTables->generate_Theta(Energy, Event::Elastic, random_generator_->Uniform()));
-		double Norm =0;
-		for (int bin = 0, bin_end = hist->GetNbinsX()+1; bin!=bin_end; ++bin)
-			Norm+=hist->GetBinContent(bin)*hist->GetBinWidth(bin);
-		Norm/=Int;
-		for (int bin = 0, bin_end = hist->GetNbinsX()+1; bin!=bin_end; ++bin)
-			hist->SetBinContent(bin, hist->GetBinContent(bin)/(Norm));
-
-		hist->Draw();
-		gr->Draw("L");
-	}
-
-	{
-		EnergyScanner eScan(EnergyScanner::PlotResonances);
-		std::string fname_XS = "tests/table_resonance_XS.txt";
-		str.open(fname_XS, std::ios_base::trunc);
-		str<<"E[eV]\tXS resonances + elastic total [1e-20 m^2]\tXS total from function"<<std::endl;
-		while (true) {
-			double E = eScan.Next(err);
-			if (0!=err)
-				break;
-			str<<E<<"\t"<<ArTables->XS_elastic(E)<<"\t"<<ArTables->ArAllData_.argon_cross_elastic(E)<<std::endl;
-		}
-		str.close();
-		std::string name = "tests/test_table_resonance_XS.sc";
-		str.open(name, std::ios_base::trunc);
-		str<<"plot \""<<fname_XS<<"\" u 1:3 title \"Resonance XS from function\""<<std::endl;
-		str<<"replot \""<<fname_XS<<"\" u 1:2 title \"Resonance XS from table\""<<std::endl;
-		str<<"pause -1"<<std::endl;
-		str.close();
-		INVOKE_GNUPLOT(name);
-	}
-
-	{
-		std::string fname_XS = "data_derived/total_cross_section_integral.dat";
-		std::string name = "tests/test_table_XS_integral.sc";
-		str.open(name, std::ios_base::trunc);
-		str<<"plot \""<<fname_XS<<"\" u 1:2 w lines title \"XS integral\""<<std::endl;
-		str<<"pause -1"<<std::endl;
-		str.close();
-		INVOKE_GNUPLOT(name);
-	}
-	//ArTables->integral_table_->plot_E_Ey();
 }
 
 void test_all (ArDataTables *ArTables)
@@ -1081,9 +1213,6 @@ void test_all (ArDataTables *ArTables)
 	test_total_cross_all (ArTables);
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 */
-	std::cout<<"Testing Ar data tables:"<<std::endl;
-	test_data_table (ArTables);
-	std::cout<<"==============================================="<<std::endl;
 
 	std::cout<<"Testing finished."<<std::endl<<std::endl<<std::endl;
 }

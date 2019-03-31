@@ -234,6 +234,110 @@ double DataVector::getX(std::size_t n)
 double DataVector::getY(std::size_t n)
 {	return ys[n]; }
 
+void DataVector::read(std::ifstream& str)
+{
+	clear();
+	std::string line, word;
+	int line_n = 0;
+	while (!str.eof() && str.is_open()) {
+		std::getline(str, line);
+		++line_n;
+		if (1 == line_n) {
+			//parse "//Order	N_used	use_left use_right is_set_left is_set_right left_value right_value"
+			double dval;
+			int ival;
+			int word_n = 0;
+			if (line.size() < 2)
+				goto wrong_format;
+			if ((line[0] != '/') || (line[1] != '/'))
+				goto wrong_format;
+			line.erase(line.begin(), line.begin() + 2);
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			setOrder(ival);
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			setNused(ival);
+			
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			use_leftmost(ival);
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			use_rightmost(ival);
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			is_set_left = ival;
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			is_set_right = ival;
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			dval = std::stoi(word);
+			left_value = dval;
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			dval = std::stoi(word);
+			right_value = dval;
+			continue;
+		wrong_format:
+			std::cerr << "DataVector::read: Error on line " << line_n << " word "<<word_n<<": wrong header format" << std::endl;
+			return;
+		}
+		if (line.size() >= 2) //Ignore simple c style comment
+			if ((line[0] == '/') && (line[1] == '/'))
+				continue;
+		word = strtoken(line, "\t ");
+		if (word.empty())
+			break;
+		double x = std::stod(word);
+		word = strtoken(line, "\t ");
+		if (word.empty())
+			break;
+		double val = std::stod(word);
+		push_back(x, val);
+	}
+}
+
+void DataVector::write(std::ofstream& str, std::string comment)
+{
+	//"//Order	N_used	use_left use_right is_set_left is_set_right left_value right_value"
+	str << "//" << getOrder() << "\t" << N_used << "\t" << (use_left ? 1 : 0) << "\t" << (use_right ? 1 : 0)
+		<< "\t" << (is_set_left ? 1 : 0) << "\t" << (is_set_right ? 1 : 0) << "\t" << left_value << "\t" << right_value << std::endl;
+	str << "//" << comment << std::endl;
+	for (std::size_t i = 0, i_end_ = size(); i != i_end_; ++i) {
+		str << xs[i] << "\t" << ys[i] << std::endl;
+	}
+}
+
 double DataVector::operator()(double point)
 {
 	if (xs.empty()||ys.empty())

@@ -56,7 +56,7 @@ EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/80); 		//fine area
 		break;
 	}
-	case (PlotResonances): { //used for plottin total and differential XS in resonances region
+	case (PlotResonances): { //used for plotting total and differential XS in resonances region
 		energy_range_ = ColoredInterval (En_1o2_ - 110*Width_1o2_, En_1o2_ + 110*Width_1o2_, Width_1o2_/3) + 	//coarse area
 				ColoredInterval (En_3o2_ - 110*Width_3o2_, En_3o2_ + 110*Width_3o2_, Width_3o2_/3) + 			//coarse area
 				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/80) + 		//fine area
@@ -274,10 +274,15 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 		E_Ionization = DBL_MAX;
 		for (int i =0, end_ = ionizations.size();i!=end_;++i)
 			E_Ionization = std::min(ionizations[i].get_En_thresh(), E_Ionization);
-	}
+	} 
 	inp.open("data/ArExitations_Magboltz.dat");
 	read_inelastic(inp, excitations);
 	inp.close();
+	if (excitations.size()) {
+		First_excitation_En = DBL_MAX;
+		for (int i = 0, end_ = excitations.size(); i != end_; ++i)
+			First_excitation_En = std::min(excitations[i].get_En_thresh(), First_excitation_En);
+	}
 	std::cout << "Finished reading Ar exprimental data." << std::endl;
 }
 
@@ -452,11 +457,38 @@ void ArAllData::argon_phase_values_MERT5(long double k, unsigned int l, long dou
 	ps_p = ps_n = std::atan(tan);
 }
 
+//In seconds. Considered non zero only for L = 1 and J = 1/2 and 3/2 (J and L are expressed in halves)
+long double ArAllData::argon_time_delay_j(long double E, int J, int L)
+{
+	if (L!=2)
+		return 0;
+	if (((J != L - 1) && (J != L + 1)) || J < 0) {
+		std::cerr << "ArAllData::argon_time_delay_j: Error: No momentum J=" << J << "/2 for e(s=1/2)-Ar(s=0) scattering with L =" << L / 2 << std::endl;
+		return 0;
+	}
+	if (J == L-1) {
+		return 2* h_bar_eVconst / (1 + std::pow(2 * (E - En_1o2_) / Width_1o2_, 2)*Width_1o2_);
+	} else {
+		return 2 * h_bar_eVconst / (1 + std::pow(2 * (E - En_3o2_) / Width_3o2_, 2)*Width_3o2_);
+	}
+}
+
+//probabilty on scatter at certain angle going through total momentum J/2 and orbital momentum L/2. (J&L are expressed in halves)
 //mode = 0 or unexpected - standard formula used in simulation, called by default.
-//mode = 1 - calculate MERT5 phases (normally only between EN_MINIMUM_ and THRESH_E_PHASES_)
+//mode = 1 - calculate using MERT5 phases (normally only between EN_MINIMUM_ and THRESH_E_PHASES_)
 //mode = 2 - calculate using extrapolation of experimental phase shifts (normally used only between THRESH_E_PHASES_ and EN_MAXIMUM_)
 //E in eV
-long double ArAllData::argon_cross_elastic_diff(long double E, long double theta, int mode) {
+long double ArAllData::argon_scatter_probability_j(long double E, long double theta, int J, int L, int mode)
+{
+	if (L % 2 != 0 || L<0) {
+		std::cerr << "ArAllData::argon_scatter_probability_j: Error: No orbital momentum L=" << L << "/2 for e(s=1/2)-Ar(s=0) scattering"<< std::endl;
+		return 0;
+	}
+	if (((J != L+1)&&(J != L - 1)) ||J<0) {
+		std::cerr << "ArAllData::argon_scatter_probability_j: Error: No momentum J=" << J << "/2 for e(s=1/2)-Ar(s=0) scattering with L ="<<L/2<< std::endl;
+		return 0;
+	}
+	int L0 = L / 2;
 	//different formulas are used for E<0.24eV and E>0.24eV!
 	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
 	unsigned int L_MAX = 0;
@@ -481,6 +513,90 @@ long double ArAllData::argon_cross_elastic_diff(long double E, long double theta
 			phase_values = &ArAllData::argon_phase_values_MERT5;
 		}
 		else {
+			L_MAX = ArExper_.max_L(k);
+			phase_values = &ArAllData::argon_phase_values_exp;
+		}
+		break;
+	}
+	}
+	long double prob = 0;
+	LegendrePolynom P1, P2;
+	AssociatedLegendrePolynom AP1, AP2;
+	long double cos_th = cos(theta);
+	if (L0 > L_MAX)
+		return prob;
+	long double ph_l0_p = 0; //p - positive, J = L+1/2
+	long double ph_l0_n = 0; //n - negative, J = L-1/2
+	((*this).*phase_values)(k, L0, ph_l0_p, ph_l0_n);
+	for (unsigned int l = 0; l <= L_MAX; ++l) {
+		long double ph_l_p = ph_l0_p;
+		long double ph_l_n = ph_l0_n;
+		if (l != L0) {
+			((*this).*phase_values)(k, l, ph_l_p, ph_l_n);
+		}
+		long double F_l0_l = 0;
+		long double G_l0_l = 0;
+		if (J == L + 1) {
+			F_l0_l = (L0 + 1)*sin(ph_l0_p)*((l + 1)*sin(ph_l_p)*cos(ph_l_p - ph_l0_p) + l*sin(ph_l_n)*cos(ph_l_n - ph_l0_p));
+			G_l0_l = sin(ph_l0_p)*(sin(ph_l_p)*cos(ph_l_p+ph_l0_p)- sin(ph_l_n)*cos(ph_l_n + ph_l0_p));
+		} else {
+			F_l0_l = (L0 + 1)*sin(ph_l0_n)*((l + 1)*sin(ph_l_p)*cos(ph_l_p - ph_l0_n) + l*sin(ph_l_n)*cos(ph_l_n - ph_l0_n));
+			G_l0_l = sin(ph_l0_n)*(sin(ph_l_p)*cos(ph_l_p + ph_l0_n) - sin(ph_l_n)*cos(ph_l_n + ph_l0_n));
+		}
+		prob = F_l0_l*P1(cos_th, l)*P2(cos_th, L0) + G_l0_l*AP1(cos_th, l, 1)*AP2(cos_th, L0, 1);
+		prob *= 4.0;
+	}
+	//cross = prob * M_PI / (2.0*pow(k, 2)) *a_bohr_SIconst*a_bohr_SIconst;
+	return prob;
+}
+
+//mode = 0 or unexpected - standard formula used in simulation, called by default.
+//mode = 1 - calculate MERT5 phases (normally only between EN_MINIMUM_ and THRESH_E_PHASES_)
+//mode = 2 - calculate using extrapolation of experimental phase shifts (normally used only between THRESH_E_PHASES_ and EN_MAXIMUM_)
+//mode = 3 - standard formula, but using argon_scatter_probability_j function (slower version, for testing argon_scatter_probability_j)
+//E in eV
+long double ArAllData::argon_cross_elastic_diff(long double E, long double theta, int mode) {
+	//different formulas are used for E<0.24eV and E>0.24eV!
+	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
+	unsigned int L_MAX = 0;
+	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	switch (mode) {
+	case 1: {
+		L_MAX = L_MAX_;
+		phase_values = &ArAllData::argon_phase_values_MERT5;
+		break;
+	}
+	case 2: {
+		L_MAX = ArExper_.max_L(k);
+		phase_values = &ArAllData::argon_phase_values_exp;
+		break;
+	}
+	case 3: {
+		if (PHASES_EN_MINIMUM_>E)
+			E = PHASES_EN_MINIMUM_;
+		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
+		if (E<THRESH_E_PHASES_) {
+			L_MAX = L_MAX_;
+		} else {
+			L_MAX = ArExper_.max_L(k);
+		}
+		long double cross = 0;
+		for (int L = 0; L <= L_MAX; ++L) {
+			if (0!=L)
+				cross += std::max(argon_scatter_probability_j(E, theta, 2 * L - 1, 2 * L), (long double)0.0);
+			cross += std::max(argon_scatter_probability_j(E, theta, 2 * L + 1, 2 * L), (long double)0.0);
+		}
+		cross *= M_PI / (2.0*pow(k, 2));
+		return cross*a_bohr_SIconst*a_bohr_SIconst;
+	}
+	default: {
+		if (PHASES_EN_MINIMUM_>E)
+			E = PHASES_EN_MINIMUM_;
+		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
+		if (E<THRESH_E_PHASES_) {
+			L_MAX = L_MAX_;
+			phase_values = &ArAllData::argon_phase_values_MERT5;
+		} else {
 			L_MAX = ArExper_.max_L(k);
 			phase_values = &ArAllData::argon_phase_values_exp;
 		}
@@ -608,6 +724,45 @@ long double ArAllData::argon_cross_elastic(long double E, int mode) //Tabulation
 	}
 	}
 	return cross;
+}
+
+long double ArAllData::argon_delay_1o2_probability(long double E, long double theta)
+{
+	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	long double prob = argon_scatter_probability_j(E, theta, 1, 2);
+	prob *= M_PI / (2.0*pow(k, 2))*a_bohr_SIconst*a_bohr_SIconst;
+	return prob / argon_cross_elastic_diff(E, theta, 3); //TODO: mode 0 and 3 should give the same results 
+}
+
+long double ArAllData::argon_delay_3o2_probability(long double E, long double theta)
+{
+	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	long double prob = argon_scatter_probability_j(E, theta, 3, 2);
+	prob *= M_PI / (2.0*pow(k, 2))*a_bohr_SIconst*a_bohr_SIconst;
+	return prob / argon_cross_elastic_diff(E, theta, 3); //TODO: mode 0 and 3 should give the same results
+}
+
+long double ArAllData::argon_delay_1o2(long double E, long double theta)
+{
+	return argon_time_delay_j(E, 1, 2);
+}
+
+long double ArAllData::argon_delay_3o2(long double E, long double theta)
+{
+	return argon_time_delay_j(E, 3, 2);
+}
+
+long double ArAllData::argon_ResNBrS_spectrum(long double W, long double E) //Normalization constant is arbitrary. Not dependant on E
+{
+	return std::exp(-0.5*std::pow((W - (ArExper_.First_excitation_En - En_1o2_)) / Width_1o2_, 2))
+		+ std::exp(-0.5*std::pow((W - (ArExper_.First_excitation_En - En_3o2_)) / Width_3o2_, 2));
+}
+
+long double ArAllData::argon_ResNBrS_XS(long double E) //Normalization constant is taken from "global_definitions.h"
+{
+	double width_factor = std::pow(Width_3o2_ / 2.0, 2) / (std::pow(Width_3o2_ / 2.0, 2) + std::pow((E - En_3o2_) / 2.0, 2));
+	width_factor += std::pow(Width_1o2_ / 2.0, 2) / (std::pow(Width_1o2_ / 2.0, 2) + std::pow((E - En_1o2_) / 2.0, 2));
+	return RESONANCE_NBrS_XS_*width_factor;
 }
 
 long double ArAllData::argon_back_scatter_prob(long double E)
@@ -765,42 +920,45 @@ void ArDataTables::read_data (std::ifstream &inp, DataVector &data, long double 
 	}
 }
 
-ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table):
+ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table, FunctionTable * delay_3o2_table, FunctionTable * delay_1o2_table):
 	total_cross_elastic_fname("data_derived/total_cross_section_elastic.dat"),
 	integral_table_fname("data_derived/cross_integrals.dat"),
 	theta_table_fname("data_derived/theta_probabilities.dat"),
-	total_cross_elastic_(1,2), //interpolation with 1st order polynomial
+	time_delay_3o2_prob_fname("data_derived/time_delay_3o2_probabilities.dat"),
+	time_delay_1o2_prob_fname("data_derived/time_delay_1o2_probabilities.dat"),
+	total_resonance_NBrS_spectrum_fname("data_derived/ResNBrS_spectrum.dat"),
 	integral_table_(int_table),
-	theta_table_(th_table)
+	theta_table_(th_table),
+	time_delay_3o2_table_(delay_3o2_table),
+	time_delay_1o2_table_(delay_1o2_table)
 {
 	std::cout<<"Loading Ar data tables"<<std::endl;
 	ensure_file(total_cross_elastic_fname);
 	ensure_file(integral_table_fname);
 	ensure_file(theta_table_fname);
+	ensure_file(time_delay_3o2_prob_fname);
+	ensure_file(time_delay_1o2_prob_fname);
+	ensure_file(total_resonance_NBrS_spectrum_fname);
 
 	std::ifstream inp;
 	std::ofstream str;
-	int err;
-	inp.open(total_cross_elastic_fname);
-	read_data(inp, total_cross_elastic_); //Cross section is stored in 1e-20 m^2 in both files and this program
-	inp.close();
-	if (total_cross_elastic_.size()<total_cross_elastic_.getNused()) {
-		std::cout<<"Failed to load \""<<total_cross_elastic_fname<<"\""<<std::endl;
-		std::cout<<"Calculating total elastic cross section..."<<std::endl;
-		total_cross_elastic_.clear();
+	inp.open(total_cross_elastic_fname); //Cross section is stored in 1e-20 m^2 in both files and this program
+	if (!inp.is_open()) {
+		std::cout << "Failed to load \"" << total_cross_elastic_fname << "\"" << std::endl;
+		generate_total_cross_elastic_table();
 		str.open(total_cross_elastic_fname, std::ios_base::trunc);
-		str<<"//E[eV]\tXS elastic [1e-20 m^2]"<<std::endl;
-		double E, cross;
-		EnergyScanner EnRange(EnergyScanner::ElasticXS);
-		while (true) {
-			E = EnRange.Next(err);
-			if (0!=err)
-				break;
-			cross = ArAllData_.argon_cross_elastic(E);
-			str<<E<<"\t"<<cross<<std::endl;
-			total_cross_elastic_.push_back(E, cross);
-		}
+		total_cross_elastic_.write(str, "E[eV]\tXS elastic [1e-20 m^2]");
 		str.close();
+	} else {
+		total_cross_elastic_.read(inp);
+		inp.close();
+		if (total_cross_elastic_.size() < total_cross_elastic_.getNused()) {
+			std::cout << "Failed to load \"" << total_cross_elastic_fname << "\"" << std::endl;
+			generate_total_cross_elastic_table();
+			str.open(total_cross_elastic_fname, std::ios_base::trunc);
+			total_cross_elastic_.write(str, "E[eV]\tXS elastic [1e-20 m^2]");
+			str.close();
+		}
 	}
 
 	inp.open(integral_table_fname, std::ios_base::binary);
@@ -841,7 +999,83 @@ ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table):
 		}
 	}
 
+	inp.open(time_delay_3o2_prob_fname, std::ios_base::binary);
+	if (!inp.is_open()) {
+		std::cout << "Failed to load \"" << time_delay_3o2_prob_fname << "\"" << std::endl;
+		generate_time_delay_3o2_table();
+		str.open(time_delay_3o2_prob_fname, std::ios_base::trunc | std::ios_base::binary);
+		time_delay_3o2_table_->write(str);
+		str.close();
+	} else {
+		time_delay_3o2_table_->read(inp);
+		inp.close();
+		if (time_delay_3o2_table_->is_empty()) {
+			std::cout << "Failed to load \"" << time_delay_3o2_prob_fname << "\"" << std::endl;
+			generate_time_delay_3o2_table();
+			str.open(time_delay_3o2_prob_fname, std::ios_base::trunc | std::ios_base::binary);
+			time_delay_3o2_table_->write(str);
+			str.close();
+		}
+	}
+
+	inp.open(time_delay_1o2_prob_fname, std::ios_base::binary);
+	if (!inp.is_open()) {
+		std::cout << "Failed to load \"" << time_delay_1o2_prob_fname << "\"" << std::endl;
+		generate_time_delay_1o2_table();
+		str.open(time_delay_1o2_prob_fname, std::ios_base::trunc | std::ios_base::binary);
+		time_delay_1o2_table_->write(str);
+		str.close();
+	} else {
+		time_delay_1o2_table_->read(inp);
+		inp.close();
+		if (time_delay_1o2_table_->is_empty()) {
+			std::cout << "Failed to load \"" << time_delay_1o2_prob_fname << "\"" << std::endl;
+			generate_time_delay_1o2_table();
+			str.open(time_delay_1o2_prob_fname, std::ios_base::trunc | std::ios_base::binary);
+			time_delay_1o2_table_->write(str);
+			str.close();
+		}
+	}
+
+	inp.open(total_resonance_NBrS_spectrum_fname, std::ios_base::binary);
+	if (!inp.is_open()) {
+		std::cout << "Failed to load \"" << total_resonance_NBrS_spectrum_fname << "\"" << std::endl;
+		generate_ResNBrS_spectrum_table();
+		str.open(total_resonance_NBrS_spectrum_fname, std::ios_base::trunc);
+		total_resonance_NBrS_spectrum_.write(str, "W[eV]\tFprob");
+		str.close();
+	} else {
+		total_resonance_NBrS_spectrum_.read(inp);
+		inp.close();
+		if (total_resonance_NBrS_spectrum_.size()==0) {
+			std::cout << "Failed to load \"" << total_resonance_NBrS_spectrum_fname << "\"" << std::endl;
+			generate_ResNBrS_spectrum_table();
+			str.open(total_resonance_NBrS_spectrum_fname, std::ios_base::trunc);
+			total_resonance_NBrS_spectrum_.write(str, "W[eV]\tFprob");
+			str.close();
+		}
+	}
+
 	std::cout<<"Finished loading Ar data tables"<<std::endl;
+}
+
+void ArDataTables::generate_total_cross_elastic_table(void)
+{
+	std::cout << "Calculating total elastic cross section..." << std::endl;
+	total_cross_elastic_.clear();
+	total_cross_elastic_.setOrder(1); //interpolation with 1st order polynomial using 2 points
+	total_cross_elastic_.setNused(2);
+
+	int err;
+	double E, cross;
+	EnergyScanner EnRange(EnergyScanner::ElasticXS);
+	while (true) {
+		E = EnRange.Next(err);
+		if (0 != err)
+			break;
+		cross = ArAllData_.argon_cross_elastic(E);
+		total_cross_elastic_.push_back(E, cross);
+	}
 }
 
 void ArDataTables::generate_integral_table(void) //uses tabulated total cross section
@@ -948,6 +1182,75 @@ void ArDataTables::generate_theta_table(void) //uses tabulated total cross secti
 	}
 }
 
+void ArDataTables::generate_time_delay_3o2_table(void)
+{
+	std::cout << "Generating 3/2 resonance time delay probability tables..." << std::endl;
+	ColoredRange energy_Y_range = 
+		ColoredInterval(En_3o2_ - 30 * Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 30 * Width_3o2_), Width_3o2_ / 10) +	//coarse area
+		ColoredInterval(En_3o2_ - 15 * Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15 * Width_3o2_), Width_3o2_ / 200);		//fine area
+	for (long int Ey_i = 0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i != Ey_ind_end_; ++Ey_i) {
+		double Ey = energy_Y_range.Value(Ey_i);
+		for (std::size_t th_i = 0, th_i_end_ = ANGLE_POINTS_; th_i != th_i_end_; ++th_i) {
+			double theta = th_i*M_PI / (ANGLE_POINTS_ - 1);
+			theta_table_->push(theta, Ey, ArAllData_.argon_delay_3o2_probability(Ey, theta));
+		}
+	}
+}
+
+void ArDataTables::generate_time_delay_1o2_table(void)
+{
+	std::cout << "Generating 3/2 resonance time delay probability tables..." << std::endl;
+	ColoredRange energy_Y_range =
+		ColoredInterval(En_1o2_ - 30 * Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 30 * Width_1o2_), Width_1o2_ / 10) +	//coarse area
+		ColoredInterval(En_1o2_ - 15 * Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15 * Width_1o2_), Width_1o2_ / 200); 	//fine area
+	for (long int Ey_i = 0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i != Ey_ind_end_; ++Ey_i) {
+		double Ey = energy_Y_range.Value(Ey_i);
+		for (std::size_t th_i = 0, th_i_end_ = ANGLE_POINTS_; th_i != th_i_end_; ++th_i) {
+			double theta = th_i*M_PI / (ANGLE_POINTS_ - 1);
+			theta_table_->push(theta, Ey, ArAllData_.argon_delay_1o2_probability(Ey, theta));
+		}
+	}
+}
+
+void ArDataTables::generate_ResNBrS_spectrum_table(void)
+{
+	std::cout << "Generating resonance NBrS spectrum probability tables..." << std::endl;
+	total_resonance_NBrS_spectrum_.clear();
+	total_resonance_NBrS_spectrum_.setOrder(1);
+	total_resonance_NBrS_spectrum_.setNused(2);
+	total_resonance_NBrS_spectrum_.use_leftmost(true);
+	total_resonance_NBrS_spectrum_.use_rightmost(true);
+	total_resonance_NBrS_spectrum_.set_leftmost(0);
+	total_resonance_NBrS_spectrum_.set_rightmost(0);
+
+	double En_center1 = ArAllData_.ArExper_.First_excitation_En - En_1o2_;
+	double En_center2 = ArAllData_.ArExper_.First_excitation_En - En_3o2_;
+
+	ColoredRange energy_range =
+		ColoredInterval(En_center1 - 4 * Width_1o2_, En_center1 + 4 * Width_1o2_, Width_1o2_ / 100) +
+		ColoredInterval(En_center2 - 4 * Width_3o2_, En_center1 + 4 * Width_3o2_, Width_3o2_ / 100);
+	std::vector <double> Fprobs;
+	Fprobs.resize(energy_range.NumOfIndices(), 0);
+	double Int = 0;
+	double W_prev = 0;
+	double Spec_prev = 0;
+	for (long int E_i = 0, E_i_end_ = energy_range.NumOfIndices(); E_i != E_i_end_; ++E_i) {
+		double W = energy_range.Value(E_i);
+		double Spec = ArAllData_.argon_ResNBrS_spectrum(W, 0);
+		Fprobs[E_i] = 0;
+		if (E_i != 0) {
+			Fprobs[E_i] = Fprobs[E_i - 1] + 0.5*(Spec + Spec_prev)*(W - W_prev);//Integral
+		}
+		W_prev = W;
+		Spec_prev = Spec;
+	}
+	for (long int E_i = 0, E_i_end_ = energy_range.NumOfIndices(); E_i != E_i_end_; ++E_i) {
+		Fprobs[E_i] /= Fprobs[E_i_end_ - 1];//normalize probability function
+		double W = energy_range.Value(E_i);
+		total_resonance_NBrS_spectrum_.push_back(W, Fprobs[E_i]);
+	}		
+}
+
 long double ArDataTables::TotalCrossSection (double E)
 {
 	long double XS_total = 0;
@@ -958,6 +1261,7 @@ long double ArDataTables::TotalCrossSection (double E)
 	for (int i = 0, end_ = ArAllData_.ArExper_.excitations.size(); i != end_; ++i) {
 		XS_total += ArAllData_.ArExper_.excitations[i](E);
 	}
+	XS_total += ArAllData_.argon_ResNBrS_XS(E);
 	return XS_total;
 }
 
@@ -965,6 +1269,9 @@ long double ArDataTables::CrossSection (double E, short type)
 {
 	if (Event::Elastic == type) {
 		return XS_elastic(E);
+	}
+	if (Event::ResNBrS == type) {
+		return ArAllData_.argon_ResNBrS_XS(E);
 	}
 	if (type>=Event::Ionization) {
 		short ID = type - Event::Ionization;
@@ -991,21 +1298,22 @@ long double ArDataTables::XS_elastic(double E)
 	return total_cross_elastic_(E, E);
 }*/
 
-double ArDataTables::generate_Theta (double E, short type, double Rand) //DONE: tabulate
+double ArDataTables::generate_theta (double E, short type, double Rand)
 {
 #ifdef	ANGLE_UNIFORM_
 	Rand = Rand*2.0 - 1.0;
 	return std::acos(Rand);
 #endif
-	/*if (Rand<0.4)
-		return M_PI;
-	return 0;*/
 	if (type>=Event::Ionization) {//Considered uniform.
 		Rand = Rand*2.0 - 1.0;
 		return std::acos(Rand);
 	}
 	if (Event::Elastic == type) {
 		return theta_table_->find_E(E, Rand);
+	}
+	if (Event::ResNBrS == type) {//Considered uniform.
+		Rand = Rand*2.0 - 1.0;
+		return std::acos(Rand);
 	}
 	//CODE below is for untabulated case
 	std::vector<double> diff_XS, F, thetas;
@@ -1037,6 +1345,56 @@ double ArDataTables::generate_Theta (double E, short type, double Rand) //DONE: 
 		}
 	}
 	return theta;
+}
+
+double ArDataTables::generate_time_delay(double E, double theta, short type, double Rand)
+{
+	if (Event::Elastic != type) {
+		return 0;
+	}
+	double p1o2 = (*time_delay_1o2_table_)(theta, E);
+	double p3o2 = (*time_delay_3o2_table_)(theta, E);
+	p1o2 = std::max(p1o2, 0.0);
+	p3o2 = std::max(p3o2, 0.0);
+	if (Rand < p1o2) {
+		return ArAllData_.argon_delay_1o2(E, theta);
+	} else {
+		if (Rand < (p1o2 + p3o2))
+			return ArAllData_.argon_delay_3o2(E, theta);
+	}
+	return 0;
+}
+
+double ArDataTables::generate_time_delay_untabulated(double E, double theta, short type, double Rand)
+{
+	if (Event::Elastic != type) {
+		return 0;
+	}
+	double p1o2 = std::max(ArAllData_.argon_delay_1o2_probability(E, theta), (long double)0.0);
+	double p3o2 = std::max(ArAllData_.argon_delay_3o2_probability(E, theta), (long double)0.0);
+	if (Rand < p1o2) {
+		return ArAllData_.argon_delay_1o2(E, theta);
+	} else {
+		if (Rand < (p1o2 + p3o2))
+			return ArAllData_.argon_delay_3o2(E, theta);
+	}
+	return 0;
+}
+
+double ArDataTables::generate_ResNBrS_En_loss(double E, double theta, double Rand)
+{
+	for (std::size_t i = 0, i_end_ = total_resonance_NBrS_spectrum_.size(); i != i_end_; ++i) {
+		if (Rand <= total_resonance_NBrS_spectrum_.getY(i)) {
+			if (0 == i)
+				return total_resonance_NBrS_spectrum_.getX(i);
+			double x0 = total_resonance_NBrS_spectrum_.getX(i - 1);
+			double x1 = total_resonance_NBrS_spectrum_.getX(i);
+			double y0 = total_resonance_NBrS_spectrum_.getY(i - 1);
+			double y1 = total_resonance_NBrS_spectrum_.getY(i);
+			return x0 + (x1 - x0)*(Rand - y0) / (y1 - y0);
+		}
+	}
+	return total_resonance_NBrS_spectrum_.getX(total_resonance_NBrS_spectrum_.size()-1);
 }
 
 void ArDataTables::setOrder(int order)

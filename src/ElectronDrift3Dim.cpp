@@ -59,11 +59,12 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 		pThreads.push_back(new TThread(("MTManager_" + std::to_string(n)).c_str(),
 			&process_runs_in_thread, _submanagers[n]));
 	}
+#ifdef TEST_VERSION_
 	//MTManager test_man(&ArDataTables_, -1, 1, seed);
 	//ArDataTables_.ArAllData_.argon_cross_elastic_diff(0.1, 0.5);
-	//test_all(&ArDataTables_);
+	test_all(&ArDataTables_);
 	//test_man.Test();
-	
+#endif
 	for (int n = 0; n < N_threads; ++n) {
 		_submanagers[n]->SetParameters(concentration, field);
 		pThreads[n]->Run(); //if it is the last iteration, submanager (AnalysisManager) clears its data
@@ -98,8 +99,10 @@ int main(int argn, char * argv[]) {
 	int n_par = 0;
 	char **f = NULL;
 	TThread::Initialize();
+#ifdef	TEST_VERSION_
 	TApplication app("test_app",&n_par,f);
 	std::string a;
+#endif
 	std::string root_fname = "Output/eData_7.0Td.root";
 	double Td = 7; //=E/N in 1e-21 in Si
 	unsigned int seed = 44;
@@ -125,12 +128,36 @@ int main(int argn, char * argv[]) {
 	double concentration = pressure / (temperature*boltzmann_SIconst);
 	double field = Td*1e-21 * concentration;
 	auto start = std::chrono::system_clock::now();
+
+	std::cout << "Starting simulation of electron drift:"<<std::endl;
+	std::cout << "  Material: pure gaseous argon" << std::endl;
+	std::cout << "  Electric field = \t" << Td << " Td" << std::endl;
+	std::cout << "  Temperature = \t" << temperature << " K" << std::endl;
+	std::cout << "  Concentration = \t" << concentration << " m^-3" << std::endl;
+	std::cout << "  Number of electrons = \t" << num_of_electrons << std::endl;
+	std::cout << "  Drift length = \t" << DRIFT_DISTANCE_ <<" m" << std::endl;
+	std::cout << "  Thread number = \t" << THREADS_NUMBER_ << std::endl;
+	std::cout << "  Output file = \t \"" << root_fname <<"\""<< std::endl;
+	std::cout << "  Random generator seed = \t" << seed << std::endl;
+
 	Process(THREADS_NUMBER_, seed, num_of_electrons, concentration, field, root_fname);
 	auto end = std::chrono::system_clock::now();
 	std::chrono::duration<double> diff = end-start;
-	std::cout<<"Elapsed time:\t"<<diff.count()<<" s"<<std::endl;
-	std::cout<<"Enter something: ";
+	std::cout << "Finished simulation." << std::endl;
+	std::cout << "  Material: pure gaseous argon" << std::endl;
+	std::cout << "  Electric field = \t" << Td << " Td" << std::endl;
+	std::cout << "  Temperature = \t" << temperature << " K" << std::endl;
+	std::cout << "  Concentration = \t" << concentration << " m^-3" << std::endl;
+	std::cout << "  Number of electrons = \t" << num_of_electrons << std::endl;
+	std::cout << "  Drift length = \t" << DRIFT_DISTANCE_ << " m" << std::endl;
+	std::cout << "  Thread number = \t" << THREADS_NUMBER_ << std::endl;
+	std::cout << "  Output file = \t \"" << root_fname << "\"" << std::endl;
+	std::cout << "  Random generator seed = \t" << seed << std::endl;
+	std::cout << "  Elapsed time  = \t"<<diff.count()<<" s"<<std::endl;
+#ifdef TEST_VERSION_
+	//std::cout<<"Enter something: ";
 	//std::cin>>a;
-	//app.Run();
+	app.Run();
+#endif
 	return 0;
 }

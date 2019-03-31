@@ -12,7 +12,7 @@
 #include "global_definitions.h"
 #include "PolynomialFit.h"
 
-//for monotone rising function only!
+//find_E_indexes_by_value works only for monotone rising function!
 //F(E1,Ey)>F(E2,Ey) if E1>E2
 //Ey:[0, Emax = 16eV]
 //E: [Ey,Emax=16eV] - not necessary - for theta tables E===theta [0, M_PI] and F - probability function
