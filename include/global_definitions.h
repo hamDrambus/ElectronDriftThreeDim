@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <sstream>
+
 #if defined(__WIN32__)
 #define NOMINMAX
 #include "Windows4Root.h"
@@ -55,14 +57,14 @@
 //#define Width_1o2_ 2.0e-2
 //^in eV
 #define RESONANCE_EN_LOSS_FACTOR_ 1.0
-#define RESONANCE_NBrS_XS_ 0.5
-//#define RESONANCE_EN_LOSS_ 1e-2
+#define RESONANCE_NBrS_XS_ 0.0
+#define RESONANCE_EN_LOSS_ 1e-1
 #define DRIFT_DISTANCE_ 3e-3
 //^in m
-#define DRIFT_DISTANCE_HISTORY 0
+#define DRIFT_DISTANCE_HISTORY 1
 //^in m. Write info about electron only starting from this position (first and last drift event are always written)
-#define SKIP_HISTORY_ 0
-#define TEST_VERSION_
+#define SKIP_HISTORY_ 999
+//#define TEST_VERSION_
 
 const long double e_charge_SIconst = 1.60217662e-19; //in coulombs (SI)
 const long double e_mass_SIconst = 9.10938356e-31; //in kg (SI)

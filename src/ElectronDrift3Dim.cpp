@@ -35,11 +35,9 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 	std::vector<TCondition*> conditions;
 	std::vector<ArDataTables*> ar_data;
 
-	FunctionTable *table = new FunctionTable; //shared between processes - read only
-	FunctionTable *table_thetas = new FunctionTable; //shared between processes - read only
 	//TODO: It is currently implied that calling FunctionTable methods is thread-safe because there is only reading and no changes in their internal states.
 	//It would be better to fix this fact in the code explicitly (cost methods, locks, etc.)
-	ArDataTables ArDataTables_ (table, table_thetas);
+	ArDataTables ArDataTables_;
 	if (N_threads > num_of_electrons)
 		N_threads = num_of_electrons;
 	int N_extra = num_of_electrons % (N_threads>0 ? N_threads: 1);
@@ -52,7 +50,7 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 		mutexes.push_back(new TMutex());
 		conditions.push_back(new TCondition(mutexes[n]));
 		thread_mutexes.push_back(new TMutex());
-		ar_data.push_back(new ArDataTables(ArDataTables_)); //copy, no repeated readings and table constructions.
+		ar_data.push_back(new ArDataTables(ArDataTables_)); //shallow copy, no repeated table constructions.
 		_submanagers.push_back(new MTManager(ar_data[n], n, N_e[n], seed + n));
 		_submanagers[n]->setCondition(conditions[n]);
 		_submanagers[n]->setThreadMutex(thread_mutexes[n]);
@@ -92,7 +90,7 @@ void Process(int N_threads, unsigned int seed, unsigned int num_of_electrons, do
 		delete mutexes[n];
 		delete thread_mutexes[n];
 	}
-	delete table;
+	ArDataTables_.DeleteData();
 }
 
 int main(int argn, char * argv[]) {

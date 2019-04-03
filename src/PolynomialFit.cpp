@@ -234,7 +234,7 @@ double DataVector::getX(std::size_t n)
 double DataVector::getY(std::size_t n)
 {	return ys[n]; }
 
-void DataVector::read(std::ifstream& str)
+void DataVector::read(std::ifstream& str) //TODO: add try/catch for handling stoi and stod
 {
 	clear();
 	std::string line, word;

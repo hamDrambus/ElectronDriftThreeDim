@@ -467,13 +467,14 @@ long double ArAllData::argon_time_delay_j(long double E, int J, int L)
 		return 0;
 	}
 	if (J == L-1) {
-		return 2* h_bar_eVconst / (1 + std::pow(2 * (E - En_1o2_) / Width_1o2_, 2)*Width_1o2_);
+		return 2* h_bar_eVconst / (1 + std::pow(2 * (E - En_1o2_) / Width_1o2_, 2))/Width_1o2_;
 	} else {
-		return 2 * h_bar_eVconst / (1 + std::pow(2 * (E - En_3o2_) / Width_3o2_, 2)*Width_3o2_);
+		return 2* h_bar_eVconst / (1 + std::pow(2 * (E - En_3o2_) / Width_3o2_, 2))/Width_3o2_;
 	}
 }
 
-//probabilty on scatter at certain angle going through total momentum J/2 and orbital momentum L/2. (J&L are expressed in halves)
+//Probability on scatter at certain angle going through total momentum J/2 and orbital momentum L/2. (J&L are expressed in halves)
+//Can be negative.
 //mode = 0 or unexpected - standard formula used in simulation, called by default.
 //mode = 1 - calculate using MERT5 phases (normally only between EN_MINIMUM_ and THRESH_E_PHASES_)
 //mode = 2 - calculate using extrapolation of experimental phase shifts (normally used only between THRESH_E_PHASES_ and EN_MAXIMUM_)
@@ -528,23 +529,26 @@ long double ArAllData::argon_scatter_probability_j(long double E, long double th
 	long double ph_l0_p = 0; //p - positive, J = L+1/2
 	long double ph_l0_n = 0; //n - negative, J = L-1/2
 	((*this).*phase_values)(k, L0, ph_l0_p, ph_l0_n);
+	ph_l0_p *= 2;
+	ph_l0_n *= 2;
 	for (unsigned int l = 0; l <= L_MAX; ++l) {
 		long double ph_l_p = ph_l0_p;
 		long double ph_l_n = ph_l0_n;
 		if (l != L0) {
 			((*this).*phase_values)(k, l, ph_l_p, ph_l_n);
+			ph_l_p *= 2;
+			ph_l_n *= 2;
 		}
 		long double F_l0_l = 0;
 		long double G_l0_l = 0;
 		if (J == L + 1) {
-			F_l0_l = (L0 + 1)*sin(ph_l0_p)*((l + 1)*sin(ph_l_p)*cos(ph_l_p - ph_l0_p) + l*sin(ph_l_n)*cos(ph_l_n - ph_l0_p));
-			G_l0_l = sin(ph_l0_p)*(sin(ph_l_p)*cos(ph_l_p+ph_l0_p)- sin(ph_l_n)*cos(ph_l_n + ph_l0_p));
+			F_l0_l = (L0 + 1)*((l + 1)*cos(ph_l0_p-ph_l_p) - (2*l+1)*cos(ph_l0_p) - (l+1)*cos(ph_l_p) + l*cos(ph_l0_p-ph_l_n) - l*cos(ph_l_n) + 2*l+1);
+			G_l0_l = cos(ph_l0_p-ph_l_p) - cos(ph_l0_p-ph_l_n) - cos(ph_l_p) + cos(ph_l_n);
 		} else {
-			F_l0_l = (L0 + 1)*sin(ph_l0_n)*((l + 1)*sin(ph_l_p)*cos(ph_l_p - ph_l0_n) + l*sin(ph_l_n)*cos(ph_l_n - ph_l0_n));
-			G_l0_l = sin(ph_l0_n)*(sin(ph_l_p)*cos(ph_l_p + ph_l0_n) - sin(ph_l_n)*cos(ph_l_n + ph_l0_n));
+			F_l0_l = (L0)*((l + 1)*cos(ph_l0_n-ph_l_p) - (2*l+1)*cos(ph_l0_n) - (l+1)*cos(ph_l_p) + l*cos(ph_l0_n-ph_l_n) - l*cos(ph_l_n) + 2*l+1);
+			G_l0_l = -1*(cos(ph_l0_n-ph_l_p) - cos(ph_l0_n-ph_l_n) - cos(ph_l_p) + cos(ph_l_n));
 		}
-		prob = F_l0_l*P1(cos_th, l)*P2(cos_th, L0) + G_l0_l*AP1(cos_th, l, 1)*AP2(cos_th, L0, 1);
-		prob *= 4.0;
+		prob += F_l0_l*P1(cos_th, l)*P2(cos_th, L0) + G_l0_l*AP1(cos_th, l, 1)*AP2(cos_th, L0, 1);
 	}
 	//cross = prob * M_PI / (2.0*pow(k, 2)) *a_bohr_SIconst*a_bohr_SIconst;
 	return prob;
@@ -556,6 +560,26 @@ long double ArAllData::argon_scatter_probability_j(long double E, long double th
 //mode = 3 - standard formula, but using argon_scatter_probability_j function (slower version, for testing argon_scatter_probability_j)
 //E in eV
 long double ArAllData::argon_cross_elastic_diff(long double E, long double theta, int mode) {
+	//different formulas are used for E<0.24eV and E>0.24eV!
+	unsigned int L_MAX = 0;
+	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	if (1!=mode&&2!=mode)
+	{
+		if (PHASES_EN_MINIMUM_>E)
+			k = a_h_bar_2e_m_e_SIconst*sqrt(PHASES_EN_MINIMUM_);
+	}
+	long double cross = argon_scatter_spin_flip_amplitude_sq(E, theta, mode);
+	cross += argon_scatter_spin_nonflip_amplitude_sq(E, theta, mode);
+	cross *= M_PI / (2.0*pow(k, 2));
+	cross = std::max(cross, (long double)0);
+	return cross*a_bohr_SIconst*a_bohr_SIconst; //const is multiplied by 1e10
+}
+
+//mode = 0 or unexpected - standard formula used in simulation, called by default.
+//mode = 1 - calculate using MERT5 phases (normally only between EN_MINIMUM_ and THRESH_E_PHASES_)
+//mode = 2 - calculate using extrapolation of experimental phase shifts (normally used only between THRESH_E_PHASES_ and EN_MAXIMUM_)
+long double ArAllData::argon_scatter_spin_flip_amplitude_sq(long double E, long double theta, int mode)
+{
 	//different formulas are used for E<0.24eV and E>0.24eV!
 	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
 	unsigned int L_MAX = 0;
@@ -571,23 +595,65 @@ long double ArAllData::argon_cross_elastic_diff(long double E, long double theta
 		phase_values = &ArAllData::argon_phase_values_exp;
 		break;
 	}
-	case 3: {
+	default: {
 		if (PHASES_EN_MINIMUM_>E)
 			E = PHASES_EN_MINIMUM_;
 		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
 		if (E<THRESH_E_PHASES_) {
 			L_MAX = L_MAX_;
+			phase_values = &ArAllData::argon_phase_values_MERT5;
 		} else {
 			L_MAX = ArExper_.max_L(k);
+			phase_values = &ArAllData::argon_phase_values_exp;
 		}
-		long double cross = 0;
-		for (int L = 0; L <= L_MAX; ++L) {
-			if (0!=L)
-				cross += std::max(argon_scatter_probability_j(E, theta, 2 * L - 1, 2 * L), (long double)0.0);
-			cross += std::max(argon_scatter_probability_j(E, theta, 2 * L + 1, 2 * L), (long double)0.0);
+		break;
+	}
+	}
+	long double cross = 0;
+	AssociatedLegendrePolynom AP1, AP2;
+	long double cos_th = cos(theta);
+	for (unsigned int l = 0; l <= L_MAX; ++l) {
+		long double l_p = 0; //p - positive
+		long double l_n = 0; //n - negative
+		((*this).*phase_values)(k, l, l_p, l_n);
+		l_p *= 2; //all cosines are taken from double angles
+		l_n *= 2;
+		for (unsigned int f = l; f <= L_MAX; ++f) {
+			long double f_p = l_p;
+			long double f_n = l_n;
+			if (l != f) {
+				((*this).*phase_values)(k, f, f_p, f_n);
+				f_p *= 2;
+				f_n *= 2;
+			}
+			long double G_l_f = ((0 == l) ? 0 :
+				cos(l_p - f_p) - cos(l_n - f_p) - cos(l_p - f_n) + cos(l_n - f_n));
+			if (l != f) { //Nondiagonal sum is reduced because f starts from l instead of 0.
+				G_l_f *= 2.0;
+			}
+			cross += G_l_f*AP1(cos_th, l, 1)*AP2(cos_th, f, 1);
 		}
-		cross *= M_PI / (2.0*pow(k, 2));
-		return cross*a_bohr_SIconst*a_bohr_SIconst;
+	}
+	cross = std::max(cross, (long double)0); //can be less than 0 only because of computational uncertainties
+	return cross; //|b|^2
+}
+
+long double ArAllData::argon_scatter_spin_nonflip_amplitude_sq(long double E, long double theta, int mode)
+{
+	//different formulas are used for E<0.24eV and E>0.24eV!
+	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
+	unsigned int L_MAX = 0;
+	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	switch (mode) {
+	case 1: {
+		L_MAX = L_MAX_;
+		phase_values = &ArAllData::argon_phase_values_MERT5;
+		break;
+	}
+	case 2: {
+		L_MAX = ArExper_.max_L(k);
+		phase_values = &ArAllData::argon_phase_values_exp;
+		break;
 	}
 	default: {
 		if (PHASES_EN_MINIMUM_>E)
@@ -605,39 +671,32 @@ long double ArAllData::argon_cross_elastic_diff(long double E, long double theta
 	}
 	long double cross = 0;
 	LegendrePolynom P1, P2;
-	AssociatedLegendrePolynom AP1, AP2;
 	long double cos_th = cos(theta);
 	for (unsigned int l = 0; l <= L_MAX; ++l) {
-		long double ph_l_p = 0; //p - positive
-		long double ph_l_n = 0; //n - negative
-		((*this).*phase_values)(k, l, ph_l_p, ph_l_n);
+		long double l_p = 0; //p - positive
+		long double l_n = 0; //n - negative
+		((*this).*phase_values)(k, l, l_p, l_n);
+		l_p *= 2; //all cosines are taken from double angles
+		l_n *= 2;
 		for (unsigned int f = l; f <= L_MAX; ++f) {
-			long double ph_f_p = ph_l_p;
-			long double ph_f_n = ph_l_n;
+			long double f_p = l_p;
+			long double f_n = l_n;
 			if (l != f) {
-				((*this).*phase_values)(k, f, ph_f_p, ph_f_n);
+				((*this).*phase_values)(k, f, f_p, f_n);
+				f_p *= 2;
+				f_n *= 2;
 			}
-			long double l_p = ph_l_p * 2.0; //all cosines are taken from double angles
-			long double l_n = ph_l_n * 2.0;
-			long double f_p = ph_f_p * 2.0;
-			long double f_n = ph_f_n * 2.0;
 			long double F_l_f = (l + 1)*(f + 1)*cos(l_p - f_p) + (l + 1)*(f)*cos(l_p - f_n) + (l)*(f + 1)*cos(l_n - f_p) +
 				l*f*cos(l_n - f_n) - (l + 1)*(2 * f + 1)*cos(l_p) - (2 * l + 1)*(f + 1)*cos(f_p) +
 				(2 * l + 1)*(2 * f + 1) - (l)*(2 * f + 1)*cos(l_n) - (2 * l + 1)*(f)*cos(f_n);
-			long double G_l_f = ((0 == l) ? 0 :
-				cos(l_p - f_p) - cos(l_n - f_p) - cos(l_p - f_n) + cos(l_n - f_n));
 			if (l != f) { //Nondiagonal sum is reduced because f starts from l instead of 0.
 				F_l_f *= 2.0;
-				G_l_f *= 2.0;
 			}
 			cross += F_l_f*P1(cos_th, l)*P2(cos_th, f);
-			//P1 and P2 because each of them has separate cache. Same for AP.
-			cross += G_l_f*AP1(cos_th, l, 1)*AP2(cos_th, f, 1); //should be 0 most of time. Important for Feshbach resonances
 		}
 	}
-	cross *= M_PI / (2.0*pow(k, 2));
-	cross = std::max(cross, (long double)0);
-	return cross*a_bohr_SIconst*a_bohr_SIconst; //const is multiplied by 1e10
+	cross = std::max(cross, (long double)0); //can be less than 0 only because of computational uncertainties
+	return cross; //|a|^2
 }
 
 //mode = 0 or unexpected - standard formula used in simulation, called by default. Using smoothing between MERT5 and experimental XS
@@ -726,30 +785,158 @@ long double ArAllData::argon_cross_elastic(long double E, int mode) //Tabulation
 	return cross;
 }
 
-long double ArAllData::argon_delay_1o2_probability(long double E, long double theta)
+/*long double ArAllData::argon_delay_1o2_probability(long double E, long double theta)
 {
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
 	long double prob = argon_scatter_probability_j(E, theta, 1, 2);
-	prob *= M_PI / (2.0*pow(k, 2))*a_bohr_SIconst*a_bohr_SIconst;
-	return prob / argon_cross_elastic_diff(E, theta, 3); //TODO: mode 0 and 3 should give the same results 
+	prob = std::max(prob, (long double)0); //TODO: since p can be <0 the formula for the delay is wrong, because 1>=P>=0 for observables
+	prob *= M_PI / (2.0*pow(k, 2)) *a_bohr_SIconst*a_bohr_SIconst;
+	//if (prob<0)
+	//	std::cout<<"ArAllData: Warning: P1/2 = "<<prob<<"\t at E = "<<E<<"\t th = "<<theta<<std::endl;
+	return prob / argon_cross_elastic_diff(E, theta);
 }
 
 long double ArAllData::argon_delay_3o2_probability(long double E, long double theta)
 {
 	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
 	long double prob = argon_scatter_probability_j(E, theta, 3, 2);
-	prob *= M_PI / (2.0*pow(k, 2))*a_bohr_SIconst*a_bohr_SIconst;
-	return prob / argon_cross_elastic_diff(E, theta, 3); //TODO: mode 0 and 3 should give the same results
+	prob = std::max(prob, (long double)0); //TODO: since p can be <0 the formula for the delay is wrong, because 1>=P>=0 for observables
+	prob *= M_PI / (2.0*pow(k, 2)) *a_bohr_SIconst*a_bohr_SIconst;
+	//if (prob<0)
+	//	std::cout<<"ArAllData: Warning: P1/2 = "<<prob<<"\t at E = "<<E<<"\t th = "<<theta<<std::endl;
+	return prob / argon_cross_elastic_diff(E, theta);
+}*/
+
+//mode = 0 or unexpected - standard formula used in simulation, called by default.
+//mode = 1 - calculate using MERT5 phases (normally only between EN_MINIMUM_ and THRESH_E_PHASES_)
+//mode = 2 - calculate using extrapolation of experimental phase shifts (normally used only between THRESH_E_PHASES_ and EN_MAXIMUM_)
+long double ArAllData::argon_delay_spin_flip (long double E, long double theta, int mode)
+{
+	//different formulas are used for E<0.24eV and E>0.24eV!
+	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
+	unsigned int L_MAX = 0;
+	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	switch (mode) {
+	case 1: {
+		L_MAX = L_MAX_;
+		phase_values = &ArAllData::argon_phase_values_MERT5;
+		break;
+	}
+	case 2: {
+		L_MAX = ArExper_.max_L(k);
+		phase_values = &ArAllData::argon_phase_values_exp;
+		break;
+	}
+	default: {
+		if (PHASES_EN_MINIMUM_>E)
+			E = PHASES_EN_MINIMUM_;
+		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
+		if (E<THRESH_E_PHASES_) {
+			L_MAX = L_MAX_;
+			phase_values = &ArAllData::argon_phase_values_MERT5;
+		} else {
+			L_MAX = ArExper_.max_L(k);
+			phase_values = &ArAllData::argon_phase_values_exp;
+		}
+		break;
+	}
+	}
+	long double cos_sum = 0;
+	long double sin_sum = 0;
+	long double cos_delayed_sum =0;
+	long double sin_delayed_sum =0;
+	AssociatedLegendrePolynom AP1;
+	long double cos_th = cos(theta);
+	for (unsigned int l = 0; l <= L_MAX; ++l) {
+		long double l_p = 0; //p - positive
+		long double l_n = 0; //n - negative
+		((*this).*phase_values)(k, l, l_p, l_n);
+		l_p *= 2; //all cosines are taken from double angles
+		l_n *= 2;
+		cos_sum +=AP1(cos_th, l, 1)*cos(l_p);
+		cos_sum +=-1*AP1(cos_th, l, 1)*cos(l_n);
+		sin_sum +=AP1(cos_th, l, 1)*sin(l_p);
+		sin_sum +=-1*AP1(cos_th, l, 1)*sin(l_n);
+		if (l!=0) {
+			sin_delayed_sum+= -2*argon_time_delay_j(E, 2*l -1, 2*l) * -1*AP1(cos_th, l, 1) * sin(l_n);
+			cos_delayed_sum+= 2*argon_time_delay_j(E, 2*l -1, 2*l) * -1*AP1(cos_th, l, 1) *cos(l_n);
+		}
+		sin_delayed_sum+= -2*argon_time_delay_j(E, 2*l +1, 2*l) * AP1(cos_th, l, 1) *sin(l_p);
+		cos_delayed_sum+= 2*argon_time_delay_j(E, 2*l +1, 2*l) * AP1(cos_th, l, 1) *cos(l_p);
+	}
+	long double cos_2 = cos_sum*cos_sum;
+	long double sin_2 = sin_sum*sin_sum;
+	return cos_2/(cos_2 + sin_2) * (sin_delayed_sum * sin_2/cos_2 + cos_delayed_sum /cos_sum);
 }
 
-long double ArAllData::argon_delay_1o2(long double E, long double theta)
+//mode = 0 or unexpected - standard formula used in simulation, called by default.
+//mode = 1 - calculate using MERT5 phases (normally only between EN_MINIMUM_ and THRESH_E_PHASES_)
+//mode = 2 - calculate using extrapolation of experimental phase shifts (normally used only between THRESH_E_PHASES_ and EN_MAXIMUM_)
+long double ArAllData::argon_delay_spin_nonflip (long double E, long double theta, int mode)
 {
-	return argon_time_delay_j(E, 1, 2);
+	//different formulas are used for E<0.24eV and E>0.24eV!
+	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
+	unsigned int L_MAX = 0;
+	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	switch (mode) {
+	case 1: {
+		L_MAX = L_MAX_;
+		phase_values = &ArAllData::argon_phase_values_MERT5;
+		break;
+	}
+	case 2: {
+		L_MAX = ArExper_.max_L(k);
+		phase_values = &ArAllData::argon_phase_values_exp;
+		break;
+	}
+	default: {
+		if (PHASES_EN_MINIMUM_>E)
+			E = PHASES_EN_MINIMUM_;
+		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
+		if (E<THRESH_E_PHASES_) {
+			L_MAX = L_MAX_;
+			phase_values = &ArAllData::argon_phase_values_MERT5;
+		} else {
+			L_MAX = ArExper_.max_L(k);
+			phase_values = &ArAllData::argon_phase_values_exp;
+		}
+		break;
+	}
+	}
+	long double cos_sum = 0;
+	long double sin_sum = 0;
+	long double cos_delayed_sum =0;
+	long double sin_delayed_sum =0;
+	LegendrePolynom P1;
+	long double cos_th = cos(theta);
+	for (unsigned int l = 0; l <= L_MAX; ++l) {
+		long double l_p = 0; //p - positive
+		long double l_n = 0; //n - negative
+		((*this).*phase_values)(k, l, l_p, l_n);
+		l_p *= 2; //all cosines are taken from double angles
+		l_n *= 2;
+		cos_sum +=(l+1)*P1(cos_th, l)*cos(l_p);
+		cos_sum +=(l)*P1(cos_th, l)*cos(l_n);
+		cos_sum -=(2*l+1)*P1(cos_th, l);
+		sin_sum +=(l+1)*P1(cos_th, l)*sin(l_p);
+		sin_sum +=(l)*P1(cos_th, l)*sin(l_n);
+		if (l!=0) {
+			sin_delayed_sum+= -2*argon_time_delay_j(E, 2*l -1, 2*l) * P1(cos_th, l) * (l)*sin(l_n);
+			cos_delayed_sum+= 2*argon_time_delay_j(E, 2*l -1, 2*l) * P1(cos_th, l) * (l)*cos(l_n);
+		}
+		sin_delayed_sum+= -2*argon_time_delay_j(E, 2*l +1, 2*l) * P1(cos_th, l) * (l+1)*sin(l_p);
+		cos_delayed_sum+= 2*argon_time_delay_j(E, 2*l +1, 2*l) * P1(cos_th, l) * (l+1)*cos(l_p);
+	}
+	long double cos_2 = cos_sum*cos_sum;
+	long double sin_2 = sin_sum*sin_sum;
+	return cos_2/(cos_2 + sin_2) * (sin_delayed_sum * sin_2/cos_2 + cos_delayed_sum /cos_sum);
 }
 
-long double ArAllData::argon_delay_3o2(long double E, long double theta)
+long double ArAllData::argon_delay_spin_nonflip_prob (long double E, long double theta, int mode)
 {
-	return argon_time_delay_j(E, 3, 2);
+	long double B = argon_scatter_spin_flip_amplitude_sq(E, theta, mode);
+	long double A = argon_scatter_spin_nonflip_amplitude_sq(E, theta, mode);
+	return A/(A+B);
 }
 
 long double ArAllData::argon_ResNBrS_spectrum(long double W, long double E) //Normalization constant is arbitrary. Not dependant on E
@@ -920,24 +1107,28 @@ void ArDataTables::read_data (std::ifstream &inp, DataVector &data, long double 
 	}
 }
 
-ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table, FunctionTable * delay_3o2_table, FunctionTable * delay_1o2_table):
+ArDataTables::ArDataTables():
 	total_cross_elastic_fname("data_derived/total_cross_section_elastic.dat"),
 	integral_table_fname("data_derived/cross_integrals.dat"),
 	theta_table_fname("data_derived/theta_probabilities.dat"),
-	time_delay_3o2_prob_fname("data_derived/time_delay_3o2_probabilities.dat"),
-	time_delay_1o2_prob_fname("data_derived/time_delay_1o2_probabilities.dat"),
-	total_resonance_NBrS_spectrum_fname("data_derived/ResNBrS_spectrum.dat"),
-	integral_table_(int_table),
-	theta_table_(th_table),
-	time_delay_3o2_table_(delay_3o2_table),
-	time_delay_1o2_table_(delay_1o2_table)
+	time_delay_spin_nonflip_prob_fname("data_derived/time_delay_spin_nonflip_probabilities.dat"),
+	time_delay_spin_flip_fname("data_derived/time_delay_spin_flip.dat"),
+	time_delay_spin_nonflip_fname("data_derived/time_delay_spin_nonflip.dat"),
+	total_resonance_NBrS_spectrum_fname("data_derived/ResNBrS_spectrum.dat")
 {
 	std::cout<<"Loading Ar data tables"<<std::endl;
+	integral_table_ = new FunctionTable; //shared between processes - read only
+	theta_table_ = new FunctionTable; //shared between processes - read only
+	time_delay_spin_flip_table_= new FunctionTable; //shared between processes - read only
+	time_delay_spin_nonflip_table_= new FunctionTable; //shared between processes - read only
+	time_delay_spin_nonflip_prob_table_= new FunctionTable; //shared between processes - read only
+
 	ensure_file(total_cross_elastic_fname);
 	ensure_file(integral_table_fname);
 	ensure_file(theta_table_fname);
-	ensure_file(time_delay_3o2_prob_fname);
-	ensure_file(time_delay_1o2_prob_fname);
+	ensure_file(time_delay_spin_nonflip_prob_fname);
+	ensure_file(time_delay_spin_flip_fname);
+	ensure_file(time_delay_spin_nonflip_fname);
 	ensure_file(total_resonance_NBrS_spectrum_fname);
 
 	std::ifstream inp;
@@ -999,40 +1190,59 @@ ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table, 
 		}
 	}
 
-	inp.open(time_delay_3o2_prob_fname, std::ios_base::binary);
+	inp.open(time_delay_spin_nonflip_prob_fname, std::ios_base::binary);
 	if (!inp.is_open()) {
-		std::cout << "Failed to load \"" << time_delay_3o2_prob_fname << "\"" << std::endl;
-		generate_time_delay_3o2_table();
-		str.open(time_delay_3o2_prob_fname, std::ios_base::trunc | std::ios_base::binary);
-		time_delay_3o2_table_->write(str);
+		std::cout << "Failed to load \"" << time_delay_spin_nonflip_prob_fname << "\"" << std::endl;
+		generate_time_delay_spin_nonflip_prob_table();
+		str.open(time_delay_spin_nonflip_prob_fname, std::ios_base::trunc | std::ios_base::binary);
+		time_delay_spin_nonflip_prob_table_->write(str);
 		str.close();
 	} else {
-		time_delay_3o2_table_->read(inp);
+		time_delay_spin_nonflip_prob_table_->read(inp);
 		inp.close();
-		if (time_delay_3o2_table_->is_empty()) {
-			std::cout << "Failed to load \"" << time_delay_3o2_prob_fname << "\"" << std::endl;
-			generate_time_delay_3o2_table();
-			str.open(time_delay_3o2_prob_fname, std::ios_base::trunc | std::ios_base::binary);
-			time_delay_3o2_table_->write(str);
+		if (time_delay_spin_nonflip_prob_table_->is_empty()) {
+			std::cout << "Failed to load \"" << time_delay_spin_nonflip_prob_fname << "\"" << std::endl;
+			generate_time_delay_spin_nonflip_prob_table();
+			str.open(time_delay_spin_nonflip_prob_fname, std::ios_base::trunc | std::ios_base::binary);
+			time_delay_spin_nonflip_prob_table_->write(str);
 			str.close();
 		}
 	}
 
-	inp.open(time_delay_1o2_prob_fname, std::ios_base::binary);
+	inp.open(time_delay_spin_nonflip_fname, std::ios_base::binary);
 	if (!inp.is_open()) {
-		std::cout << "Failed to load \"" << time_delay_1o2_prob_fname << "\"" << std::endl;
-		generate_time_delay_1o2_table();
-		str.open(time_delay_1o2_prob_fname, std::ios_base::trunc | std::ios_base::binary);
-		time_delay_1o2_table_->write(str);
+		std::cout << "Failed to load \"" << time_delay_spin_nonflip_fname << "\"" << std::endl;
+		generate_time_delay_spin_nonflip_table();
+		str.open(time_delay_spin_nonflip_fname, std::ios_base::trunc | std::ios_base::binary);
+		time_delay_spin_nonflip_table_->write(str);
 		str.close();
 	} else {
-		time_delay_1o2_table_->read(inp);
+		time_delay_spin_nonflip_table_->read(inp);
 		inp.close();
-		if (time_delay_1o2_table_->is_empty()) {
-			std::cout << "Failed to load \"" << time_delay_1o2_prob_fname << "\"" << std::endl;
-			generate_time_delay_1o2_table();
-			str.open(time_delay_1o2_prob_fname, std::ios_base::trunc | std::ios_base::binary);
-			time_delay_1o2_table_->write(str);
+		if (time_delay_spin_nonflip_table_->is_empty()) {
+			std::cout << "Failed to load \"" << time_delay_spin_nonflip_fname << "\"" << std::endl;
+			generate_time_delay_spin_nonflip_table();
+			str.open(time_delay_spin_nonflip_fname, std::ios_base::trunc | std::ios_base::binary);
+			time_delay_spin_nonflip_table_->write(str);
+			str.close();
+		}
+	}
+
+	inp.open(time_delay_spin_flip_fname, std::ios_base::binary);
+	if (!inp.is_open()) {
+		std::cout << "Failed to load \"" << time_delay_spin_flip_fname << "\"" << std::endl;
+		generate_time_delay_spin_flip_table();
+		str.open(time_delay_spin_flip_fname, std::ios_base::trunc | std::ios_base::binary);
+		time_delay_spin_flip_table_->write(str);
+		str.close();
+	} else {
+		time_delay_spin_flip_table_->read(inp);
+		inp.close();
+		if (time_delay_spin_flip_table_->is_empty()) {
+			std::cout << "Failed to load \"" << time_delay_spin_flip_fname << "\"" << std::endl;
+			generate_time_delay_spin_flip_table();
+			str.open(time_delay_spin_flip_fname, std::ios_base::trunc | std::ios_base::binary);
+			time_delay_spin_flip_table_->write(str);
 			str.close();
 		}
 	}
@@ -1057,6 +1267,20 @@ ArDataTables::ArDataTables(FunctionTable * int_table, FunctionTable * th_table, 
 	}
 
 	std::cout<<"Finished loading Ar data tables"<<std::endl;
+}
+
+void ArDataTables::DeleteData(void)
+{
+	delete integral_table_;
+	delete theta_table_;
+	delete time_delay_spin_flip_table_;
+	delete time_delay_spin_nonflip_table_;
+	delete time_delay_spin_nonflip_prob_table_;
+	integral_table_ = NULL;
+	theta_table_ = NULL;
+	time_delay_spin_flip_table_ = NULL;
+	time_delay_spin_nonflip_table_ = NULL;
+	time_delay_spin_nonflip_prob_table_ = NULL;
 }
 
 void ArDataTables::generate_total_cross_elastic_table(void)
@@ -1182,32 +1406,56 @@ void ArDataTables::generate_theta_table(void) //uses tabulated total cross secti
 	}
 }
 
-void ArDataTables::generate_time_delay_3o2_table(void)
+void ArDataTables::generate_time_delay_spin_flip_table(void)
 {
-	std::cout << "Generating 3/2 resonance time delay probability tables..." << std::endl;
-	ColoredRange energy_Y_range = 
-		ColoredInterval(En_3o2_ - 30 * Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 30 * Width_3o2_), Width_3o2_ / 10) +	//coarse area
-		ColoredInterval(En_3o2_ - 15 * Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15 * Width_3o2_), Width_3o2_ / 200);		//fine area
+	std::cout << "Generating spin flip time delay tables..." << std::endl;
+	ColoredRange energy_Y_range =
+		ColoredInterval(En_3o2_ - 30 * Width_3o2_, En_3o2_ + 30 * Width_3o2_, Width_3o2_ / 10) +	//coarse area
+		ColoredInterval(En_3o2_ - 15 * Width_3o2_, En_3o2_ + 15 * Width_3o2_, Width_3o2_ / 200)+		//fine area
+		ColoredInterval(En_1o2_ - 30 * Width_1o2_, En_1o2_ + 30 * Width_1o2_, Width_1o2_ / 10) +	//coarse area
+		ColoredInterval(En_1o2_ - 15 * Width_1o2_, En_1o2_ + 15 * Width_1o2_, Width_1o2_ / 200);		//fine area
+	energy_Y_range.Trim(0, EN_MAXIMUM_);
 	for (long int Ey_i = 0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i != Ey_ind_end_; ++Ey_i) {
 		double Ey = energy_Y_range.Value(Ey_i);
 		for (std::size_t th_i = 0, th_i_end_ = ANGLE_POINTS_; th_i != th_i_end_; ++th_i) {
 			double theta = th_i*M_PI / (ANGLE_POINTS_ - 1);
-			theta_table_->push(theta, Ey, ArAllData_.argon_delay_3o2_probability(Ey, theta));
+			time_delay_spin_flip_table_->push(theta, Ey, ArAllData_.argon_delay_spin_flip(Ey, theta));
 		}
 	}
 }
 
-void ArDataTables::generate_time_delay_1o2_table(void)
+void ArDataTables::generate_time_delay_spin_nonflip_table(void)
 {
-	std::cout << "Generating 3/2 resonance time delay probability tables..." << std::endl;
+	std::cout << "Generating spin nonflip time delay tables..." << std::endl;
 	ColoredRange energy_Y_range =
-		ColoredInterval(En_1o2_ - 30 * Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 30 * Width_1o2_), Width_1o2_ / 10) +	//coarse area
-		ColoredInterval(En_1o2_ - 15 * Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15 * Width_1o2_), Width_1o2_ / 200); 	//fine area
+		ColoredInterval(En_3o2_ - 30 * Width_3o2_, En_3o2_ + 30 * Width_3o2_, Width_3o2_ / 10) +	//coarse area
+		ColoredInterval(En_3o2_ - 15 * Width_3o2_, En_3o2_ + 15 * Width_3o2_, Width_3o2_ / 200)+		//fine area
+		ColoredInterval(En_1o2_ - 30 * Width_1o2_, En_1o2_ + 30 * Width_1o2_, Width_1o2_ / 10) +	//coarse area
+		ColoredInterval(En_1o2_ - 15 * Width_1o2_, En_1o2_ + 15 * Width_1o2_, Width_1o2_ / 200);		//fine area
+	energy_Y_range.Trim(0, EN_MAXIMUM_);
 	for (long int Ey_i = 0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i != Ey_ind_end_; ++Ey_i) {
 		double Ey = energy_Y_range.Value(Ey_i);
 		for (std::size_t th_i = 0, th_i_end_ = ANGLE_POINTS_; th_i != th_i_end_; ++th_i) {
 			double theta = th_i*M_PI / (ANGLE_POINTS_ - 1);
-			theta_table_->push(theta, Ey, ArAllData_.argon_delay_1o2_probability(Ey, theta));
+			time_delay_spin_nonflip_table_->push(theta, Ey, ArAllData_.argon_delay_spin_nonflip(Ey, theta));
+		}
+	}
+}
+
+void ArDataTables::generate_time_delay_spin_nonflip_prob_table(void)
+{
+	std::cout << "Generating spin nonflip time delay probability tables..." << std::endl;
+	ColoredRange energy_Y_range =
+		ColoredInterval(En_3o2_ - 30 * Width_3o2_, En_3o2_ + 30 * Width_3o2_, Width_3o2_ / 10) +	//coarse area
+		ColoredInterval(En_3o2_ - 15 * Width_3o2_, En_3o2_ + 15 * Width_3o2_, Width_3o2_ / 200)+		//fine area
+		ColoredInterval(En_1o2_ - 30 * Width_1o2_, En_1o2_ + 30 * Width_1o2_, Width_1o2_ / 10) +	//coarse area
+		ColoredInterval(En_1o2_ - 15 * Width_1o2_, En_1o2_ + 15 * Width_1o2_, Width_1o2_ / 200);		//fine area
+	energy_Y_range.Trim(0, EN_MAXIMUM_);
+	for (long int Ey_i = 0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i != Ey_ind_end_; ++Ey_i) {
+		double Ey = energy_Y_range.Value(Ey_i);
+		for (std::size_t th_i = 0, th_i_end_ = ANGLE_POINTS_; th_i != th_i_end_; ++th_i) {
+			double theta = th_i*M_PI / (ANGLE_POINTS_ - 1);
+			time_delay_spin_nonflip_prob_table_->push(theta, Ey, ArAllData_.argon_delay_spin_nonflip_prob(Ey, theta));
 		}
 	}
 }
@@ -1352,15 +1600,12 @@ double ArDataTables::generate_time_delay(double E, double theta, short type, dou
 	if (Event::Elastic != type) {
 		return 0;
 	}
-	double p1o2 = (*time_delay_1o2_table_)(theta, E);
-	double p3o2 = (*time_delay_3o2_table_)(theta, E);
-	p1o2 = std::max(p1o2, 0.0);
-	p3o2 = std::max(p3o2, 0.0);
-	if (Rand < p1o2) {
-		return ArAllData_.argon_delay_1o2(E, theta);
+	double P = (*time_delay_spin_nonflip_prob_table_)(theta, E);
+	P = std::max(P, 0.0);
+	if (Rand < P) {
+		return (*time_delay_spin_nonflip_table_)(theta, E);
 	} else {
-		if (Rand < (p1o2 + p3o2))
-			return ArAllData_.argon_delay_3o2(E, theta);
+		return (*time_delay_spin_flip_table_)(theta, E);
 	}
 	return 0;
 }
@@ -1370,13 +1615,11 @@ double ArDataTables::generate_time_delay_untabulated(double E, double theta, sho
 	if (Event::Elastic != type) {
 		return 0;
 	}
-	double p1o2 = std::max(ArAllData_.argon_delay_1o2_probability(E, theta), (long double)0.0);
-	double p3o2 = std::max(ArAllData_.argon_delay_3o2_probability(E, theta), (long double)0.0);
-	if (Rand < p1o2) {
-		return ArAllData_.argon_delay_1o2(E, theta);
+	double P = ArAllData_.argon_delay_spin_nonflip_prob(E, theta);
+	if (Rand < P) {
+		return ArAllData_.argon_delay_spin_nonflip(E, theta);
 	} else {
-		if (Rand < (p1o2 + p3o2))
-			return ArAllData_.argon_delay_3o2(E, theta);
+		return ArAllData_.argon_delay_spin_flip(E, theta);
 	}
 	return 0;
 }

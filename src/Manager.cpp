@@ -64,7 +64,7 @@ void Manager::InitTree (void)
 
 	sim_data_->Branch("time_initial", &event_.time_start);
 	sim_data_->Branch("time_delta", &event_.delta_time);
-	//sim_data_->Branch("time_delta_full", &event_.delta_time_full);
+	sim_data_->Branch("time_delta_full", &event_.delta_time_full);
 
 	if (0==SKIP_HISTORY_) { //for spectra
 		sim_data_->Branch("energy_initial", &event_.En_start);
@@ -76,10 +76,10 @@ void Manager::InitTree (void)
 		//sim_data_->Branch("position_initial",&event_.pos_start);
 		//sim_data_->Branch("position_delta",&event_.delta_x);
 	}
-	sim_data_->Branch("theta_initial", &event_.theta_start);
-	sim_data_->Branch("theta_coll", &event_.theta_collision);
-	sim_data_->Branch("theta_final", &event_.theta_finish);
-	sim_data_->Branch("theta_delta", &event_.delta_theta);
+	//sim_data_->Branch("theta_initial", &event_.theta_start);
+	//sim_data_->Branch("theta_coll", &event_.theta_collision);
+	//sim_data_->Branch("theta_final", &event_.theta_finish);
+	//sim_data_->Branch("theta_delta", &event_.delta_theta);
 	sim_data_->Branch("path_delta", &event_.delta_l);
 
 	sim_data_->Branch("photon_energy", &event_.photon_En);

@@ -243,6 +243,22 @@ void test_legendre_polynomial(void)
 	std::cout<<"Wolfram alpha:\t 0"<<std::endl;
 	std::cout<<"Pl(7,1) =\t "<<Pl(1, 7)<<std::endl;
 	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
+	LegendrePolynom Pl2;
+	std::cout<<"===Pl2==="<<std::endl;
+	std::cout<<"Pl(7,-1) =\t "<<Pl2(-1, 7)<<std::endl;
+	std::cout<<"Wolfram alpha:\t -1"<<std::endl;
+	std::cout<<"Pl(7,-1) =\t "<<Pl2(-1, 7)<<std::endl;
+	std::cout<<"Wolfram alpha:\t -1"<<std::endl;
+	std::cout<<"Pl(8,-1) =\t "<<Pl2(-1, 8)<<std::endl;
+	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
+	std::cout<<"Pl(8,-1) =\t "<<Pl2(-0.9, 8)<<std::endl;
+	std::cout<<"Wolfram alpha:\t -0.409685903515625"<<std::endl;
+	LegendrePolynom Pl3;
+	std::cout<<"===Pl3==="<<std::endl;
+	std::cout<<"Pl(0,-1) =\t "<<Pl3(-1, 0)<<std::endl;
+	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
+	std::cout<<"Pl(0,-1) =\t "<<Pl3(-1, 0)<<std::endl;
+	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
 	AssociatedLegendrePolynom APl;
 	std::cout<<"Associated Legendre polynomials:"<<std::endl;
 	std::cout<<"APl(3, 3, 0.36) =\t"<<APl(0.36, 3, 3)<<std::endl;
@@ -251,6 +267,8 @@ void test_legendre_polynomial(void)
 	std::cout<<"Wolfram alpha:\t 1.0075884874"<<std::endl;
 	std::cout<<"APl(1, 1, -0.36) =\t"<<APl(-0.36, 1, 1)<<std::endl;
 	std::cout<<"Wolfram alpha:\t -0.93295230317"<<std::endl;
+	std::cout<<"APl(10, 1, 0.27) =\t"<<APl(0.27, 10, 1)<<std::endl;
+	std::cout<<"Wolfram alpha:\t -0.73106380723"<<std::endl;
 	std::cout<<"APl(10, 1, 0.27) =\t"<<APl(0.27, 10, 1)<<std::endl;
 	std::cout<<"Wolfram alpha:\t -0.73106380723"<<std::endl;
 }
@@ -758,7 +776,7 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 	{
 		double E = En_3o2_-0.05;
 		unsigned int N_th = 600;
-		int N_lz = 0;
+		int N_lz = 0, N_gz = 0;
 		double I_lz = 0;
 		double I_gz = 0;
 		for (int i = 0; i<=N_th; ++i) {
@@ -769,21 +787,26 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 				if (prob < 0) {
 					++N_lz;
 					I_lz += prob;
-				} else
+				} else {
 					I_gz += prob;
+					++N_gz;
+				}
 				if (L > 0) {
 					prob = ArTables->ArAllData_.argon_scatter_probability_j(E, theta, 2 * L - 1, 2 * L);
 					if (prob < 0) {
 						++N_lz;
 						I_lz += prob;
-					} else
-					I_gz += prob;
+					} else {
+						I_gz += prob;
+						++N_gz;
+					}
 				}
 			}
 		}
 		std::cout << "Test of probability of scattering through defined J L " << std::endl;
 		std::cout << "E = " << E << "; N_theta = "<< N_th << std::endl;
 		std::cout << "Num of negative probabilities: "<< N_lz << std::endl;
+		std::cout << "Num of positive probabilities: "<< N_gz << std::endl;
 		std::cout << "Sum of negative probabilities: " << I_lz << std::endl;
 		std::cout << "Sum of positive probabilities: " << I_gz << std::endl;
 	}
@@ -799,7 +822,7 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 		std::string name = "tests/test_diff_XS_elastic_10eV_Pjl.sc";
 		str.open(name, std::ios_base::trunc);
 		str<<"plot \""<<fname_diff<<"\" u 1:2 title \"Diff. XS at 10 eV\""<<std::endl;
-		str << "plot \"" << fname_diff << "\" u 1:3 title \"Diff. XS at 10 eV using l-j probabilities\"" << std::endl;
+		str << "replot \"" << fname_diff << "\" u 1:3 title \"Diff. XS at 10 eV using l-j probabilities\"" << std::endl;
 		str<<"pause -1"<<std::endl;
 		str.close();
 		INVOKE_GNUPLOT(name);
@@ -832,7 +855,7 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 		str << "set key top left" << std::endl;
 		str << "plot \"" << fname_tot << "\" u 1:2 w lines title \"total XS\"" << std::endl;
 		str << "replot \"" << fname_tot << "\" u 1:3 w lines title \"total XS from diff.\"" << std::endl;
-		str << "replot \"" << fname_tot << "\" u 1:3 w lines title \"total XS from diff. by Pjl\"" << std::endl;
+		str << "replot \"" << fname_tot << "\" u 1:4 w lines title \"total XS from diff. by Pjl\"" << std::endl;
 		str << "pause -1" << std::endl;
 		str.close();
 		INVOKE_GNUPLOT(name);
@@ -886,65 +909,37 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 
 void test_time_delay(ArDataTables *ArTables)
 {
-	std::vector<double> Es = {11.05, 11.1, 11.1025, 11.1038 , 11.2708};
-	for (std::size_t i = 0, i_end_ = Es.size(); i != i_end_; ++i) {
-		double Energy = Es[i];
-		std::string title = std::string("time delay ") + std::to_string(Energy) + "eV";
-		TCanvas *c1 = new TCanvas(title.c_str(), title.c_str(), 900, 700);
-		TPaveText* pave_text = new TPaveText(0.1, 0.9, 0.5, 0.75, "");
-		std::string hist_title = (std::string("Time delay for scatter at ") + std::to_string(Energy) + "eV");
-		TH1D * hist = new TH1D(hist_title.c_str(), hist_title.c_str(), 300, 0, 1.05*h_bar_eVconst/std::min(Width_1o2_, Width_3o2_));
-		TRandom *random_generator_ = new TRandom1(42);
-		unsigned long int N0 = 0, Nn0 = 0;
-		for (int h = 0; h < 100000; ++h) {
-			double theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
-			double delay = ArTables->generate_time_delay_untabulated(Energy, theta, Event::Elastic, random_generator_->Uniform());
-			if (0 != delay) {
-				hist->Fill(delay);
-				++Nn0;
-			} else {
-				++N0;
-			}
-		}
-		pave_text->AddText((std::string("N with 0 delay = ") + std::to_string(N0)).c_str());
-		pave_text->AddText((std::string("N with non 0 delay = ") + std::to_string(Nn0)).c_str());
-		hist->Draw();
-		pave_text->Draw("same");
-	}
+	{
+		std::string title0 = std::string("Time delay 11.075-11.125 eV");
+		std::string title1 = std::string("Time delay at 11.075-11.125 eV");
+		std::string title2 = std::string("Tabulated time delay at 11.075-11.125 eV");
 
-	for (std::size_t i = 0, i_end_ = Es.size(); i != i_end_; ++i) {
-		double Energy = En_3o2_;
-		std::string title = std::string("time delay table") + std::to_string(Energy) + "eV";
-		TCanvas *c1 = new TCanvas(title.c_str(), title.c_str(), 900, 700);
+		TCanvas *c1 = new TCanvas(title0.c_str(), title0.c_str(), 900, 700);
+		c1->SetLogy();
 		TLegend* legend = new TLegend(0.50, 0.75, 0.9, 0.9);
 		//legend->SetHeader("");
 		legend->SetMargin(0.25);
-		std::string hist_title = (std::string("Time delay for scatter at ") + std::to_string(Energy) + "eV");
-		std::string hist_title2 = (std::string("Tabulated time delay for scatter at ") + std::to_string(Energy) + "eV");
-		TH1D * hist = new TH1D(hist_title.c_str(), hist_title.c_str(), 300, 0, 1.05*h_bar_eVconst / std::min(Width_1o2_, Width_3o2_));
-		TH1D * hist2 = new TH1D(hist_title.c_str(), hist_title.c_str(), 300, 0, 1.05*h_bar_eVconst / std::min(Width_1o2_, Width_3o2_));
+		TH1D * hist1 = new TH1D(title1.c_str(), title1.c_str(), 600, 0, 1.05*4*h_bar_eVconst/std::min(Width_1o2_, Width_3o2_));
+		TH1D * hist2 = new TH1D(title2.c_str(), title2.c_str(), 600, 0, 1.05*4*h_bar_eVconst/std::min(Width_1o2_, Width_3o2_));
+		hist2->SetLineColor(kRed);
 		TRandom *random_generator_ = new TRandom1(42);
-		unsigned long int N0_1 = 0, Nn0_1 = 0, N0_2 = 0, Nn0_2 = 0;
-		for (int h = 0; h < 100000; ++h) {
+		//unsigned long int N0 = 0, Nn0 = 0;
+		for (int h = 0; h < 2000000; ++h) {
+			double Energy = 11.075 + (11.125-11.075)*random_generator_->Uniform();
 			double theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
-			double delay1 = ArTables->generate_time_delay_untabulated(Energy, theta, Event::Elastic, random_generator_->Uniform());
-			if (0 != delay1) {
-				hist->Fill(delay1);
-				++Nn0_1;
-			} else {
-				++N0_1;
-			}
-			double delay2 = ArTables->generate_time_delay(Energy, theta, Event::Elastic, random_generator_->Uniform());
-			if (0 != delay2) {
-				hist2->Fill(delay2);
-				++Nn0_2;
-			} else {
-				++N0_2;
-			}
+			double delay = ArTables->generate_time_delay_untabulated(Energy, theta, Event::Elastic, random_generator_->Uniform());
+			hist1->Fill(delay);
+			Energy = 11.075 + (11.125-11.075)*random_generator_->Uniform();
+			theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
+			delay = ArTables->generate_time_delay(Energy, theta, Event::Elastic, random_generator_->Uniform());
+			hist2->Fill(delay);
 		}
-		legend->AddEntry(hist, (std::string("Ndelayed = ") + std::to_string(Nn0_1) + ", Ntot = "+std::to_string(Nn0_1+ N0_1)).c_str(), "l");
-		legend->AddEntry(hist2, (std::string("Tabulated. Ndelayed = ") + std::to_string(Nn0_2) + ", Ntot = " + std::to_string(Nn0_2 + N0_2)).c_str(), "l");
-		hist->Draw();
+		std::ostringstream str1, str2;
+		str1 << hist1->GetMean();
+		str2 << hist2->GetMean();
+		legend->AddEntry(hist1, (std::string("N = 2000000, Mean = ") + str1.str()).c_str(), "l");
+		legend->AddEntry(hist2, (std::string("Tabulated. N = 2000000, Mean = ") + str1.str()).c_str(), "l");
+		hist1->Draw();
 		hist2->Draw("same");
 		legend->Draw("same");
 	}
@@ -1189,10 +1184,14 @@ void test_all (ArDataTables *ArTables)
 	test_legendre_intregral ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 	*/
-	std::cout<<"Testing differential cross section:"<<std::endl;
+/*	std::cout<<"Testing differential cross section:"<<std::endl;
 	test_diff_tot_cross (ArTables);
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-
+*/
+/*	std::cout<<"Testing J-L probabilities:"<<std::endl;
+	test_J_L_probabilities (ArTables);
+	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
+*/
 /*	std::cout<<"Testing backward scatter probability:"<<std::endl;
 	test_backward_scatter_prob (ArTables);
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
@@ -1208,11 +1207,15 @@ void test_all (ArDataTables *ArTables)
 /*	std::cout<<"Testing resonance cross section:"<<std::endl;
 	test_resonance_cross (ArTables);
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-*/
-/*	std::cout<<"Testing total cross sections:"<<std::endl;
+*//*
+	std::cout<<"Testing total cross sections:"<<std::endl;
 	test_total_cross_all (ArTables);
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 */
+	std::cout<<"Testing time delay:"<<std::endl;
+	test_time_delay (ArTables);
+	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
+
 
 	std::cout<<"Testing finished."<<std::endl<<std::endl<<std::endl;
 }

@@ -91,14 +91,19 @@ public:
 	long double argon_TM_forward(long double E);
 	long double argon_TM_backward(long double E);
 
-	//have to make these 2 public for testing
+	//have to make these 2 public for testing. UPD: these functions are useless. Time delay is calculated differently
 	long double argon_scatter_probability_j(long double E, long double theta, int J, int L, int mode=0);
 	long double argon_time_delay_j(long double E, int J, int L);
+	long double argon_scatter_spin_flip_amplitude_sq(long double E, long double theta, int mode=0);
+	long double argon_scatter_spin_nonflip_amplitude_sq(long double E, long double theta, int mode=0);
 
-	long double argon_delay_1o2_probability(long double E, long double theta);
-	long double argon_delay_3o2_probability(long double E, long double theta);
-	long double argon_delay_1o2 (long double E, long double theta);
-	long double argon_delay_3o2 (long double E, long double theta);
+	//Wrong approach:
+	//long double argon_delay_1o2_probability(long double E, long double theta);
+	//long double argon_delay_3o2_probability(long double E, long double theta);
+	long double argon_delay_spin_flip (long double E, long double theta, int mode =0);
+	long double argon_delay_spin_nonflip (long double E, long double theta, int mode =0);
+	//long double argon_delay_spin_flip_prob (long double E, long double theta, int mode =0);
+	long double argon_delay_spin_nonflip_prob (long double E, long double theta, int mode =0);
 
 	long double argon_ResNBrS_spectrum(long double W, long double E); //Normalization constant is arbitrary. Not dependant on E
 	long double argon_ResNBrS_XS(long double E); //Normalization constant is taken from "global_definitions.h"
@@ -112,8 +117,9 @@ protected:
 	std::string total_cross_elastic_fname; //contains Feshbach resonances
 	std::string integral_table_fname;
 	std::string theta_table_fname;
-	std::string time_delay_3o2_prob_fname;
-	std::string time_delay_1o2_prob_fname;
+	std::string time_delay_spin_nonflip_prob_fname;
+	std::string time_delay_spin_flip_fname;
+	std::string time_delay_spin_nonflip_fname;
 	std::string total_resonance_NBrS_spectrum_fname;
 
 	DataVector total_cross_elastic_;
@@ -122,15 +128,19 @@ protected:
 	void generate_total_cross_elastic_table(void);
 	void generate_integral_table(void);
 	void generate_theta_table(void);
-	void generate_time_delay_3o2_table(void);
-	void generate_time_delay_1o2_table(void);
+	void generate_time_delay_spin_flip_table(void);
+	void generate_time_delay_spin_nonflip_table(void);
+	void generate_time_delay_spin_nonflip_prob_table(void);
 	void generate_ResNBrS_spectrum_table(void);
 public:
+	//No deep copy
 	FunctionTable *integral_table_;	//shared between threads after it is initialized
 	FunctionTable *theta_table_; 	//shared between threads after it is initialized
-	FunctionTable *time_delay_3o2_table_; 	//shared between threads after it is initialized
-	FunctionTable *time_delay_1o2_table_; 	//shared between threads after it is initialized
-	ArDataTables(FunctionTable * int_table, FunctionTable * th_table, FunctionTable * delay_3o2_table, FunctionTable * delay_1o2_table);
+	FunctionTable *time_delay_spin_flip_table_; 	//shared between threads after it is initialized
+	FunctionTable *time_delay_spin_nonflip_table_; 	//shared between threads after it is initialized
+	FunctionTable *time_delay_spin_nonflip_prob_table_; 	//shared between threads after it is initialized
+	ArDataTables ();
+	ArDataTables (const ArDataTables & ) = default;
 	long double CrossSection (double E, short type);
 	long double TotalCrossSection (double E);
 	long double XS_elastic(double E);
@@ -144,6 +154,8 @@ public:
 	void setNused(int N);
 	int getOrder(void);
 	int getNused(void);
+
+	void DeleteData(void);
 };
 
 #endif
