@@ -9,7 +9,7 @@
 	TH1D* hist_Tdelay = new TH1D ("Time delay [s]","Time delay [s]",600, 0, 1e-12);
     TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
     TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
-    TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",300,0, 1e-5);
+    TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",300,4e-7, 7e-7);
     TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 15);
     TH1D* hist_theta = new TH1D ("Scatter angle near 10 eV","Scatter angle near 10 eV",300, 0, 3.1416);
     //TH1D* hist_Ey = new TH1D ("Ey [eV]", "Ey [eV]",300, 0, 15);
@@ -19,7 +19,7 @@
     double E_at_time = 1e-11;
     double dt = 6e-12;
     double DRIFT_DISTANCE = 3e-3;
-    std::string fname1("Output/v12.4/eData_7.0Td.root");
+    std::string fname1("Output/v12.6/eData_7.0Td.root");
     double En_start;
     double En_collision;
     double En_finish;
