@@ -481,6 +481,14 @@ void FunctionTable::read (std::ifstream& str)
 	}
 }
 
+void FunctionTable::write(std::string fname)
+{
+	std::ofstream str;
+	str.open(fname, std::ios_base::trunc | std::ios_base::binary);
+	write(str);
+	str.close();
+}
+
 void FunctionTable::write (std::ofstream& str)
 {
 	std::size_t real_size= _Eys.size();

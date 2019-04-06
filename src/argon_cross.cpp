@@ -10,50 +10,56 @@ EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 	switch (type_) {
 	case (ElasticXS): { //used for table construction
 		//from 1e-3 eV to 0.1 eV with step 5e-4 eV, etc.
-		energy_range_ =ColoredInterval (0, XS_EL_EN_MINIMUM_, 1e-4) + ColoredInterval (XS_EL_EN_MINIMUM_, 0.1, 5e-4) + ColoredInterval (0.1, 1, 1e-3) +
-				ColoredInterval (1, 10, 5e-2) + ColoredInterval (10, XS_EL_EN_MAXIMUM_, 0.1)+
+		energy_range_ =ColoredInterval (0, gSettings.PhysConsts()->XS_el_En_minimum, 1e-4) +
+				ColoredInterval (gSettings.PhysConsts()->XS_el_En_minimum, 0.1, 5e-4) + ColoredInterval (0.1, 1, 1e-3) +
+				ColoredInterval (1, 10, 5e-2) + ColoredInterval (10, gSettings.PhysConsts()->XS_el_En_maximum, 0.1)+
 				ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/2) + 	//coarse area
 				ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/2) + 	//coarse area
 				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/30) + 	//fine area
 				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/30); 		//fine area
+		energy_range_.Trim(0, gSettings.ProgConsts()->maximal_energy);
 		break;
 	}
 	case (InelasticXS): {
-		energy_range_ = ColoredInterval (11.5, EN_MAXIMUM_, 0.01);
+		energy_range_ = ColoredInterval (11.5, gSettings.ProgConsts()->maximal_energy, 0.01);
 		break;
 	}
 	case (ElasticResXS): {
-		energy_range_ = ColoredInterval (XS_EL_EN_MINIMUM_*0.1, 0.1, 5e-4) + ColoredInterval (0.1, 1, 1e-3) +
-				ColoredInterval (1, 10, 5e-2) + ColoredInterval (10, XS_EL_EN_MAXIMUM_, 0.1) +
+		energy_range_ = ColoredInterval (gSettings.PhysConsts()->XS_el_En_minimum*0.1, 0.1, 5e-4) + ColoredInterval (0.1, 1, 1e-3) +
+				ColoredInterval (1, 10, 5e-2) + ColoredInterval (10, gSettings.PhysConsts()->XS_el_En_maximum, 0.1) +
 				ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/2) + 		//coarse area
 				ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/2) + 		//coarse area
 				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/30) + 	//fine area
 				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/30);	//fine area
+		energy_range_.Trim(0, gSettings.ProgConsts()->maximal_energy);
 		break;
 	}
 	case (XSIntegral): {
 		energy_range_ = ColoredInterval (0, 0.1, 2e-4) + ColoredInterval (0.1, 1, 8e-4) +
-				ColoredInterval (1, 10, 1e-2) + ColoredInterval (10, EN_MAXIMUM_, 0.02) +
-				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
-				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
-				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) + 	//fine area
-				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80) +	//fine area
-				ColoredInterval (11.5, EN_MAXIMUM_, 0.003);
+				ColoredInterval (1, 10, 1e-2) + ColoredInterval (10, gSettings.PhysConsts()->XS_el_En_maximum, 0.02) +
+				ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/5) +	//coarse area
+				ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/5) +	//coarse area
+				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/80) + 	//fine area
+				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/80) +	//fine area
+				ColoredInterval (11.5, gSettings.PhysConsts()->XS_el_En_maximum, 0.003);
+		energy_range_.Trim(0, gSettings.ProgConsts()->maximal_energy);
 		break;
 	}
-	case (PlotElastic): {
+	case (PlotElastic): { //not used
 		//from 1e-3 eV to 0.1 eV with step 5e-4 eV, etc.
-		energy_range_ = ColoredInterval (XS_EL_EN_MINIMUM_, 0.1, 3e-4) + ColoredInterval (0.1, 1, 9e-4);
+		energy_range_ = ColoredInterval (gSettings.PhysConsts()->XS_el_En_minimum, 0.1, 3e-4) + ColoredInterval (0.1, 1, 9e-4);
 		break;
 	}
 	case (PlotResonance_3o2): {
 		energy_range_ = ColoredInterval (En_3o2_ - 110*Width_3o2_, En_3o2_ + 110*Width_3o2_, Width_3o2_/3) +//coarse area
 				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/80); 		//fine area
+		energy_range_.Trim(0, gSettings.PhysConsts()->XS_el_En_maximum);
 		break;
 	}
 	case (PlotResonance_1o2): {
 		energy_range_ = ColoredInterval (En_1o2_ - 110*Width_1o2_, En_1o2_ + 110*Width_1o2_, Width_1o2_/3) +//coarse area
 				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/80); 		//fine area
+		energy_range_.Trim(0, gSettings.PhysConsts()->XS_el_En_maximum);
 		break;
 	}
 	case (PlotResonances): { //used for plotting total and differential XS in resonances region
@@ -61,44 +67,43 @@ EnergyScanner::EnergyScanner(ScanType type): i(0), type_(type)
 				ColoredInterval (En_3o2_ - 110*Width_3o2_, En_3o2_ + 110*Width_3o2_, Width_3o2_/3) + 			//coarse area
 				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/80) + 		//fine area
 				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/80); 			//fine area
+		energy_range_.Trim(0, gSettings.PhysConsts()->XS_el_En_maximum);
 		break;
 	}
 	case (PlotDiffXS): {  //used for plotting test of differential to total cross sections
 		energy_range_ = ColoredInterval (1e-4, 0.1, 7e-4) +
 				ColoredInterval (0.1, 1, 7e-3) +
-				ColoredInterval (1, EN_MAXIMUM_, 0.086);
-			//ColoredInterval(En_1o2_ - 110 * Width_1o2_, En_1o2_ + 110 * Width_1o2_, Width_1o2_ / 3) + 	//coarse area
-			//ColoredInterval(En_3o2_ - 110 * Width_3o2_, En_3o2_ + 110 * Width_3o2_, Width_3o2_ / 3) + 	//coarse area
-			//ColoredInterval(En_1o2_ - 15 * Width_1o2_, En_1o2_ + 15 * Width_1o2_, Width_1o2_ / 80) + 	//fine area
-			//ColoredInterval(En_3o2_ - 15 * Width_3o2_, En_3o2_ + 15 * Width_3o2_, Width_3o2_ / 80); 	//fine area
+				ColoredInterval (1, gSettings.PhysConsts()->XS_el_En_maximum, 0.086);
+		energy_range_.Trim(0, gSettings.ProgConsts()->maximal_energy);
 		break;
 	}
 	case (PlotInelasticXS): {
-		energy_range_ = ColoredInterval (11.5, XS_EL_EN_MAXIMUM_, 0.007) +
-				ColoredInterval (XS_EL_EN_MAXIMUM_, 100, 0.1);
+		energy_range_ = ColoredInterval (11.5, gSettings.PhysConsts()->XS_el_En_maximum, 0.007) +
+				ColoredInterval (gSettings.PhysConsts()->XS_el_En_maximum, 100, 0.1);
 		break;
 	}
 	case (PlotElasticResXS): {
-		energy_range_ = ColoredInterval (XS_EL_EN_MINIMUM_, 0.1, 3e-4) + ColoredInterval (0.1, 1, 9e-4) +
-				ColoredInterval (1, 10, 7e-3) + ColoredInterval (10, XS_EL_EN_MAXIMUM_, 0.016) +
-				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(XS_EL_EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
-				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(XS_EL_EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
-				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(XS_EL_EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) +//fine area
-				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(XS_EL_EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80);//fine area
+		energy_range_ = ColoredInterval (gSettings.PhysConsts()->XS_el_En_minimum, 0.1, 3e-4) + ColoredInterval (0.1, 1, 9e-4) +
+				ColoredInterval (1, 10, 7e-3) + ColoredInterval (10, gSettings.PhysConsts()->XS_el_En_maximum, 0.016) +
+				ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/5) +	//coarse area
+				ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/5) +	//coarse area
+				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/80) +//fine area
+				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/80);//fine area
+		energy_range_.Trim(0, gSettings.ProgConsts()->maximal_energy);
 		break;
 	}
 	case (PlotAllXS): {
-		energy_range_ = ColoredInterval (1e-4, 0.1, 2e-4) + ColoredInterval (0.1, 1, 7e-4) +
-				ColoredInterval (1, 10, 7e-3) + ColoredInterval (10, XS_EL_EN_MAXIMUM_, 0.016) +
-				ColoredInterval (En_1o2_ - 110*Width_1o2_, std::min(XS_EL_EN_MAXIMUM_, En_1o2_ + 110*Width_1o2_), Width_1o2_/5) +	//coarse area
-				ColoredInterval (En_3o2_ - 110*Width_3o2_, std::min(XS_EL_EN_MAXIMUM_, En_3o2_ + 110*Width_3o2_), Width_3o2_/5) +	//coarse area
-				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(XS_EL_EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) +//fine area
-				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(XS_EL_EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80) +//fine area
-				ColoredInterval (11.5, XS_EL_EN_MAXIMUM_, 0.003);
+		energy_range_ = ColoredInterval (gSettings.PhysConsts()->XS_el_En_minimum*0.1, 0.1, 2e-4) + ColoredInterval (0.1, 1, 7e-4) +
+				ColoredInterval (1, 10, 7e-3) + ColoredInterval (10, gSettings.PhysConsts()->XS_el_En_maximum, 0.016) +
+				ColoredInterval (En_1o2_ - 110*Width_1o2_, En_1o2_ + 110*Width_1o2_, Width_1o2_/5) +	//coarse area
+				ColoredInterval (En_3o2_ - 110*Width_3o2_, En_3o2_ + 110*Width_3o2_, Width_3o2_/5) +	//coarse area
+				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/80) +//fine area
+				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/80) +//fine area
+				ColoredInterval (11.5, gSettings.PhysConsts()->XS_el_En_maximum, 0.003);
+		energy_range_.Trim(0, gSettings.ProgConsts()->maximal_energy);
 		break;
 	}
 	}
-
 }
 long double EnergyScanner::Next(int& err)
 {
@@ -144,11 +149,13 @@ double InelasticProcess::operator ()(double E) //returns cross section in 1e-16 
 
 double InelasticProcess::BB_XS(double E)
 {
-	double gamma = (E+e_mass_eVconst)/e_mass_eVconst;
+	double gamma = (E+gSettings.PhysConsts()->e_mass_eV)/ gSettings.PhysConsts()->Ar_mass_eV;
 	double gamma2 = gamma*gamma;
 	double beta2 = 1.0-1.0/gamma2;
-	double BBconst = 8.0*M_PI*a_bohr_SIconst*a_bohr_SIconst*Ry_eVconst*Ry_eVconst/e_mass_eVconst;
-	return (Oscillator_strength_/(En_threshold_*beta2))*log(beta2*gamma2*e_mass_eVconst/(2.0*En_threshold_)-beta2)*BBconst*E/(E+En_threshold_+ArExper_->E_Ionization);
+	double BBconst = 8.0*M_PI* gSettings.PhysConsts()->a_bohr_SI *gSettings.PhysConsts()->a_bohr_SI
+		*gSettings.PhysConsts()->Ry_eV*gSettings.PhysConsts()->Ry_eV / gSettings.PhysConsts()->e_mass_eV;
+	return (Oscillator_strength_/(En_threshold_*beta2))*log(beta2*gamma2*gSettings.PhysConsts()->e_mass_eV /(2.0*En_threshold_)-beta2)
+		*BBconst*E/(E+En_threshold_+ArExper_->E_Ionization);
 }
 
 double InelasticProcess::Exp_XS(double E)
@@ -166,12 +173,17 @@ std::string InelasticProcess::get_name (void) const
 unsigned int InelasticProcess::get_ID (void) const
 {	return ID_;}
 
-ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd order polynomial*/, max_process_ID(0), E_Ionization(0)
+ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd order polynomial*/, max_process_ID(0), E_Ionization(0), is_valid_(false)
 {
 	std::cout << "Reading Ar exprimental data..." << std::endl;
 	std::ifstream inp;
-	inp.open("data/ArScatteringCross.dat");
 	std::string line, word;
+	unsigned int MAX_L = 6; //L == (MAX_L-1) is the last one //TODO: move this "magic" number to either setings or phases' input data file.
+	inp.open(gSettings.ProgConsts()->elastic_XS_fname);
+	if (!inp.is_open()) {
+		std::cerr << "ArExperimental::ArExperimental: Failed to open file \"" << gSettings.ProgConsts()->elastic_XS_fname << "\"" << std::endl;
+		goto fail_load;
+	}
 	while (!inp.eof()) {
 		std::getline(inp, line);
 		if (line.size()>=2)
@@ -180,7 +192,7 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 		word = strtoken(line, "\t ");
 		if (word.empty())
 			break;
-		double k = a_h_bar_2e_m_e_SIconst*sqrt(std::stod(word));
+		double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(std::stod(word));
 		word = strtoken(line, "\t ");
 		if (word.empty())
 			break;
@@ -188,20 +200,24 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 		total_elastic_cross.push(k, XS);
 	}
 	inp.close();
-	for (int l=0;l<6;++l)
-		if (l<4) {
-			phase_shifts_pos_.push_back(DataVector(3,4)); /*interpolation by 3rd order polynomial because there's data for 11eV*/
+	for (int l = 0; l < MAX_L; ++l) { 
+		if (l < 4) {
+			phase_shifts_pos_.push_back(DataVector(3, 4)); /*interpolation by 3rd order polynomial because there's data for 11eV*/
 			phase_shifts_pos_.back().use_rightmost(true);
-			phase_shifts_neg_.push_back(DataVector(3,4));
+			phase_shifts_neg_.push_back(DataVector(3, 4));
 			phase_shifts_neg_.back().use_rightmost(true);
 		} else {
-			phase_shifts_pos_.push_back(DataVector(3,5)); /*fit by 3rd order polynomial TODO: tests, tests*/
+			phase_shifts_pos_.push_back(DataVector(3, 5)); /*fit by 3rd order polynomial TODO: tests, tests*/
 			phase_shifts_pos_.back().use_rightmost(true);
-			phase_shifts_neg_.push_back(DataVector(3,4));
+			phase_shifts_neg_.push_back(DataVector(3, 4));
 			phase_shifts_neg_.back().use_rightmost(true);
 		}
-	inp.open("data/McEachranArPhaseShifts.dat");
-	unsigned int MAX_L = 6; //L == (MAX_L-1) is the last one
+	}
+	inp.open(gSettings.ProgConsts()->elastic_XS_phaseshift_fname);
+	if (!inp.is_open()) {
+		std::cerr << "ArExperimental::ArExperimental: Failed to open file \"" << gSettings.ProgConsts()->elastic_XS_phaseshift_fname << "\"" << std::endl;
+		goto fail_load;
+	}
 	while (!inp.eof()) {
 		std::getline(inp, line);
 		bool positive = true;
@@ -267,7 +283,11 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 	}
 	inp.close();
 	//loading ionization and excitation data
-	inp.open("data/ArIonizations_Magboltz.dat");
+	inp.open(gSettings.ProgConsts()->ionization_XS_fname);
+	if (!inp.is_open()) {
+		std::cerr << "ArExperimental::ArExperimental: Failed to open file \"" << gSettings.ProgConsts()->ionization_XS_fname << "\"" << std::endl;
+		goto fail_load;
+	}
 	read_inelastic(inp, ionizations);
 	inp.close();
 	if (ionizations.size()) {
@@ -275,7 +295,11 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 		for (int i =0, end_ = ionizations.size();i!=end_;++i)
 			E_Ionization = std::min(ionizations[i].get_En_thresh(), E_Ionization);
 	} 
-	inp.open("data/ArExitations_Magboltz.dat");
+	inp.open(gSettings.ProgConsts()->excitation_XS_fname);
+	if (!inp.is_open()) {
+		std::cerr << "ArExperimental::ArExperimental: Failed to open file \"" << gSettings.ProgConsts()->excitation_XS_fname << "\"" << std::endl;
+		goto fail_load;
+	}
 	read_inelastic(inp, excitations);
 	inp.close();
 	if (excitations.size()) {
@@ -283,8 +307,22 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 		for (int i = 0, end_ = excitations.size(); i != end_; ++i)
 			First_excitation_En = std::min(excitations[i].get_En_thresh(), First_excitation_En);
 	}
+	is_valid_ = true;
 	std::cout << "Finished reading Ar exprimental data." << std::endl;
+	return;
+fail_load: //TODO:implement through try-catch (create bad_data or something exception)
+	std::cerr << "Failed to load Ar experimental data" << std::endl;
+	total_elastic_cross.clear();
+	phase_shifts_neg_.clear();
+	phase_shifts_pos_.clear();
+	ionizations.clear();
+	excitations.clear();
+	is_valid_ = false;
+	return;
 }
+
+bool ArExperimental::isValid(void) const
+{	return is_valid_; }
 
 void ArExperimental::read_inelastic(std::ifstream &inp, std::vector<InelasticProcess> &to)
 {
@@ -410,6 +448,7 @@ void ArExperimental::phase_shift (long double k, unsigned int l, long double &ps
 
 ArAllData::ArAllData(void)
 {}
+
 //k is in atomic units
 void ArAllData::argon_phase_values_exp(long double k, unsigned int l, long double &ps_p, long double &ps_n)
 {
@@ -418,9 +457,9 @@ void ArAllData::argon_phase_values_exp(long double k, unsigned int l, long doubl
 	ps_p = angle_pos;
 	ps_n = angle_neg;
 	if (1 == l) {
-		long double E = std::pow(k / a_h_bar_2e_m_e_SIconst, 2.0);//recalculation from atomic units to energy
-		long double cot3o2 = -2 * (E - En_3o2_) / Width_3o2_;
-		long double cot1o2 = -2 * (E - En_1o2_) / Width_1o2_;
+		long double E = std::pow(k /gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2.0);//recalculation from atomic units to energy
+		long double cot3o2 = -2 * (E - gSettings.PhysConsts()->En_3o2) / gSettings.PhysConsts()->Width_3o2;
+		long double cot1o2 = -2 * (E - gSettings.PhysConsts()->En_1o2) / gSettings.PhysConsts()->Width_1o2;
 		long double cos3o2 = cot3o2 / std::sqrt(1 + cot3o2*cot3o2);
 		long double cos1o2 = cot1o2 / std::sqrt(1 + cot1o2*cot1o2);
 		ps_p += std::acos(cos3o2);
@@ -432,14 +471,14 @@ void ArAllData::argon_phase_values_exp(long double k, unsigned int l, long doubl
 void ArAllData::argon_phase_values_MERT5(long double k, unsigned int l, long double &ps_p, long double &ps_n)
 {
 	//see Kurokawa Phys. Rev. A84 2011, MERT5+ fit http://dx.doi.org/10.1103/PhysRevA.84.062717
-	double A = -1.365;
-	double D = 80.5;
-	double F = -153;
-	double G = 31.0;
-	double A1 = 8.8;
-	double H = 29.7;
-	double alpha_d = 11.08;
-	double alpha_q = 0.0;
+	double A = gSettings.PhysConsts()->MERT5_A;
+	double D = gSettings.PhysConsts()->MERT5_D;
+	double F = gSettings.PhysConsts()->MERT5_F;
+	double G = gSettings.PhysConsts()->MERT5_G;
+	double A1 = gSettings.PhysConsts()->MERT5_A1;
+	double H = gSettings.PhysConsts()->MERT5_H;
+	double alpha_d = gSettings.PhysConsts()->MERT5_alpha_d;
+	double alpha_q = gSettings.PhysConsts()->MERT5_alpha_q;
 	long double tan = 0;
 	if (0 == l) {
 		tan = -A*k*(1 + 4 * alpha_d*k*k*log(k) / 3) - M_PI*alpha_d*k*k / 3 + D*pow(k, 3) + F* pow(k, 4);
@@ -467,9 +506,11 @@ long double ArAllData::argon_time_delay_j(long double E, int J, int L)
 		return 0;
 	}
 	if (J == L-1) {
-		return 2* h_bar_eVconst / (1 + std::pow(2 * (E - En_1o2_) / Width_1o2_, 2))/Width_1o2_;
+		return 2*gSettings.PhysConsts()->h_bar_eVs/ 
+			(1 + std::pow(2 * (E - gSettings.PhysConsts()->En_1o2) / gSettings.PhysConsts()->Width_1o2, 2))/ gSettings.PhysConsts()->Width_1o2;
 	} else {
-		return 2* h_bar_eVconst / (1 + std::pow(2 * (E - En_3o2_) / Width_3o2_, 2))/Width_3o2_;
+		return 2 * gSettings.PhysConsts()->h_bar_eVs /
+			(1 + std::pow(2 * (E - gSettings.PhysConsts()->En_3o2) / gSettings.PhysConsts()->Width_3o2, 2)) / gSettings.PhysConsts()->Width_3o2;
 	}
 }
 
@@ -493,10 +534,10 @@ long double ArAllData::argon_scatter_probability_j(long double E, long double th
 	//different formulas are used for E<0.24eV and E>0.24eV!
 	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
 	unsigned int L_MAX = 0;
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units
 	switch (mode) {
 	case 1: {
-		L_MAX = L_MAX_;
+		L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 		phase_values = &ArAllData::argon_phase_values_MERT5;
 		break;
 	}
@@ -506,11 +547,11 @@ long double ArAllData::argon_scatter_probability_j(long double E, long double th
 		break;
 	}
 	default: {
-		if (PHASES_EN_MINIMUM_>E)
-			E = PHASES_EN_MINIMUM_;
-		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
-		if (E<THRESH_E_PHASES_) {
-			L_MAX = L_MAX_;
+		if (gSettings.PhysConsts()->phases_En_minimum > E)
+			E = gSettings.PhysConsts()->phases_En_minimum;
+		k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E);
+		if (E<gSettings.PhysConsts()->phases_En_threshold) {
+			L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 			phase_values = &ArAllData::argon_phase_values_MERT5;
 		}
 		else {
@@ -562,17 +603,17 @@ long double ArAllData::argon_scatter_probability_j(long double E, long double th
 long double ArAllData::argon_cross_elastic_diff(long double E, long double theta, int mode) {
 	//different formulas are used for E<0.24eV and E>0.24eV!
 	unsigned int L_MAX = 0;
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units
 	if (1!=mode&&2!=mode)
 	{
-		if (PHASES_EN_MINIMUM_>E)
-			k = a_h_bar_2e_m_e_SIconst*sqrt(PHASES_EN_MINIMUM_);
+		if (gSettings.PhysConsts()->phases_En_minimum>E)
+			k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(gSettings.PhysConsts()->phases_En_minimum);
 	}
 	long double cross = argon_scatter_spin_flip_amplitude_sq(E, theta, mode);
 	cross += argon_scatter_spin_nonflip_amplitude_sq(E, theta, mode);
 	cross *= M_PI / (2.0*pow(k, 2));
 	cross = std::max(cross, (long double)0);
-	return cross*a_bohr_SIconst*a_bohr_SIconst; //const is multiplied by 1e10
+	return cross*gSettings.PhysConsts()->a_bohr_SI*gSettings.PhysConsts()->a_bohr_SI; //const is multiplied by 1e10
 }
 
 //mode = 0 or unexpected - standard formula used in simulation, called by default.
@@ -583,10 +624,10 @@ long double ArAllData::argon_scatter_spin_flip_amplitude_sq(long double E, long 
 	//different formulas are used for E<0.24eV and E>0.24eV!
 	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
 	unsigned int L_MAX = 0;
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units
 	switch (mode) {
 	case 1: {
-		L_MAX = L_MAX_;
+		L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 		phase_values = &ArAllData::argon_phase_values_MERT5;
 		break;
 	}
@@ -596,11 +637,11 @@ long double ArAllData::argon_scatter_spin_flip_amplitude_sq(long double E, long 
 		break;
 	}
 	default: {
-		if (PHASES_EN_MINIMUM_>E)
-			E = PHASES_EN_MINIMUM_;
-		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
-		if (E<THRESH_E_PHASES_) {
-			L_MAX = L_MAX_;
+		if (gSettings.PhysConsts()->phases_En_minimum>E)
+			E = gSettings.PhysConsts()->phases_En_minimum;
+		k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E);
+		if (E< gSettings.PhysConsts()->phases_En_threshold) {
+			L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 			phase_values = &ArAllData::argon_phase_values_MERT5;
 		} else {
 			L_MAX = ArExper_.max_L(k);
@@ -643,10 +684,10 @@ long double ArAllData::argon_scatter_spin_nonflip_amplitude_sq(long double E, lo
 	//different formulas are used for E<0.24eV and E>0.24eV!
 	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
 	unsigned int L_MAX = 0;
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units
 	switch (mode) {
 	case 1: {
-		L_MAX = L_MAX_;
+		L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 		phase_values = &ArAllData::argon_phase_values_MERT5;
 		break;
 	}
@@ -656,11 +697,11 @@ long double ArAllData::argon_scatter_spin_nonflip_amplitude_sq(long double E, lo
 		break;
 	}
 	default: {
-		if (PHASES_EN_MINIMUM_>E)
-			E = PHASES_EN_MINIMUM_;
-		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
-		if (E<THRESH_E_PHASES_) {
-			L_MAX = L_MAX_;
+		if (gSettings.PhysConsts()->phases_En_minimum>E)
+			E = gSettings.PhysConsts()->phases_En_minimum;
+		k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E);
+		if (E<gSettings.PhysConsts()->phases_En_threshold) {
+			L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 			phase_values = &ArAllData::argon_phase_values_MERT5;
 		} else {
 			L_MAX = ArExper_.max_L(k);
@@ -705,14 +746,15 @@ long double ArAllData::argon_scatter_spin_nonflip_amplitude_sq(long double E, lo
 //mode = 3 - calculate using experimental phases (for testing only) + resonances
 //mode = 4 - same as 0, but no smoothing
 //below XS_EL_EN_MINIMUM_ linear extrapolation to XS(0)=7.491 (1e-20 m^2) (in default mode)
+//TODO: add no Ramseur minimum case
 long double ArAllData::argon_cross_elastic(long double E, int mode) //Tabulation of this function must be done carefully. Do not forget near 0 case.
 {
 	long double cross = 0;
 	switch (mode) {
 	case 1: {
-		long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
+		long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units is following:
 														// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
-		unsigned int L_MAX = L_MAX_;
+		unsigned int L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 		for (unsigned int l = 0; l <= L_MAX; ++l) {
 			long double phase_l_p = 0;
 			long double phase_l_n = 0;
@@ -720,19 +762,19 @@ long double ArAllData::argon_cross_elastic(long double E, int mode) //Tabulation
 			cross += (l + 1)*sin(phase_l_p)*sin(phase_l_p) + l*sin(phase_l_n)*sin(phase_l_n);
 		}
 		cross *= 4.0*M_PI / pow(k, 2);
-		cross *= a_bohr_SIconst*a_bohr_SIconst;
+		cross *= gSettings.PhysConsts()->a_bohr_SI*gSettings.PhysConsts()->a_bohr_SI;
 		break;
 	}
 	case 2: {
 		//this is extrapolation of experimental data
-		cross = ArExper_.total_elastic_cross(a_h_bar_2e_m_e_SIconst*sqrt(E), a_h_bar_2e_m_e_SIconst*sqrt(E));
+		cross = ArExper_.total_elastic_cross(gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E), gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E));
 		//this part is calculated using phase shifts
 		cross += argon_cross_resonance_1o2(E);
 		cross += argon_cross_resonance_3o2(E);
 		break;
 	}
 	case 3: {
-		long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+		long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units
 		unsigned int L_MAX = ArExper_.max_L(k);;
 		for (unsigned int l = 0; l <= L_MAX; ++l) {
 			long double phase_l_p = 0;
@@ -741,15 +783,23 @@ long double ArAllData::argon_cross_elastic(long double E, int mode) //Tabulation
 			cross += (l + 1)*sin(phase_l_p)*sin(phase_l_p) + l*sin(phase_l_n)*sin(phase_l_n);
 		}
 		cross *= 4.0*M_PI / pow(k, 2);
-		cross *= a_bohr_SIconst*a_bohr_SIconst;
+		cross *= gSettings.PhysConsts()->a_bohr_SI*gSettings.PhysConsts()->a_bohr_SI;
 		break;
 	}
 	case 4: {
-		if (E<XS_EL_EN_MINIMUM_) {
-			cross = 7.491 + E*(argon_cross_elastic(XS_EL_EN_MINIMUM_, 1) - 7.491) / XS_EL_EN_MINIMUM_; //linear behavior. MERT5 is used at XS_EL_EN_MINIMUM_
+		if (gSettings.PhysConsts()->no_ramsauer_minimum) {
+			double E1 = gSettings.PhysConsts()->ramsauer_minimum_En;
+			double XS1 = argon_cross_elastic(E1, 1); //MERT5
+			if (E<E1)
+				return E*XS1 / E1; //linear increase from (0,0). No Ramsauer minimum.
+		}
+		if (E<gSettings.PhysConsts()->XS_el_En_minimum) {
+			double XS0 = gSettings.PhysConsts()->XS_el_at_0_En;
+			cross = XS0 + E*(argon_cross_elastic(gSettings.PhysConsts()->XS_el_En_minimum, 1) - XS0) / gSettings.PhysConsts()->XS_el_En_minimum;
+			//linear behavior. MERT5 is used at XS_EL_EN_MINIMUM_
 		}
 		else {
-			if (E <THRESH_E_XS_) {
+			if (E < gSettings.PhysConsts()->XS_el_En_thresold) {
 				cross = argon_cross_elastic(E, 1); //MERT5
 			}
 			else {
@@ -759,16 +809,21 @@ long double ArAllData::argon_cross_elastic(long double E, int mode) //Tabulation
 		break;
 	}
 	default: {
-#ifndef D_EN_SMOOTH_
-		cross = argon_cross_elastic(E, 4);
-#else
-		if (E<XS_EL_EN_MINIMUM_) {
-			cross = 7.491 + E*(argon_cross_elastic(XS_EL_EN_MINIMUM_, 1) - 7.491) / XS_EL_EN_MINIMUM_; //linear behavior. MERT5 is used at XS_EL_EN_MINIMUM_
+		if (gSettings.PhysConsts()->no_ramsauer_minimum) {
+			double E1 = gSettings.PhysConsts()->ramsauer_minimum_En;
+			double XS1 = argon_cross_elastic(E1, 1); //MERT5
+			if (E<E1)
+				return E*XS1 / E1; //linear increase from (0,0). No Ramsauer minimum.
 		}
-		else {
-			double E_l = THRESH_E_XS_ - D_EN_SMOOTH_;
-			double E_r = THRESH_E_XS_ + D_EN_SMOOTH_;
-			if (E <E_l) {
+		if (E<gSettings.PhysConsts()->XS_el_En_minimum) {
+			double XS0 = gSettings.PhysConsts()->XS_el_at_0_En;
+			cross = XS0 + E*(argon_cross_elastic(gSettings.PhysConsts()->XS_el_En_minimum, 1) - XS0) / gSettings.PhysConsts()->XS_el_En_minimum;
+			//linear behavior. MERT5 is used at XS_el_En_minimum
+		} else {
+			double smooth_d_En = std::fabs(gSettings.PhysConsts()->XS_el_En_smooth_width);
+			double E_l = gSettings.PhysConsts()->XS_el_En_thresold - smooth_d_En;
+			double E_r = gSettings.PhysConsts()->XS_el_En_thresold + smooth_d_En;
+			if (E <=E_l) {
 				cross = argon_cross_elastic(E, 1);//MERT5
 				break;
 			}
@@ -776,36 +831,14 @@ long double ArAllData::argon_cross_elastic(long double E, int mode) //Tabulation
 				cross = argon_cross_elastic(E, 2);//Experiment
 				break;
 			}
-			cross = ((E_r - E)*argon_cross_elastic(E, 1) + (E - E_l)*argon_cross_elastic(E, 2)) / (E_r - E_l); //linear smoothing between MERT5 and experiment
+			cross = ((E_r - E)*argon_cross_elastic(E, 1) + (E - E_l)*argon_cross_elastic(E, 2)) / (E_r - E_l);
+			//linear smoothing between MERT5 and experiment
 		}
-#endif
 		break;
 	}
 	}
 	return cross;
 }
-
-/*long double ArAllData::argon_delay_1o2_probability(long double E, long double theta)
-{
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
-	long double prob = argon_scatter_probability_j(E, theta, 1, 2);
-	prob = std::max(prob, (long double)0); //TODO: since p can be <0 the formula for the delay is wrong, because 1>=P>=0 for observables
-	prob *= M_PI / (2.0*pow(k, 2)) *a_bohr_SIconst*a_bohr_SIconst;
-	//if (prob<0)
-	//	std::cout<<"ArAllData: Warning: P1/2 = "<<prob<<"\t at E = "<<E<<"\t th = "<<theta<<std::endl;
-	return prob / argon_cross_elastic_diff(E, theta);
-}
-
-long double ArAllData::argon_delay_3o2_probability(long double E, long double theta)
-{
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
-	long double prob = argon_scatter_probability_j(E, theta, 3, 2);
-	prob = std::max(prob, (long double)0); //TODO: since p can be <0 the formula for the delay is wrong, because 1>=P>=0 for observables
-	prob *= M_PI / (2.0*pow(k, 2)) *a_bohr_SIconst*a_bohr_SIconst;
-	//if (prob<0)
-	//	std::cout<<"ArAllData: Warning: P1/2 = "<<prob<<"\t at E = "<<E<<"\t th = "<<theta<<std::endl;
-	return prob / argon_cross_elastic_diff(E, theta);
-}*/
 
 //mode = 0 or unexpected - standard formula used in simulation, called by default.
 //mode = 1 - calculate using MERT5 phases (normally only between EN_MINIMUM_ and THRESH_E_PHASES_)
@@ -815,10 +848,10 @@ long double ArAllData::argon_delay_spin_flip (long double E, long double theta, 
 	//different formulas are used for E<0.24eV and E>0.24eV!
 	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
 	unsigned int L_MAX = 0;
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units
 	switch (mode) {
 	case 1: {
-		L_MAX = L_MAX_;
+		L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 		phase_values = &ArAllData::argon_phase_values_MERT5;
 		break;
 	}
@@ -828,11 +861,11 @@ long double ArAllData::argon_delay_spin_flip (long double E, long double theta, 
 		break;
 	}
 	default: {
-		if (PHASES_EN_MINIMUM_>E)
-			E = PHASES_EN_MINIMUM_;
-		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
-		if (E<THRESH_E_PHASES_) {
-			L_MAX = L_MAX_;
+		if (gSettings.PhysConsts()->phases_En_minimum>E)
+			E = gSettings.PhysConsts()->phases_En_minimum;
+		k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E);
+		if (E<gSettings.PhysConsts()->phases_En_threshold) {
+			L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 			phase_values = &ArAllData::argon_phase_values_MERT5;
 		} else {
 			L_MAX = ArExper_.max_L(k);
@@ -877,10 +910,10 @@ long double ArAllData::argon_delay_spin_nonflip (long double E, long double thet
 	//different formulas are used for E<0.24eV and E>0.24eV!
 	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
 	unsigned int L_MAX = 0;
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units
 	switch (mode) {
 	case 1: {
-		L_MAX = L_MAX_;
+		L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 		phase_values = &ArAllData::argon_phase_values_MERT5;
 		break;
 	}
@@ -890,11 +923,11 @@ long double ArAllData::argon_delay_spin_nonflip (long double E, long double thet
 		break;
 	}
 	default: {
-		if (PHASES_EN_MINIMUM_>E)
-			E = PHASES_EN_MINIMUM_;
-		k = a_h_bar_2e_m_e_SIconst*sqrt(E);
-		if (E<THRESH_E_PHASES_) {
-			L_MAX = L_MAX_;
+		if (gSettings.PhysConsts()->phases_En_minimum>E)
+			E = gSettings.PhysConsts()->phases_En_minimum;
+		k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E);
+		if (E< gSettings.PhysConsts()->phases_En_threshold) {
+			L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
 			phase_values = &ArAllData::argon_phase_values_MERT5;
 		} else {
 			L_MAX = ArExper_.max_L(k);
@@ -941,40 +974,44 @@ long double ArAllData::argon_delay_spin_nonflip_prob (long double E, long double
 
 long double ArAllData::argon_ResNBrS_spectrum(long double W, long double E) //Normalization constant is arbitrary. Not dependant on E
 {
-	return std::exp(-0.5*std::pow((W - (ArExper_.First_excitation_En - En_1o2_)) / Width_1o2_, 2))
-		+ std::exp(-0.5*std::pow((W - (ArExper_.First_excitation_En - En_3o2_)) / Width_3o2_, 2));
+	return std::exp(-0.5*std::pow((W - (ArExper_.First_excitation_En - gSettings.PhysConsts()->En_1o2)) / gSettings.PhysConsts()->Width_1o2, 2))
+		+ std::exp(-0.5*std::pow((W - (ArExper_.First_excitation_En - gSettings.PhysConsts()->En_3o2)) / gSettings.PhysConsts()->Width_3o2, 2));
 }
 
 long double ArAllData::argon_ResNBrS_XS(long double E) //Normalization constant is taken from "global_definitions.h"
 {
-	double width_factor = std::pow(Width_3o2_ / 2.0, 2) / (std::pow(Width_3o2_ / 2.0, 2) + std::pow((E - En_3o2_) / 2.0, 2));
-	width_factor += std::pow(Width_1o2_ / 2.0, 2) / (std::pow(Width_1o2_ / 2.0, 2) + std::pow((E - En_1o2_) / 2.0, 2));
-	return RESONANCE_NBrS_XS_*width_factor;
+	double width_factor = std::pow(gSettings.PhysConsts()->Width_3o2 / 2.0, 2) /
+		(std::pow(gSettings.PhysConsts()->Width_3o2 / 2.0, 2) + std::pow((E - gSettings.PhysConsts()->En_3o2) / 2.0, 2));
+	width_factor += std::pow(gSettings.PhysConsts()->Width_1o2 / 2.0, 2) /
+		(std::pow(gSettings.PhysConsts()->Width_1o2 / 2.0, 2) + std::pow((E - gSettings.PhysConsts()->En_1o2) / 2.0, 2));
+	return width_factor*gSettings.PhysConsts()->resonance_NBrS_XS;
 }
 
 long double ArAllData::argon_back_scatter_prob(long double E)
 {
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
-													// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
+	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
+	unsigned int L_MAX = 0;
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units is following:
+	// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
+	if (E< gSettings.PhysConsts()->phases_En_threshold) {
+		L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
+		phase_values = &ArAllData::argon_phase_values_MERT5;
+	} else {
+		L_MAX = ArExper_.max_L(k);
+		phase_values = &ArAllData::argon_phase_values_exp;
+	}
 	LegendrePolynom P1, P2;
 	long double W = 0;
 	long double cross = 0;
-	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper_.max_L(k);
 	for (unsigned int l = 0; l <= L_MAX; ++l) {
 		long double phase_l_p = 0;
 		long double phase_l_n = 0;
-		if (E<THRESH_E_PHASES_)
-			argon_phase_values_MERT5(k, l, phase_l_p, phase_l_n);
-		else
-			argon_phase_values_exp(k, l, phase_l_p, phase_l_n);
+		((*this).*phase_values)(k, l, phase_l_p, phase_l_n);
 		for (unsigned int f = l; f <= L_MAX; ++f) {
 			long double phase_f_p = phase_l_p;
 			long double phase_f_n = phase_l_n;
 			if (l != f) {
-				if (E<THRESH_E_PHASES_)
-					argon_phase_values_MERT5(k, f, phase_f_p, phase_f_n);
-				else
-					argon_phase_values_exp(k, f, phase_f_p, phase_f_n);
+				((*this).*phase_values)(k, f, phase_f_p, phase_f_n);
 			}
 			long double cos_l_f = cos(phase_l_p - phase_f_p);
 			W += ((l == f) ? 1.0 : 2.0)*(2 * l + 1)*(2 * f + 1)*sin(phase_l_p)*sin(phase_f_p)*cos_l_f*Int_PlPl(l, f, -1, 0, 1e-5);
@@ -987,27 +1024,29 @@ long double ArAllData::argon_back_scatter_prob(long double E)
 //energy loss and input are in eV
 long double ArAllData::argon_TM_forward(long double E)
 {
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
-													// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
+	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
+	unsigned int L_MAX = 0;
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units is following:
+																	  // k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
+	if (E< gSettings.PhysConsts()->phases_En_threshold) {
+		L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
+		phase_values = &ArAllData::argon_phase_values_MERT5;
+	} else {
+		L_MAX = ArExper_.max_L(k);
+		phase_values = &ArAllData::argon_phase_values_exp;
+	}
 	LegendrePolynom P1, P2;
 	long double W = 0;
 	long double cross = 0;
-	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper_.max_L(k);
 	for (unsigned int l = 0; l <= L_MAX; ++l) {
 		long double phase_l_p = 0;
 		long double phase_l_n = 0;
-		if (E<THRESH_E_PHASES_)
-			argon_phase_values_MERT5(k, l, phase_l_p, phase_l_n);
-		else
-			argon_phase_values_exp(k, l, phase_l_p, phase_l_n);
+		((*this).*phase_values)(k, l, phase_l_p, phase_l_n);
 		for (unsigned int f = l; f <= L_MAX; ++f) {
 			long double phase_f_p = phase_l_p;
 			long double phase_f_n = phase_l_n;
 			if (l != f) {
-				if (E<THRESH_E_PHASES_)
-					argon_phase_values_MERT5(k, f, phase_f_p, phase_f_n);
-				else
-					argon_phase_values_exp(k, f, phase_f_p, phase_f_n);
+				((*this).*phase_values)(k, f, phase_f_p, phase_f_n);
 			}
 			long double cos_l_f = cos(phase_l_p - phase_f_p);
 			W += ((l == f) ? 1.0 : 2.0)*(2 * l + 1)*(2 * f + 1)*sin(phase_l_p)*sin(phase_f_p)*cos_l_f*Int_PlPl_transf(l, f, 0, 1, 1e-5);
@@ -1020,27 +1059,29 @@ long double ArAllData::argon_TM_forward(long double E)
 
 long double ArAllData::argon_TM_backward(long double E)
 {
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E); //recalculation from energy to atomic units is following:
-													// k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
+	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) = 0;
+	unsigned int L_MAX = 0;
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units is following:
+																	  // k[atomic] = a_bohr * sqrt(2 * m_electron[SI] * q_electron[SI] * E[eV]) / h_bar(plank const)[SI].
+	if (E< gSettings.PhysConsts()->phases_En_threshold) {
+		L_MAX = gSettings.PhysConsts()->MERT5_Lmax;
+		phase_values = &ArAllData::argon_phase_values_MERT5;
+	} else {
+		L_MAX = ArExper_.max_L(k);
+		phase_values = &ArAllData::argon_phase_values_exp;
+	}
 	LegendrePolynom P1, P2;
 	long double W = 0;
 	long double cross = 0;
-	unsigned int L_MAX = (E<THRESH_E_PHASES_) ? L_MAX_ : ArExper_.max_L(k);
 	for (unsigned int l = 0; l <= L_MAX; ++l) {
 		long double phase_l_p = 0;
 		long double phase_l_n = 0;
-		if (E<THRESH_E_PHASES_)
-			argon_phase_values_MERT5(k, l, phase_l_p, phase_l_n);
-		else
-			argon_phase_values_exp(k, l, phase_l_p, phase_l_n);
+		((*this).*phase_values)(k, l, phase_l_p, phase_l_n);
 		for (unsigned int f = l; f <= L_MAX; ++f) {
 			long double phase_f_p = phase_l_p;
 			long double phase_f_n = phase_l_n;
 			if (l != f) {
-				if (E<THRESH_E_PHASES_)
-					argon_phase_values_MERT5(k, f, phase_f_p, phase_f_n);
-				else
-					argon_phase_values_exp(k, f, phase_f_p, phase_f_n);
+				((*this).*phase_values)(k, f, phase_f_p, phase_f_n);
 			}
 			long double cos_l_f = cos(phase_l_p - phase_f_p);
 			W += ((l == f) ? 1.0 : 2.0)*(2 * l + 1)*(2 * f + 1)*sin(phase_l_p)*sin(phase_f_p)*cos_l_f*Int_PlPl_transf(l, f, -1, 0, 1e-5);
@@ -1053,12 +1094,12 @@ long double ArAllData::argon_TM_backward(long double E)
 
 long double ArAllData::argon_cross_resonance_3o2(long double E)
 {
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E);
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E);
 	long double ps_p_0, ps_n_0;
 	ArExper_.phase_shift(k, 1, ps_p_0, ps_n_0);
 	long double ps_p = ps_p_0, ps_n = ps_n_0;
-	long double cot3o2 = -2 * (E - En_3o2_) / Width_3o2_;
-	long double cot1o2 = -2 * (E - En_1o2_) / Width_1o2_;
+	long double cot3o2 = -2 * (E - gSettings.PhysConsts()->En_3o2) / gSettings.PhysConsts()->Width_3o2;
+	long double cot1o2 = -2 * (E - gSettings.PhysConsts()->En_1o2) / gSettings.PhysConsts()->Width_1o2;
 	long double cos3o2 = cot3o2 / std::sqrt(1 + cot3o2*cot3o2);
 	long double cos1o2 = cot1o2 / std::sqrt(1 + cot1o2*cot1o2);
 	ps_p += std::acos(cos3o2);
@@ -1066,17 +1107,17 @@ long double ArAllData::argon_cross_resonance_3o2(long double E)
 
 	long double cross = 2 * (pow(sin(ps_p), 2) - pow(sin(ps_p_0), 2));
 	cross *= 4.0*M_PI / pow(k, 2);
-	return cross * a_bohr_SIconst * a_bohr_SIconst;
+	return cross * gSettings.PhysConsts()->a_bohr_SI * gSettings.PhysConsts()->a_bohr_SI;
 }
 
 long double ArAllData::argon_cross_resonance_1o2(long double E)
 {
-	long double k = a_h_bar_2e_m_e_SIconst*sqrt(E);
+	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E);
 	long double ps_p_0, ps_n_0;
 	ArExper_.phase_shift(k, 1, ps_p_0, ps_n_0);
 	long double ps_p = ps_p_0, ps_n = ps_n_0;
-	long double cot3o2 = -2 * (E - En_3o2_) / Width_3o2_;
-	long double cot1o2 = -2 * (E - En_1o2_) / Width_1o2_;
+	long double cot3o2 = -2 * (E - gSettings.PhysConsts()->En_3o2) / gSettings.PhysConsts()->Width_3o2;
+	long double cot1o2 = -2 * (E - gSettings.PhysConsts()->En_1o2) / gSettings.PhysConsts()->Width_1o2;
 	long double cos3o2 = cot3o2 / std::sqrt(1 + cot3o2*cot3o2);
 	long double cos1o2 = cot1o2 / std::sqrt(1 + cot1o2*cot1o2);
 	ps_p += std::acos(cos3o2);
@@ -1084,7 +1125,7 @@ long double ArAllData::argon_cross_resonance_1o2(long double E)
 
 	long double cross = (pow(sin(ps_n), 2) - pow(sin(ps_n_0), 2));
 	cross *= 4.0*M_PI / pow(k, 2);
-	return cross * a_bohr_SIconst * a_bohr_SIconst;
+	return cross * gSettings.PhysConsts()->a_bohr_SI * gSettings.PhysConsts()->a_bohr_SI;
 }
 
 void ArDataTables::read_data (std::ifstream &inp, DataVector &data, long double y_factor)
@@ -1108,20 +1149,25 @@ void ArDataTables::read_data (std::ifstream &inp, DataVector &data, long double 
 }
 
 ArDataTables::ArDataTables():
-	total_cross_elastic_fname("data_derived/total_cross_section_elastic.dat"),
-	integral_table_fname("data_derived/cross_integrals.dat"),
-	theta_table_fname("data_derived/theta_probabilities.dat"),
-	time_delay_spin_nonflip_prob_fname("data_derived/time_delay_spin_nonflip_probabilities.dat"),
-	time_delay_spin_flip_fname("data_derived/time_delay_spin_flip.dat"),
-	time_delay_spin_nonflip_fname("data_derived/time_delay_spin_nonflip.dat"),
-	total_resonance_NBrS_spectrum_fname("data_derived/ResNBrS_spectrum.dat")
+	total_cross_elastic_fname(gSettings.ProgConsts()->tabulated_data_folder + "total_cross_section_elastic.dat"),
+	integral_table_fname(gSettings.ProgConsts()->tabulated_data_folder + "cross_integrals.dat"),
+	theta_table_fname(gSettings.ProgConsts()->tabulated_data_folder + "theta_probabilities.dat"),
+	time_delay_spin_nonflip_prob_fname(gSettings.ProgConsts()->tabulated_data_folder + "time_delay_spin_nonflip_probabilities.dat"),
+	time_delay_spin_flip_fname(gSettings.ProgConsts()->tabulated_data_folder + "time_delay_spin_flip.dat"),
+	time_delay_spin_nonflip_fname(gSettings.ProgConsts()->tabulated_data_folder + "time_delay_spin_nonflip.dat"),
+	total_resonance_NBrS_spectrum_fname(gSettings.ProgConsts()->tabulated_data_folder + "ResNBrS_spectrum.dat")
 {
 	std::cout<<"Loading Ar data tables"<<std::endl;
+	is_valid_ = true;
+	//Only shallow copy:
 	integral_table_ = new FunctionTable; //shared between processes - read only
 	theta_table_ = new FunctionTable; //shared between processes - read only
 	time_delay_spin_flip_table_= new FunctionTable; //shared between processes - read only
 	time_delay_spin_nonflip_table_= new FunctionTable; //shared between processes - read only
 	time_delay_spin_nonflip_prob_table_= new FunctionTable; //shared between processes - read only
+
+	is_valid_ = false;
+	return;
 
 	ensure_file(total_cross_elastic_fname);
 	ensure_file(integral_table_fname);
@@ -1136,137 +1182,141 @@ ArDataTables::ArDataTables():
 	inp.open(total_cross_elastic_fname); //Cross section is stored in 1e-20 m^2 in both files and this program
 	if (!inp.is_open()) {
 		std::cout << "Failed to load \"" << total_cross_elastic_fname << "\"" << std::endl;
-		generate_total_cross_elastic_table();
-		str.open(total_cross_elastic_fname, std::ios_base::trunc);
-		total_cross_elastic_.write(str, "E[eV]\tXS elastic [1e-20 m^2]");
-		str.close();
+		if (generate_total_cross_elastic_table())
+			total_cross_elastic_.write(total_cross_elastic_fname, "E[eV]\tXS elastic [1e-20 m^2]");
+		else
+			is_valid_ = false;
 	} else {
 		total_cross_elastic_.read(inp);
 		inp.close();
 		if (total_cross_elastic_.size() < total_cross_elastic_.getNused()) {
 			std::cout << "Failed to load \"" << total_cross_elastic_fname << "\"" << std::endl;
-			generate_total_cross_elastic_table();
-			str.open(total_cross_elastic_fname, std::ios_base::trunc);
-			total_cross_elastic_.write(str, "E[eV]\tXS elastic [1e-20 m^2]");
-			str.close();
+			if (generate_total_cross_elastic_table()) 
+				total_cross_elastic_.write(total_cross_elastic_fname, "E[eV]\tXS elastic [1e-20 m^2]");
+			else
+				is_valid_ = false;
 		}
 	}
 
 	inp.open(integral_table_fname, std::ios_base::binary);
 	if (!inp.is_open()) {
 		std::cout<<"Failed to load \""<<integral_table_fname<<"\""<<std::endl;
-		generate_integral_table();
-		str.open(integral_table_fname, std::ios_base::trunc|std::ios_base::binary);
-		integral_table_->write(str);
-		str.close();
+		if (generate_integral_table())
+			integral_table_->write(integral_table_fname);
+		else
+			is_valid_ = false;
 	} else {
 		integral_table_->read(inp);
 		inp.close();
 		if (integral_table_->is_empty()) {
 			std::cout<<"Failed to load \""<<integral_table_fname<<"\""<<std::endl;
-			generate_integral_table();
-			str.open(integral_table_fname, std::ios_base::trunc|std::ios_base::binary);
-			integral_table_->write(str);
-			str.close();
+			if (generate_integral_table())
+				integral_table_->write(integral_table_fname);
+			else
+				is_valid_ = false;
 		}
 	}
 
 	inp.open(theta_table_fname, std::ios_base::binary);
 	if (!inp.is_open()) {
 		std::cout<<"Failed to load \""<<theta_table_fname<<"\""<<std::endl;
-		generate_theta_table();
-		str.open(theta_table_fname, std::ios_base::trunc|std::ios_base::binary);
-		theta_table_->write(str);
-		str.close();
+		if (generate_theta_table())
+			theta_table_->write(theta_table_fname);
+		else
+			is_valid_ = false;
 	} else {
 		theta_table_->read(inp);
 		inp.close();
 		if (theta_table_->is_empty()) {
 			std::cout<<"Failed to load \""<<theta_table_fname<<"\""<<std::endl;
-			generate_theta_table();
-			str.open(theta_table_fname, std::ios_base::trunc|std::ios_base::binary);
-			theta_table_->write(str);
-			str.close();
+			if (generate_theta_table())
+				theta_table_->write(theta_table_fname);
+			else
+				is_valid_ = false;
 		}
 	}
 
 	inp.open(time_delay_spin_nonflip_prob_fname, std::ios_base::binary);
 	if (!inp.is_open()) {
 		std::cout << "Failed to load \"" << time_delay_spin_nonflip_prob_fname << "\"" << std::endl;
-		generate_time_delay_spin_nonflip_prob_table();
-		str.open(time_delay_spin_nonflip_prob_fname, std::ios_base::trunc | std::ios_base::binary);
-		time_delay_spin_nonflip_prob_table_->write(str);
-		str.close();
+		if (generate_time_delay_spin_nonflip_prob_table())
+			time_delay_spin_nonflip_prob_table_->write(time_delay_spin_nonflip_prob_fname);
+		else
+			is_valid_ = false;
 	} else {
 		time_delay_spin_nonflip_prob_table_->read(inp);
 		inp.close();
 		if (time_delay_spin_nonflip_prob_table_->is_empty()) {
 			std::cout << "Failed to load \"" << time_delay_spin_nonflip_prob_fname << "\"" << std::endl;
-			generate_time_delay_spin_nonflip_prob_table();
-			str.open(time_delay_spin_nonflip_prob_fname, std::ios_base::trunc | std::ios_base::binary);
-			time_delay_spin_nonflip_prob_table_->write(str);
-			str.close();
+			if (generate_time_delay_spin_nonflip_prob_table())
+				time_delay_spin_nonflip_prob_table_->write(time_delay_spin_nonflip_prob_fname);
+			else
+				is_valid_ = false;
 		}
 	}
 
 	inp.open(time_delay_spin_nonflip_fname, std::ios_base::binary);
 	if (!inp.is_open()) {
 		std::cout << "Failed to load \"" << time_delay_spin_nonflip_fname << "\"" << std::endl;
-		generate_time_delay_spin_nonflip_table();
-		str.open(time_delay_spin_nonflip_fname, std::ios_base::trunc | std::ios_base::binary);
-		time_delay_spin_nonflip_table_->write(str);
-		str.close();
+		if (generate_time_delay_spin_nonflip_table())
+			time_delay_spin_nonflip_table_->write(time_delay_spin_nonflip_fname);
+		else
+			is_valid_ = false;
 	} else {
 		time_delay_spin_nonflip_table_->read(inp);
 		inp.close();
 		if (time_delay_spin_nonflip_table_->is_empty()) {
 			std::cout << "Failed to load \"" << time_delay_spin_nonflip_fname << "\"" << std::endl;
-			generate_time_delay_spin_nonflip_table();
-			str.open(time_delay_spin_nonflip_fname, std::ios_base::trunc | std::ios_base::binary);
-			time_delay_spin_nonflip_table_->write(str);
-			str.close();
+			if (generate_time_delay_spin_nonflip_table())
+				time_delay_spin_nonflip_table_->write(time_delay_spin_nonflip_fname);
+			else
+				is_valid_ = false;
 		}
 	}
 
 	inp.open(time_delay_spin_flip_fname, std::ios_base::binary);
 	if (!inp.is_open()) {
 		std::cout << "Failed to load \"" << time_delay_spin_flip_fname << "\"" << std::endl;
-		generate_time_delay_spin_flip_table();
-		str.open(time_delay_spin_flip_fname, std::ios_base::trunc | std::ios_base::binary);
-		time_delay_spin_flip_table_->write(str);
-		str.close();
+		if (generate_time_delay_spin_flip_table())
+			time_delay_spin_flip_table_->write(time_delay_spin_flip_fname);
+		else
+			is_valid_ = false;
 	} else {
 		time_delay_spin_flip_table_->read(inp);
 		inp.close();
 		if (time_delay_spin_flip_table_->is_empty()) {
 			std::cout << "Failed to load \"" << time_delay_spin_flip_fname << "\"" << std::endl;
-			generate_time_delay_spin_flip_table();
-			str.open(time_delay_spin_flip_fname, std::ios_base::trunc | std::ios_base::binary);
-			time_delay_spin_flip_table_->write(str);
-			str.close();
+			if (generate_time_delay_spin_flip_table())
+				time_delay_spin_flip_table_->write(time_delay_spin_flip_fname);
+			else
+				is_valid_ = false;
 		}
 	}
 
 	inp.open(total_resonance_NBrS_spectrum_fname, std::ios_base::binary);
 	if (!inp.is_open()) {
 		std::cout << "Failed to load \"" << total_resonance_NBrS_spectrum_fname << "\"" << std::endl;
-		generate_ResNBrS_spectrum_table();
-		str.open(total_resonance_NBrS_spectrum_fname, std::ios_base::trunc);
-		total_resonance_NBrS_spectrum_.write(str, "W[eV]\tFprob");
-		str.close();
+		if (generate_ResNBrS_spectrum_table())
+			total_resonance_NBrS_spectrum_.write(total_resonance_NBrS_spectrum_fname, "W[eV]\tFprob");
+		else
+			is_valid_ = false;
 	} else {
 		total_resonance_NBrS_spectrum_.read(inp);
 		inp.close();
 		if (total_resonance_NBrS_spectrum_.size()==0) {
 			std::cout << "Failed to load \"" << total_resonance_NBrS_spectrum_fname << "\"" << std::endl;
-			generate_ResNBrS_spectrum_table();
-			str.open(total_resonance_NBrS_spectrum_fname, std::ios_base::trunc);
-			total_resonance_NBrS_spectrum_.write(str, "W[eV]\tFprob");
-			str.close();
+			if (generate_ResNBrS_spectrum_table())
+				total_resonance_NBrS_spectrum_.write(total_resonance_NBrS_spectrum_fname, "W[eV]\tFprob");
+			else
+				is_valid_ = false;
 		}
 	}
-
 	std::cout<<"Finished loading Ar data tables"<<std::endl;
+}
+
+bool ArDataTables::isValid(void) const
+{
+	return is_valid_ && ArAllData_.ArExper_.isValid();
 }
 
 void ArDataTables::DeleteData(void)
@@ -1283,13 +1333,16 @@ void ArDataTables::DeleteData(void)
 	time_delay_spin_nonflip_prob_table_ = NULL;
 }
 
-void ArDataTables::generate_total_cross_elastic_table(void)
+bool ArDataTables::generate_total_cross_elastic_table(void)
 {
 	std::cout << "Calculating total elastic cross section..." << std::endl;
 	total_cross_elastic_.clear();
 	total_cross_elastic_.setOrder(1); //interpolation with 1st order polynomial using 2 points
 	total_cross_elastic_.setNused(2);
-
+	if (!ArAllData_.ArExper_.isValid()) {
+		std::cout << "Error: Invalid experimental data" << std::endl;
+		return false;
+	}
 	int err;
 	double E, cross;
 	EnergyScanner EnRange(EnergyScanner::ElasticXS);
@@ -1300,17 +1353,22 @@ void ArDataTables::generate_total_cross_elastic_table(void)
 		cross = ArAllData_.argon_cross_elastic(E);
 		total_cross_elastic_.push_back(E, cross);
 	}
+	return true;
 }
 
-void ArDataTables::generate_integral_table(void) //uses tabulated total cross section
+bool ArDataTables::generate_integral_table(void) //uses tabulated total cross section
 {
 	std::cout<<"Generating cross section integrals..."<<std::endl;
+	if (!ArAllData_.ArExper_.isValid()) {
+		std::cout << "Error: Invalid experimental data" << std::endl;
+		return false;
+	}
 	// v1.x-v3.x & v7.x
-	ColoredRange energy_Y_range = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0, EN_MAXIMUM_, 1e-3) +
-				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
-				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
-				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) + 	//fine area
-				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80);	//fine area
+	ColoredRange energy_Y_range = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0, gSettings.PhysConsts()->XS_el_En_maximum, 1e-3) +
+				ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/5) +	//coarse area
+				ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/5) +	//coarse area
+				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/80) + 	//fine area
+				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/80);	//fine area
 
 	/* v4.x
 	ColoredRange energy_Y_range = ColoredInterval (0, 0.005, 1e-5) + ColoredInterval (0.005, 1, 1e-4) + ColoredInterval (0, EN_MAXIMUM_, 1e-3) +
@@ -1326,20 +1384,20 @@ void ArDataTables::generate_integral_table(void) //uses tabulated total cross se
 			ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/20) + 	//fine area
 			ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/20);	//fine area
 	*/
+	energy_Y_range.Trim(0, gSettings.ProgConsts()->maximal_energy);
 	for (long int Ey_i=0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i!=Ey_ind_end_;++Ey_i) {
 		double Ey = energy_Y_range.Value(Ey_i);
 		//v1.x-v4.x & v7.x
 		ColoredRange energy_range = ColoredInterval (0, 0.1, 2e-4) + ColoredInterval (0.1, 1, 8e-4) +
-					ColoredInterval (1, 10, 1e-2) + ColoredInterval (10, EN_MAXIMUM_, 0.02) +
-					ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
-					ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
-					ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) + 	//fine area
-					ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80) +	//fine area
-					ColoredInterval (11.5, EN_MAXIMUM_, 0.003);
+					ColoredInterval (1, 10, 1e-2) + ColoredInterval (10, gSettings.PhysConsts()->XS_el_En_maximum, 0.02) +
+					ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/5) +	//coarse area
+					ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/5) +	//coarse area
+					ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/80) + 	//fine area
+					ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/80) +	//fine area
+					ColoredInterval (11.5, gSettings.PhysConsts()->XS_el_En_maximum, 0.003);
 		//^dE defined by characteristics of cross section
 		//dE defiend by sqrt(E/E-Ey) - finer dE when E is closer to Ey
 		energy_range = energy_range + ColoredInterval(Ey, 1.1*Ey, Ey/500.0) + ColoredInterval(1.1*Ey, 10*Ey, Ey/100.0) + ColoredInterval(10*Ey, 50*Ey, Ey/10.0);
-
 		// v5.x-v6.x
 		/*ColoredRange energy_range = ColoredInterval (0, 0.1, 1e-3) + ColoredInterval (0.1, 1, 2e-3) +
 					ColoredInterval (1, 10, 2e-2) + ColoredInterval (10, EN_MAXIMUM_, 0.02) +
@@ -1350,7 +1408,7 @@ void ArDataTables::generate_integral_table(void) //uses tabulated total cross se
 					ColoredInterval (11.5, EN_MAXIMUM_, 0.003);
 		energy_range = energy_range + ColoredInterval(Ey, 1.1*Ey, Ey/500.0) + ColoredInterval(1.1*Ey, 10*Ey, Ey/10.0) + ColoredInterval(10*Ey, 50*Ey, Ey/1.0);
 		*/
-		energy_range.Trim(Ey, EN_MAXIMUM_);
+		energy_range.Trim(Ey, gSettings.ProgConsts()->maximal_energy);
 		long double Int = 0;
 		double E = Ey, E_prev = Ey;
 		for (long int E_i=0, E_i_end_=energy_range.NumOfIndices(); E_i!=E_i_end_;++E_i) {
@@ -1369,20 +1427,26 @@ void ArDataTables::generate_integral_table(void) //uses tabulated total cross se
 			integral_table_->push(E, Ey, Int);
 		}
 	}
+	return true;
 }
 
-void ArDataTables::generate_theta_table(void) //uses tabulated total cross section
+bool ArDataTables::generate_theta_table(void) //uses tabulated total cross section
 {
 	std::cout<<"Generating theta probability function tables..."<<std::endl;
-	ColoredRange energy_Y_range = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0, EN_MAXIMUM_, 1e-3) +
-				ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/10) +	//coarse area
-				ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/10) +	//coarse area
-				ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/200) + 	//fine area
-				ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/200);		//fine area
+	if (!ArAllData_.ArExper_.isValid()) {
+		std::cout << "Error: Invalid experimental data" << std::endl;
+		return false;
+	}
+	ColoredRange energy_Y_range = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0, gSettings.PhysConsts()->XS_el_En_maximum, 1e-3) +
+				ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/10) +	//coarse area
+				ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/10) +	//coarse area
+				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/200) + 	//fine area
+				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/200);		//fine area
+	energy_Y_range.Trim(0, gSettings.ProgConsts()->maximal_energy);
 	std::vector<double> diff_XS, F, thetas;
-	diff_XS.resize(ANGLE_POINTS_, 0);
-	thetas.resize(ANGLE_POINTS_, 0);
-	F.resize(ANGLE_POINTS_, 0);
+	diff_XS.resize(gSettings.ProgConsts()->angle_discretization, 0);
+	thetas.resize(gSettings.ProgConsts()->angle_discretization, 0);
+	F.resize(gSettings.ProgConsts()->angle_discretization, 0);
 	for (long int Ey_i=0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i!=Ey_ind_end_; ++Ey_i) {
 		double Ey = energy_Y_range.Value(Ey_i);
 		long double (ArAllData::*diff_cross)(long double, long double, int) = 0;
@@ -1404,65 +1468,85 @@ void ArDataTables::generate_theta_table(void) //uses tabulated total cross secti
 		for (std::size_t th_i=0, th_i_end_=thetas.size(); th_i!=th_i_end_;++th_i)
 			theta_table_->push(thetas[th_i], Ey, F[th_i]);
 	}
+	return true;
 }
 
-void ArDataTables::generate_time_delay_spin_flip_table(void)
+bool ArDataTables::generate_time_delay_spin_flip_table(void)
 {
 	std::cout << "Generating spin flip time delay tables..." << std::endl;
+	if (!ArAllData_.ArExper_.isValid()) {
+		std::cout << "Error: Invalid experimental data" << std::endl;
+		return false;
+	}
 	ColoredRange energy_Y_range =
 		ColoredInterval(En_3o2_ - 30 * Width_3o2_, En_3o2_ + 30 * Width_3o2_, Width_3o2_ / 10) +	//coarse area
 		ColoredInterval(En_3o2_ - 15 * Width_3o2_, En_3o2_ + 15 * Width_3o2_, Width_3o2_ / 200)+		//fine area
 		ColoredInterval(En_1o2_ - 30 * Width_1o2_, En_1o2_ + 30 * Width_1o2_, Width_1o2_ / 10) +	//coarse area
 		ColoredInterval(En_1o2_ - 15 * Width_1o2_, En_1o2_ + 15 * Width_1o2_, Width_1o2_ / 200);		//fine area
-	energy_Y_range.Trim(0, EN_MAXIMUM_);
+	energy_Y_range.Trim(0, gSettings.ProgConsts()->maximal_energy);
 	for (long int Ey_i = 0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i != Ey_ind_end_; ++Ey_i) {
 		double Ey = energy_Y_range.Value(Ey_i);
-		for (std::size_t th_i = 0, th_i_end_ = ANGLE_POINTS_; th_i != th_i_end_; ++th_i) {
-			double theta = th_i*M_PI / (ANGLE_POINTS_ - 1);
+		for (std::size_t th_i = 0, th_i_end_ = gSettings.ProgConsts()->angle_discretization; th_i != th_i_end_; ++th_i) {
+			double theta = th_i*M_PI / (th_i_end_ - 1);
 			time_delay_spin_flip_table_->push(theta, Ey, ArAllData_.argon_delay_spin_flip(Ey, theta));
 		}
 	}
+	return true;
 }
 
-void ArDataTables::generate_time_delay_spin_nonflip_table(void)
+bool ArDataTables::generate_time_delay_spin_nonflip_table(void)
 {
 	std::cout << "Generating spin nonflip time delay tables..." << std::endl;
+	if (!ArAllData_.ArExper_.isValid()) {
+		std::cout << "Error: Invalid experimental data" << std::endl;
+		return false;
+	}
 	ColoredRange energy_Y_range =
 		ColoredInterval(En_3o2_ - 30 * Width_3o2_, En_3o2_ + 30 * Width_3o2_, Width_3o2_ / 10) +	//coarse area
 		ColoredInterval(En_3o2_ - 15 * Width_3o2_, En_3o2_ + 15 * Width_3o2_, Width_3o2_ / 200)+		//fine area
 		ColoredInterval(En_1o2_ - 30 * Width_1o2_, En_1o2_ + 30 * Width_1o2_, Width_1o2_ / 10) +	//coarse area
 		ColoredInterval(En_1o2_ - 15 * Width_1o2_, En_1o2_ + 15 * Width_1o2_, Width_1o2_ / 200);		//fine area
-	energy_Y_range.Trim(0, EN_MAXIMUM_);
+	energy_Y_range.Trim(0, gSettings.ProgConsts()->maximal_energy);
 	for (long int Ey_i = 0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i != Ey_ind_end_; ++Ey_i) {
 		double Ey = energy_Y_range.Value(Ey_i);
-		for (std::size_t th_i = 0, th_i_end_ = ANGLE_POINTS_; th_i != th_i_end_; ++th_i) {
-			double theta = th_i*M_PI / (ANGLE_POINTS_ - 1);
+		for (std::size_t th_i = 0, th_i_end_ = gSettings.ProgConsts()->angle_discretization; th_i != th_i_end_; ++th_i) {
+			double theta = th_i*M_PI / (th_i_end_ - 1);
 			time_delay_spin_nonflip_table_->push(theta, Ey, ArAllData_.argon_delay_spin_nonflip(Ey, theta));
 		}
 	}
+	return true;
 }
 
-void ArDataTables::generate_time_delay_spin_nonflip_prob_table(void)
+bool ArDataTables::generate_time_delay_spin_nonflip_prob_table(void)
 {
 	std::cout << "Generating spin nonflip time delay probability tables..." << std::endl;
+	if (!ArAllData_.ArExper_.isValid()) {
+		std::cout << "Error: Invalid experimental data" << std::endl;
+		return false;
+	}
 	ColoredRange energy_Y_range =
 		ColoredInterval(En_3o2_ - 30 * Width_3o2_, En_3o2_ + 30 * Width_3o2_, Width_3o2_ / 10) +	//coarse area
 		ColoredInterval(En_3o2_ - 15 * Width_3o2_, En_3o2_ + 15 * Width_3o2_, Width_3o2_ / 200)+		//fine area
 		ColoredInterval(En_1o2_ - 30 * Width_1o2_, En_1o2_ + 30 * Width_1o2_, Width_1o2_ / 10) +	//coarse area
 		ColoredInterval(En_1o2_ - 15 * Width_1o2_, En_1o2_ + 15 * Width_1o2_, Width_1o2_ / 200);		//fine area
-	energy_Y_range.Trim(0, EN_MAXIMUM_);
+	energy_Y_range.Trim(0, gSettings.ProgConsts()->maximal_energy);
 	for (long int Ey_i = 0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i != Ey_ind_end_; ++Ey_i) {
 		double Ey = energy_Y_range.Value(Ey_i);
-		for (std::size_t th_i = 0, th_i_end_ = ANGLE_POINTS_; th_i != th_i_end_; ++th_i) {
-			double theta = th_i*M_PI / (ANGLE_POINTS_ - 1);
+		for (std::size_t th_i = 0, th_i_end_ = gSettings.ProgConsts()->angle_discretization; th_i != th_i_end_; ++th_i) {
+			double theta = th_i*M_PI / (th_i_end_ - 1);
 			time_delay_spin_nonflip_prob_table_->push(theta, Ey, ArAllData_.argon_delay_spin_nonflip_prob(Ey, theta));
 		}
 	}
+	return true;
 }
 
-void ArDataTables::generate_ResNBrS_spectrum_table(void)
+bool ArDataTables::generate_ResNBrS_spectrum_table(void)
 {
 	std::cout << "Generating resonance NBrS spectrum probability tables..." << std::endl;
+	if (!ArAllData_.ArExper_.isValid()) {
+		std::cout << "Error: Invalid experimental data" << std::endl;
+		return false;
+	}
 	total_resonance_NBrS_spectrum_.clear();
 	total_resonance_NBrS_spectrum_.setOrder(1);
 	total_resonance_NBrS_spectrum_.setNused(2);
@@ -1496,7 +1580,8 @@ void ArDataTables::generate_ResNBrS_spectrum_table(void)
 		Fprobs[E_i] /= Fprobs[E_i_end_ - 1];//normalize probability function
 		double W = energy_range.Value(E_i);
 		total_resonance_NBrS_spectrum_.push_back(W, Fprobs[E_i]);
-	}		
+	}
+	return true;
 }
 
 long double ArDataTables::TotalCrossSection (double E)
@@ -1535,29 +1620,18 @@ long double ArDataTables::XS_elastic(double E)
 	return total_cross_elastic_(E, E);
 }
 
-//No Ramsauer minimum
-/*long double ArDataTables::XS_elastic(double E)
-{
-	double E1 = 0.3286;
-	double XS1 = 0.349195;
-	if (E<E1) {
-		return E*XS1/E1; //linear increase from (0,0). No Ramsauer minimum.
-	}
-	return total_cross_elastic_(E, E);
-}*/
-
 double ArDataTables::generate_theta (double E, short type, double Rand)
 {
-#ifdef	ANGLE_UNIFORM_
-	Rand = Rand*2.0 - 1.0;
-	return std::acos(Rand);
-#endif
+	if (Event::Elastic == type) {
+		if (gSettings.PhysConsts()->scattering_angle_model == PhysicalConstants::ScatterModel::Uniform) {
+			Rand = Rand*2.0 - 1.0;
+			return std::acos(Rand);
+		}
+		return theta_table_->find_E(E, Rand);
+	}
 	if (type>=Event::Ionization) {//Considered uniform.
 		Rand = Rand*2.0 - 1.0;
 		return std::acos(Rand);
-	}
-	if (Event::Elastic == type) {
-		return theta_table_->find_E(E, Rand);
 	}
 	if (Event::ResNBrS == type) {//Considered uniform.
 		Rand = Rand*2.0 - 1.0;
@@ -1565,9 +1639,9 @@ double ArDataTables::generate_theta (double E, short type, double Rand)
 	}
 	//CODE below is for untabulated case
 	std::vector<double> diff_XS, F, thetas;
-	diff_XS.resize(ANGLE_POINTS_, 0);
-	thetas.resize(ANGLE_POINTS_, 0);
-	F.resize(ANGLE_POINTS_, 0);
+	diff_XS.resize(gSettings.ProgConsts()->angle_discretization, 0);
+	thetas.resize(gSettings.ProgConsts()->angle_discretization, 0);
+	F.resize(gSettings.ProgConsts()->angle_discretization, 0);
 	long double (ArAllData::*diff_cross)(long double, long double, int) = 0;
 	if (Event::Elastic == type) {
 		diff_cross = &ArAllData::argon_cross_elastic_diff;

@@ -1,25 +1,25 @@
 #ifndef MTMANAGER_H_
 #define MTMANAGER_H_
 
-#include <TMutex.h>
-#include <TThread.h>
+#include <thread>
 #include "Manager.h"
 
 class MTManager: public Manager
 {
 protected:
-	TCondition* condition_;
-	TMutex* thread_mutex_;
 	int instance_;
-	int N_electrons_;
+	boost::optional<unsigned int> N_electrons_;
+	boost::optional<std::size_t> run_index_;
 public:
-	MTManager(ArDataTables *Ar_tables, int instance, int N_electrons, UInt_t RandomSeed = 42);
+	MTManager(ArDataTables *Ar_tables, int instance);
 	void ProcessAll(void);
-	void setCondition(TCondition* cond);
-	TCondition* getCondition(void) const;
-	void setThreadMutex(TMutex* mutex);
-	TMutex* getThreadMutex(void) const;
+	bool setRunIndex(std::size_t index);
+	boost::optional<std::size_t> getRunIndex(void) const;
+	bool setNelectons(unsigned int Ne);
+	boost::optional<unsigned int> getNelectons(void) const;
 	void Merge(MTManager *with);
+	bool isReady(void) const;
+	void Clear(void);
 };
 
 #endif 

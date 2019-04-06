@@ -15,7 +15,13 @@ class Manager
 {
 protected:
 	TRandom * random_generator_;
-	unsigned int start_seed_;
+	boost::optional<unsigned int> initial_seed_;
+	boost::optional<double> Concentration_;
+	boost::optional<double> eField_;
+	boost::optional<double> Coefficient_;
+	boost::optional<double> Drift_distance_;
+
+	unsigned int e_first_seed_;
 	TTree * sim_data_;
 	TTree * processes_data_;
 	Long64_t *processes_counters_;
@@ -38,22 +44,22 @@ protected:
 	void PostStepAction(Event &event);
 	void DoGotoNext(Event &event);
 	void InitTree (void);
-	bool is_ready_;
-	double Concentration_;
-	double eField_;
-	double Coefficient_;
 	long double XS_integral(long double from, long double to, long double Eny, Event &event);
 	long double XS_integral_for_test(long double from, long double to, long double Eny, long double dE);
 	long double XS_integral_table(long double from, long double to, long double Eny, Event &event);
 	long double Path_integral (long double x, long double cos_th);
 public:
-	void Initialize(Event &event);
-	void Clear(void);
+	virtual bool isReady(void) const;
+	virtual void Initialize(void);
+	virtual void Initialize(Event &event);
+	virtual void Clear(void); //fully clears manager state, subsequent resetting of parameters is required. 
 	void DoStep(Event &event);
 	bool IsFinished(Event &event);
-	void SetParameters(double Concetr /*in SI*/, double E /*in SI*/);
-	void SetParameters(double T /*in K*/, double Pressure /*in SI*/, double E /*in SI*/);
-	Manager(ArDataTables *Ar_tables, UInt_t RandomSeed = 42);
+	void setParameters(double Concetr /*in SI*/, double E /*in SI*/, double drift_distance /*in m*/);
+	void setParameters(double T /*in K*/, double Pressure /*in SI*/, double E /*in SI*/, double drift_distance /*in m*/);
+	bool setInitialSeed(unsigned int seed);
+	boost::optional<unsigned int> getInitialSeed(void) const;
+	Manager(ArDataTables *Ar_tables);
 	~Manager();
 	void LoopSimulation(void);
 	void WriteHistory(std::string root_fname);

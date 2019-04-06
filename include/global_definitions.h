@@ -6,6 +6,10 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <boost/optional.hpp>
+#include <boost/foreach.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 #if defined(__WIN32__)
 #define NOMINMAX
@@ -19,64 +23,105 @@
 #include <math.h>
 #include <ctgmath>
 
-#define THREADS_NUMBER_ 6
-#define L_MAX_ 10
 //All energies in the program are in eV.
-#define XS_EL_EN_MAXIMUM_ 20.0
-#define XS_EL_EN_MINIMUM_ 1e-3
-#define PHASES_EN_MAXIMUM_ 12
-#define PHASES_EN_MINIMUM_ 5e-3
-#define THRESH_E_PHASES_ 0.24
-//^MERT 5 is applied only below this energy for differential cross-section
-#define THRESH_E_XS_ 1.0
-//^MERT 5 is applied only below this energy for total cross section
-/* These 2 thresholds are different because MERT5 excellently fits experimental total XS up until 1 eV (considering uncertainties).
- * On the other hand, phase shift values (PSs) obtained from experimental differential XS and MERT5 have discrepancy
- * from around 0.24 eV and above. Because of this P backward and TM (i.e. diff.XS) have discontinuity.
- * Hence, even though MERT5 have right total XS around 1eV, situation is following:
- * From 5e-3 to 0.24 eV MERT5 PSs are used for Pb and TM and diff. XS.
- * From 5e-3 to 1 eV MERT5 PSs are used for total elastic XS.
- * Otherwise, experimental PSs are used for diff. XS
- * and experimental total XS is used for total elstic XS instead of experimental PSs.
- * Feshbach resonances are added on top extrapolated exp. elastic XS using theoretical resonance phaseshifs (see Franz, et al. 2008)
- * MERT5 fit parameters are taken from Kurokawa, et al 2011.
- */
-#define D_EN_SMOOTH_ 0.1
-//^ MERT5 and experimental totalXS have small discontinuity at 1eV.
-#define EN_MAXIMUM_ 16.0
-//^maximum electron energy available in the programm. Limited by elastic diff and total XS data. The limit is required for tabulation.
-//^In practive e reaches only about 14eV at 7Td.
-#define ANGLE_POINTS_ 1001
-//#define ANGLE_UNIFORM_
-//^temporary for v9.x
-#define En_3o2_ 11.103
-#define En_1o2_ 11.270
-#define Width_3o2_ 2.3e-3
-#define Width_1o2_ 2.2e-3
-//#define Width_3o2_ 2.0e-2
-//#define Width_1o2_ 2.0e-2
-//^in eV
-#define RESONANCE_EN_LOSS_FACTOR_ 1.0
-#define RESONANCE_NBrS_XS_ 0.0
-#define RESONANCE_EN_LOSS_ 1e-1
-#define DRIFT_DISTANCE_ 3e-3
-//^in m
-#define DRIFT_DISTANCE_HISTORY 1
-//^in m. Write info about electron only starting from this position (first and last drift event are always written)
-#define SKIP_HISTORY_ 999
-//#define TEST_VERSION_
+struct PhysicalConstants {
+	long double e_charge_SI; //in coulombs (SI)
+	long double e_mass_SI; //in kg (SI)
+	long double e_mass_eV; //in eV
+	long double h_bar_SI; //in SI
+	long double h_bar_eVs; //in eV*s
+	long double a_bohr_SI; //in meters (SI) multiplied by e10 for XS to be in 1e-20 m2
+	long double Ry_eV; //Rydberg constant
+	long double boltzmann_SI; //SI
+	double Ar_mass_eV; //eV
+	//TODO: calculate after loading other constants; Calculated only once in order to increase the performance (the effect is not tested)
+	long double a_h_bar_2eM_e_SI; //in SI a_bohr*sqrt(2*Me*e)/h_bar
 
-const long double e_charge_SIconst = 1.60217662e-19; //in coulombs (SI)
-const long double e_mass_SIconst = 9.10938356e-31; //in kg (SI)
-const long double e_mass_eVconst = 5.109989461e5; //in eV
-const long double h_bar_SIconst = 1.054571800e-34; //in SI
-const long double h_bar_eVconst = 6.582119514e-16; //in eV*s
-const long double a_bohr_SIconst = 5.2917721092e-1; //in meters (SI) multiplied by e10 for XS to be in 1e-20 m2
-const long double Ry_eVconst = 13.605693; //Rydberg constant
-const long double a_h_bar_2e_m_e_SIconst = 2.711063352e-1; //in SI a_bohr*sqrt(2*Me*e)/h_bar
-const long double boltzmann_SIconst = 1.38064852e-23; //SI
-//const double resonance_time_const = 2.9918725e-13;//in s. = h_bar /Width
-const double Ar_mass_eVconst = 3.726e10; //eV
+	unsigned int MERT5_Lmax;
+	double MERT5_A;
+	double MERT5_D;
+	double MERT5_F;
+	double MERT5_G;
+	double MERT5_A1;
+	double MERT5_H;
+	double MERT5_alpha_d;
+	double MERT5_alpha_q;
+	double phases_En_maximum;
+	double phases_En_minimum;
+	double phases_En_threshold; //MERT 5 is applied only below this energy for differential cross-section
+	enum ScatterModel : short {Normal = 0, Uniform = 1} scattering_angle_model;//(former #define ANGLE_UNIFORM_ for v9.x)
+	bool no_ramsauer_minimum;
+	double ramsauer_minimum_En;
+	double XS_el_at_0_En;
+	double XS_el_En_maximum;
+	double XS_el_En_minimum;
+	double XS_el_En_thresold;
+	double XS_el_En_smooth_width; //MERT5 and experimental totalXS have small discontinuity at XS_el_En_thresold eV.
+	
+	double En_3o2;
+	double En_1o2;
+	double Width_3o2;
+	double Width_1o2;
+
+	double resonance_NBrS_XS;
+	boost::optional<double> resonance_En_loss;
+};
+
+struct RunParameters {
+	double field; //in Td
+	double drift_distance; //in m
+	unsigned int seed;
+	unsigned int n_electrons;
+	std::string output_file;
+};
+
+struct ProgramConstants {
+	double temperature; //in SI (Kelvins)
+	double pressure; //in SI (Pascals)
+	unsigned int thread_number;
+	double maximal_energy;
+	unsigned int angle_discretization;
+	boost::optional<double> drift_distance_ignore_history;
+	boost::optional<int> skip_history_rate;
+	bool is_test_version; //TODO: specify testing modules in settings.xml
+
+	std::string data_folder;
+	std::string elastic_XS_fname;
+	std::string elastic_XS_phaseshift_fname;
+	std::string excitation_XS_fname;
+	std::string ionization_XS_fname;
+	
+	std::string output_fname_pattern;
+	std::string tabulated_data_folder;
+	
+	double def_drift_distance;
+	unsigned int def_n_electrons;
+	unsigned int def_seed;
+
+	std::vector<RunParameters> run_specifics;
+};
+
+class Settings {
+protected:
+	bool is_valid_;
+	PhysicalConstants phys_const_;
+	ProgramConstants prog_const_;
+public:
+	bool isValid(void) const;
+	Settings();
+	Settings(std::string fname);
+	bool Load(std::string fname);
+	//bool Save(std::string fname) const;
+	const PhysicalConstants* PhysConsts(void) const;
+	const ProgramConstants* ProgConsts(void) const;
+};
+
+extern Settings gSettings;
+
+#define En_1o2_ gSettings.PhysConsts()->En_1o2
+#define En_3o2_ gSettings.PhysConsts()->En_3o2
+#define Width_1o2_ gSettings.PhysConsts()->Width_1o2
+#define Width_3o2_ gSettings.PhysConsts()->Width_3o2
 
 #if defined(__WIN32__)
 #define INVOKE_GNUPLOT(a) system(("start \"\" \"%GNUPLOT%\\gnuplot.exe\" --persist \"" + a + "\"").c_str())

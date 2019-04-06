@@ -1,30 +1,59 @@
 #include "MTManager.h"
 
-MTManager::MTManager(ArDataTables *Ar_tables, int instance, int N_electrons, UInt_t RandomSeed) :
-	Manager(Ar_tables, RandomSeed), condition_(NULL), thread_mutex_(NULL), instance_(instance), N_electrons_(N_electrons)
+MTManager::MTManager(ArDataTables *Ar_tables, int instance) :
+	Manager(Ar_tables), instance_(instance)
 {}
 
 void MTManager::ProcessAll(void)
 {
-	unsigned int incr = N_electrons_>1000 ? 1 + N_electrons_ / 100 : 1;
+	if (!isReady()) {
+		std::cout << "MTManager::ProcessAll: some of the parameters are not initiaized, exiting" << std::endl;
+		return;
+	}
+	unsigned int incr = *N_electrons_> 1000 ? 1 + *N_electrons_ / 100 : 1;
 	for (unsigned int i = 0; i<N_electrons_; ++i) {
 		this->LoopSimulation();
 		if (0 == (i + 1) % incr)
-			std::cout <<"Thread "<<instance_<<": "<< i + 1 << "/" << N_electrons_ <<" Seed "<<start_seed_<<std::endl;
+			std::cout <<"Thread "<<instance_<<": "<< i + 1 << "/" << *N_electrons_ <<" Seed "<<e_first_seed_<<std::endl;
 	}
-	if (0 != N_electrons_%incr) {
-		std::cout << "Thread " << instance_ << ": " << N_electrons_ << "/" << N_electrons_<<" Seed "<<start_seed_ << std::endl;
+	if (0 != *N_electrons_%incr || 0u == N_electrons_) {
+		std::cout << "Thread " << instance_ << ": " << *N_electrons_ << "/" << *N_electrons_<<" Seed "<< e_first_seed_ << std::endl;
 	}
 }
 
-void MTManager::setCondition(TCondition* cond)
-{	condition_ = cond;}
-TCondition* MTManager::getCondition(void) const
-{	return condition_;}
-void MTManager::setThreadMutex(TMutex* mutex)
-{	thread_mutex_ = mutex;}
-TMutex* MTManager::getThreadMutex(void) const
-{	return thread_mutex_;}
+bool MTManager::setRunIndex(std::size_t index)
+{
+	run_index_ = index;
+	return true;
+}
+
+boost::optional<std::size_t> MTManager::getRunIndex(void) const
+{
+	return run_index_;
+}
+
+bool MTManager::setNelectons(unsigned int Ne)
+{
+	N_electrons_ = Ne;
+	return true;
+}
+
+boost::optional<unsigned int> MTManager::getNelectons(void) const
+{
+	return N_electrons_;
+}
+
+bool MTManager::isReady(void) const
+{
+	return Manager::isReady() && boost::none != N_electrons_ && boost::none != run_index_;
+}
+
+void MTManager::Clear(void)
+{
+	N_electrons_ = boost::none;
+	run_index_ = boost::none;
+	Manager::Clear();
+}
 
 void MTManager::Merge(MTManager *with)
 {

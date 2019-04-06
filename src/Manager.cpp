@@ -1,10 +1,9 @@
 #include "Manager.h"
 
-Manager::Manager(ArDataTables *Ar_tables, UInt_t RandomSeed) : is_ready_(false), eField_(0), Concentration_(0), Coefficient_(0),
-	skip_counter_(0), ArTables_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0)
+Manager::Manager(ArDataTables *Ar_tables) : 
+	skip_counter_(0), ArTables_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0), sim_data_(NULL)
 {
-	random_generator_ = new TRandom1(RandomSeed); //TRandom3 is a default. TRandom1 is slower but better
-	start_seed_ = RandomSeed;
+	random_generator_ = new TRandom1(); //TRandom3 is a default. TRandom1 is slower but better
 	processes_size_ = ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization - Event::Overflow; //3 = elastic + None + Overthrow
 	processes_counters_ = new Long64_t [processes_size_];
 	processes_IDs_ = new Short_t [processes_size_];
@@ -14,7 +13,7 @@ Manager::Manager(ArDataTables *Ar_tables, UInt_t RandomSeed) : is_ready_(false),
 		processes_counters_[i] = 0;
 		switch (processes_IDs_[i]) {
 		case (Event::Overflow): {
-			processes_legends_[i] = c_str_cp(std::string("\"Overflow (energy exceeds ")+std::to_string(EN_MAXIMUM_) + " eV)\"");
+			processes_legends_[i] = c_str_cp(std::string("\"Overflow (energy exceeds ")+std::to_string(gSettings.ProgConsts()->maximal_energy) + " eV)\"");
 			break;
 		}
 		case (Event::None): {
@@ -57,16 +56,27 @@ Manager::~Manager()
 		processes_data_->Delete();
 }
 
+bool Manager::isReady(void) const
+{
+	return (boost::none != Concentration_ && boost::none != Coefficient_ && boost::none != eField_
+		&& boost::none != initial_seed_ && boost::none!=Drift_distance_);
+}
+
 void Manager::InitTree (void)
 {
-	sim_data_ = new TTree("ElectronHistory", "ElectronHistory");
+	if (NULL== sim_data_)
+		sim_data_ = new TTree("ElectronHistory", "ElectronHistory");
 	sim_data_->Branch("process_type", &event_.process);
 
 	sim_data_->Branch("time_initial", &event_.time_start);
 	sim_data_->Branch("time_delta", &event_.delta_time);
 	sim_data_->Branch("time_delta_full", &event_.delta_time_full);
 
-	if (0==SKIP_HISTORY_) { //for spectra
+	bool detailed = (boost::none==gSettings.ProgConsts()->skip_history_rate);
+	if (!detailed)
+		detailed = (0 == *gSettings.ProgConsts()->skip_history_rate);
+
+	if (detailed) { //for spectra
 		sim_data_->Branch("energy_initial", &event_.En_start);
 		sim_data_->Branch("energy_coll", &event_.En_collision);
 		sim_data_->Branch("energy_final", &event_.En_finish);
@@ -98,40 +108,59 @@ void Manager::InitTree (void)
 
 void Manager::Clear(void)
 {
-	is_ready_ = false;
 	sim_data_->Delete();
+	sim_data_ = NULL;
 	skip_counter_ = 0;
 	skipping_early_events = true;
 	num_of_events = 0;
 	num_of_10millions = 0;
+	eField_ = boost::none;
+	Concentration_ = boost::none;
+	Coefficient_ = boost::none;
+	Drift_distance_ = boost::none;
+	initial_seed_ = boost::none;
 	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
-		processes_IDs_[i] = i + Event::Overflow;
 		processes_counters_[i] = 0;
 	}
 	InitTree();
 }
 
-void Manager::SetParameters(double Concentr /*in SI*/, double E /*in SI*/)
+void Manager::setParameters(double Concentr /*in SI*/, double E /*in SI*/, double drift_distance /*in m*/)
 {
-	Concentration_ = std::fabs(Concentr);
-	eField_ = std::fabs(E);
-	is_ready_ = true;
-	if ((0 == Concentration_) || (0 == eField_)) {
+	Concentr = std::fabs(Concentr);
+	E = std::fabs(E);
+	if ((0 == Concentr) || (0 == E)) {
 		std::cout << "Manager::SetParameters(): Can't have 0 values" << std::endl;
-		is_ready_ = false;
 	}
-	Coefficient_ = 1e20/* *e_charge_SIconst*/ * eField_ / Concentration_; // me/mu is set to 1.0
+	Concentration_ = Concentr;
+	eField_ = E;
+	if (drift_distance < 0) {
+		std::cout << "Manager::SetParameters(): Warning: negative drift distance, using its absolute value." << std::endl;
+	}
+	Drift_distance_ = std::fabs(drift_distance);
+	Coefficient_ = 1e20/* *e_charge_SIconst*/ * *eField_ / *Concentration_; // me/mu is set to 1.0
 	//1e20 is because XS is expressed in 1e-20 m^2, not in m^2
 }
 
-void Manager::SetParameters(double T /*in K*/, double Pressure /*in SI*/, double E /*in SI*/)
+void Manager::setParameters(double T /*in K*/, double Pressure /*in SI*/, double E /*in SI*/, double drift_distance /*in m*/)
 {
 	if (0 == T) {
 		std::cout << "Manager::SetParameters(): Can't have 0 temperature" << std::endl;
-		is_ready_ = false;
 		return;
 	}
-	SetParameters(Pressure / (T*boltzmann_SIconst), E);
+	setParameters(Pressure / (T*gSettings.PhysConsts()->boltzmann_SI), E, drift_distance);
+}
+
+bool Manager::setInitialSeed(unsigned int seed)
+{
+	initial_seed_ = seed;
+	random_generator_->SetSeed(*initial_seed_);
+	return true;
+}
+
+boost::optional<unsigned int> Manager::getInitialSeed(void) const
+{
+	return initial_seed_;
 }
 
 //Int XS(e)*sqrt(e/(e-Eny))*de
@@ -148,12 +177,12 @@ long double Manager::XS_integral(long double from, long double to, long double E
 		E_prev = from;
 	}
 	ColoredRange energy_range_ = ColoredInterval (0, 0.1, 2e-4) + ColoredInterval (0.1, 1, 8e-4) +
-		ColoredInterval (1, 10, 1e-2) + ColoredInterval (10, EN_MAXIMUM_, 0.02) +
-		ColoredInterval (En_1o2_ - 100*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 100*Width_1o2_), Width_1o2_/5) +	//coarse area
-		ColoredInterval (En_3o2_ - 100*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 100*Width_3o2_), Width_3o2_/5) +	//coarse area
-		ColoredInterval (En_1o2_ - 15*Width_1o2_, std::min(EN_MAXIMUM_, En_1o2_ + 15*Width_1o2_), Width_1o2_/80) + 	//fine area
-		ColoredInterval (En_3o2_ - 15*Width_3o2_, std::min(EN_MAXIMUM_, En_3o2_ + 15*Width_3o2_), Width_3o2_/80) +	//fine area
-		ColoredInterval (11.5, EN_MAXIMUM_, 0.003);
+		ColoredInterval (1, 10, 1e-2) + ColoredInterval (10, gSettings.PhysConsts()->XS_el_En_maximum, 0.02) +
+		ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/5) +	//coarse area
+		ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/5) +	//coarse area
+		ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/80) + 	//fine area
+		ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/80) +		//fine area
+		ColoredInterval (11.5, gSettings.PhysConsts()->XS_el_En_maximum, 0.003);
 	energy_range_.Trim(from, to);
 	int i_end_ = energy_range_.NumOfIndices();
 	event.deb_N_integral = i_end_;
@@ -193,16 +222,26 @@ long double Manager::XS_integral_for_test(long double from, long double to, long
 	return Int;
 }
 
-void Manager::Initialize(Event &event)
+void Manager::Initialize(void)
 {
-	if (!is_ready_)
+	if (!isReady()) {
+		std::cout << "Manager::Initialize: some of the parameters are not initiaized, exiting" << std::endl;
 		return;
-	skip_counter_=0;
+	}
+	skip_counter_ = 0;
 	skipping_early_events = true;
 	num_of_events = 0;
 	num_of_10millions = 0;
 	//processes_counters; //preserve
-	start_seed_ = random_generator_->GetSeed();
+	e_first_seed_ = random_generator_->GetSeed();
+}
+
+void Manager::Initialize(Event &event)
+{
+	if (!isReady()) {
+		std::cout << "Manager::Initialize: some of the parameters are not initiaized, exiting" << std::endl;
+		return;
+	}
 	event.CrossSections.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization, 0); //+1 for Elastic
 	event.CrossSectionsSum.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization, 0);
 	event.En_start = 1 + 3*random_generator_->Uniform();
@@ -249,11 +288,11 @@ void Manager::Solve (long double LnR, Event &event)
 	//approximate right point. By default it is EN_MAXIMUM_, but there are a lot of extra calculations in this case
 	long double left = e_start;
 	long double right = e_start + 10*LnR/(ArTables_->TotalCrossSection(left)*sqrt(left/(left-Eny)));
-	right = std::min((double)right, EN_MAXIMUM_);
+	right = std::min((double)right, gSettings.ProgConsts()->maximal_energy);
 	long double I_max = XS_integral(e_start, right, Eny, event);
 	if (I_max < LnR) {
-		I_max = XS_integral(e_start, EN_MAXIMUM_, Eny, event);
-		right = EN_MAXIMUM_;
+		I_max = XS_integral(e_start, gSettings.ProgConsts()->maximal_energy, Eny, event);
+		right = gSettings.ProgConsts()->maximal_energy;
 	}
 	long double e_finish = right;
 	event.En_collision = right;
@@ -279,8 +318,8 @@ void Manager::Solve (long double LnR, Event &event)
 				right = e_finish;
 				f_right = f_new;
 			}
-			convergence_criteria = 2e-4*(std::min(std::max(e_start, (long double)0.1*XS_EL_EN_MINIMUM_),
-					std::max(e_finish, (long double)0.1*XS_EL_EN_MINIMUM_)));//std::max(2e-6, std::fabs(5e-4*event.En_finish));
+			convergence_criteria = 2e-4*(std::min(std::max(e_start, (long double)0.1*gSettings.PhysConsts()->XS_el_En_minimum),
+					std::max(e_finish, (long double)0.1*gSettings.PhysConsts()->XS_el_En_minimum)));//std::max(2e-6, std::fabs(5e-4*event.En_finish));
 		}
 		event.En_collision = e_finish;
 		event.deb_solver_y_left = f_left;
@@ -352,11 +391,11 @@ void Manager::Solve_test (long double LnR, Event &event)
 	//approximate right point. By default it is EN_MAXIMUM_, but there are a lot of extra calculations in this case
 	long double left = e_start;
 	long double right = e_start + 10*LnR/(ArTables_->TotalCrossSection(left)*sqrt(left/(left-Eny)));
-	right = std::min((double)right, EN_MAXIMUM_);
+	right = std::min((double)right, gSettings.ProgConsts()->maximal_energy);
 	long double I_max = XS_integral_for_test(e_start, right, Eny, 1e-5);
 	if (I_max < LnR) {
-		I_max = XS_integral_for_test(e_start, EN_MAXIMUM_, Eny, 1e-5);
-		right = EN_MAXIMUM_;
+		I_max = XS_integral_for_test(e_start, gSettings.ProgConsts()->maximal_energy, Eny, 1e-5);
+		right = gSettings.ProgConsts()->maximal_energy;
 	}
 	long double e_finish = right;
 	event.En_collision = right;
@@ -382,8 +421,8 @@ void Manager::Solve_test (long double LnR, Event &event)
 				right = e_finish;
 				f_right = f_new;
 			}
-			convergence_criteria = 2e-4*(std::min(std::max(e_start, (long double)0.1*XS_EL_EN_MINIMUM_),
-					std::max(e_finish, (long double)0.1*XS_EL_EN_MINIMUM_)));//std::max(2e-6, std::fabs(5e-4*event.En_finish));
+			convergence_criteria = 2e-4*(std::min(std::max(e_start, (long double)0.1*gSettings.PhysConsts()->XS_el_En_minimum),
+					std::max(e_finish, (long double)0.1*gSettings.PhysConsts()->XS_el_En_minimum)));//std::max(2e-6, std::fabs(5e-4*event.En_finish));
 		}
 		event.En_collision = e_finish;
 		event.deb_solver_y_left = f_left;
@@ -412,32 +451,33 @@ long double Manager::Path_integral (long double x, long double cos_th)
 
 void Manager::DoStepLength(Event &event)
 {
-	if (!is_ready_)
+	if (!isReady())
 		return;
 
 	long double L = - log(random_generator_->Uniform());
-	L *= Coefficient_; //Calculated once for fixed parameters;
+	L *= *Coefficient_; //Calculated once for fixed parameters;
 	//solving L = XS_integral(Ei, Ec) for Ec===E collision.
 	Solve_table(L, event);
 
 	//Energy is in eV
-	long double vel_0 = sqrt(2.0*e_charge_SIconst*event.En_start / e_mass_SIconst)*cos(event.theta_start);
-	long double vel_1 = sqrt(2.0*e_charge_SIconst*event.En_collision / e_mass_SIconst)*cos(event.theta_collision);
-	event.delta_time = (vel_1 - vel_0)*e_mass_SIconst / (e_charge_SIconst * eField_); //in s
-	event.delta_x = (event.En_collision - event.En_start) / eField_;
+	double eom = gSettings.PhysConsts()->e_charge_SI / gSettings.PhysConsts()->e_mass_SI;
+	long double vel_0 = sqrt(2.0*eom*event.En_start)*cos(event.theta_start);
+	long double vel_1 = sqrt(2.0*eom*event.En_collision)*cos(event.theta_collision);
+	event.delta_time = (vel_1 - vel_0) / (eom * *eField_); //in s
+	event.delta_x = (event.En_collision - event.En_start) / *eField_;
 	event.pos_finish = event.pos_start + event.delta_x;
-	event.En_avr = event.En_start + eField_*vel_0*event.delta_time / 4.0 + e_charge_SIconst*std::pow(eField_*event.delta_time, 2) / (6 * e_mass_SIconst);
+	event.En_avr = event.En_start + *eField_*vel_0*event.delta_time / 4.0 + eom*std::pow(*eField_*event.delta_time, 2) / 6.0;
 	//Total path in meters:
 	//calculated as Int{sqrt((dy/dt)^2 + (dx/dt)^2 ) dt} from 0 to delta_time
-	long double up_limit = event.delta_time*eField_*sqrt(e_charge_SIconst/(2*e_mass_SIconst*event.En_start));
+	long double up_limit = event.delta_time**eField_*sqrt(eom/(2*event.En_start));
 	event.delta_l = Path_integral(up_limit, event.theta_start) - Path_integral(0, event.theta_start);
-	event.delta_l*=2*event.En_start/eField_;
+	event.delta_l*=2*event.En_start/ *eField_;
 	event_ = event;
 }
 
 void Manager::DoScattering(Event &event)
 {
-	if (!is_ready_)
+	if (!isReady())
 		return;
 	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i) {
 		event.CrossSections[i] = ArTables_->CrossSection(std::fabs(event.En_collision), i + Event::Elastic);
@@ -464,7 +504,7 @@ void Manager::DoScattering(Event &event)
 	if (cos_th_f>1.0)
 		cos_th_f = 1.0;
 	event.theta_finish = std::acos(cos_th_f);// event.theta_collision + (R3<0.5 ? event.delta_theta: -event.delta_theta); - v7.x - 2D implementation
-	long double gamma_f = e_mass_eVconst/Ar_mass_eVconst;
+	long double gamma_f = gSettings.PhysConsts()->e_mass_eV/ gSettings.PhysConsts()->Ar_mass_eV;
 	double EnergyLoss = 2*(1-cos(event.delta_theta))*event.En_collision*gamma_f /pow(1 + gamma_f, 2);
 	double time_delay = 0;
 	switch (event.process) {
@@ -508,7 +548,7 @@ void Manager::DoScattering(Event &event)
 
 void Manager::PostStepAction(Event &event)
 {
-	if (!is_ready_)
+	if (!isReady())
 		return;
 	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
 		if (processes_IDs_[i] == event.process) {
@@ -516,13 +556,13 @@ void Manager::PostStepAction(Event &event)
 			break;
 		}
 	}
-	if (event.pos_start>=DRIFT_DISTANCE_HISTORY) {
-		skipping_early_events = false;
-		skip_counter_=0;
+	if (event.pos_start>=gSettings.ProgConsts()->drift_distance_ignore_history) { //assert (double>boost::none)
+		skipping_early_events = false; //if true (set at initalization) all events with position less that gSettings.ProgConsts()->drift_distance_ignore_history (if present) are not recored.
+		skip_counter_ = 0;
 	}
-	if (skip_counter_>SKIP_HISTORY_)
-		skip_counter_=0;
-	if ((0==num_of_events)||IsFinished(event)) {
+	if (skip_counter_ == gSettings.ProgConsts()->skip_history_rate || boost::none == gSettings.ProgConsts()->skip_history_rate)
+		skip_counter_ = 0;
+	if ((0==num_of_events)||IsFinished(event)) { //always record first and last drift event
 		sim_data_->Fill();
 		++skip_counter_;
 		++num_of_events;
@@ -560,7 +600,7 @@ void Manager::DoGotoNext(Event &event)
 
 void Manager::DoStep(Event &event)
 {
-	if (!is_ready_)
+	if (!isReady())
 		return;
 	DoGotoNext(event);
 	DoStepLength(event);
@@ -570,16 +610,21 @@ void Manager::DoStep(Event &event)
 
 bool Manager::IsFinished(Event &event)
 {
-	if (!is_ready_)
+	if (!isReady())
 		return true;
 	//return sim_data_->GetEntries()>=100;
-	return !(event.pos_finish < DRIFT_DISTANCE_);
+	return !(event.pos_finish < Drift_distance_);
 }
 
 void Manager::LoopSimulation(void)
 {
-	if (!is_ready_)
+	Initialize();
+	if (!isReady())
 		return;
+	if (!ArTables_->isValid()) {
+		std::cerr << "Manager::LoopSimulation: invalid data tables" << std::endl;
+		return;
+	}
 	Initialize(event_);
 	while (!IsFinished(event_)) {
 		DoStep(event_);
