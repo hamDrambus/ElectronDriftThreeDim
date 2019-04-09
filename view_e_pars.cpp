@@ -9,7 +9,7 @@
 	TH1D* hist_Tdelay = new TH1D ("Time delay [s]","Time delay [s]",600, 0, 1e-12);
     TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
     TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
-    TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",300,4e-7, 7e-7);
+    TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",300,3.75e-7, 6.5e-7);
     TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 15);
     TH1D* hist_theta = new TH1D ("Scatter angle near 10 eV","Scatter angle near 10 eV",300, 0, 3.1416);
     //TH1D* hist_Ey = new TH1D ("Ey [eV]", "Ey [eV]",300, 0, 15);
@@ -193,6 +193,7 @@
             hist_V_drift->Draw();
             TCanvas *c_3_5 = new TCanvas ("Drift time", "Drift time", DEF_W, DEF_H);
             hist_T_drift->Draw();
+			hist_T_drift->Fit("gaus");
             TCanvas *c_4 = new TCanvas ("Delta L", "Delta L", DEF_W, DEF_H);
             hist_dl->Draw();
             TCanvas *c_5 = new TCanvas ("e energy average", "e energy average", DEF_W, DEF_H);

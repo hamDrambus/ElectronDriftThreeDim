@@ -58,7 +58,7 @@
 //^in eV
 #define RESONANCE_EN_LOSS_FACTOR_ 1.0
 #define RESONANCE_NBrS_XS_ 0.0
-#define RESONANCE_EN_LOSS_ 1e-1
+//#define RESONANCE_EN_LOSS_ 1e-1
 #define DRIFT_DISTANCE_ 3e-3
 //^in m
 #define DRIFT_DISTANCE_HISTORY 1
