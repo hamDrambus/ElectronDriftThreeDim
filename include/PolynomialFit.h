@@ -78,6 +78,7 @@ public:
 
 	//save/load full state except cache from file
 	void read(std::ifstream& str);
+	void write(std::string fname, std::string comment = "");
 	void write(std::ofstream& str, std::string comment="");
 protected:
 	void get_indices(double point, int &n_min, int &n_max); //[n_min, n_max] are used, not [n_min,n_max). N_used==n_max-n_min+1>=order+1

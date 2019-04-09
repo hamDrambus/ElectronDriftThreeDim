@@ -53,6 +53,7 @@ class ArExperimental
 {
 protected:
 	void read_inelastic(std::ifstream &inp, std::vector<InelasticProcess> &to);
+	bool is_valid_;
 public:
 	std::vector<DataVector> phase_shifts_pos_;
 	std::vector<DataVector> phase_shifts_neg_;
@@ -66,6 +67,7 @@ public:
 	InelasticProcess * FindInelastic(short ID);
 	unsigned int max_L (long double k);
 	void phase_shift (long double k, unsigned int l, long double &ps_pos, long double &ps_neg);
+	bool isValid(void) const;
 };
 
 /*This class reads some experimental values from ./data
@@ -114,6 +116,7 @@ class ArDataTables //loads data from default files if presented. If not then val
 public:
 	ArAllData ArAllData_;
 protected:
+	bool is_valid_;
 	std::string total_cross_elastic_fname; //contains Feshbach resonances
 	std::string integral_table_fname;
 	std::string theta_table_fname;
@@ -125,13 +128,13 @@ protected:
 	DataVector total_cross_elastic_;
 	DataVector total_resonance_NBrS_spectrum_; //Stores probability function, not the spectrum itself
 	void read_data (std::ifstream &inp, DataVector &data, long double y_factor = 1);
-	void generate_total_cross_elastic_table(void);
-	void generate_integral_table(void);
-	void generate_theta_table(void);
-	void generate_time_delay_spin_flip_table(void);
-	void generate_time_delay_spin_nonflip_table(void);
-	void generate_time_delay_spin_nonflip_prob_table(void);
-	void generate_ResNBrS_spectrum_table(void);
+	bool generate_total_cross_elastic_table(void);
+	bool generate_integral_table(void);
+	bool generate_theta_table(void);
+	bool generate_time_delay_spin_flip_table(void);
+	bool generate_time_delay_spin_nonflip_table(void);
+	bool generate_time_delay_spin_nonflip_prob_table(void);
+	bool generate_ResNBrS_spectrum_table(void);
 public:
 	//No deep copy
 	FunctionTable *integral_table_;	//shared between threads after it is initialized
@@ -141,6 +144,8 @@ public:
 	FunctionTable *time_delay_spin_nonflip_prob_table_; 	//shared between threads after it is initialized
 	ArDataTables ();
 	ArDataTables (const ArDataTables & ) = default;
+
+	bool isValid(void) const;
 	long double CrossSection (double E, short type);
 	long double TotalCrossSection (double E);
 	long double XS_elastic(double E);

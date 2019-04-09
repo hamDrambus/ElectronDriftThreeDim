@@ -327,6 +327,14 @@ void DataVector::read(std::ifstream& str) //TODO: add try/catch for handling sto
 	}
 }
 
+void DataVector::write(std::string fname, std::string comment)
+{
+	std::ofstream str;
+	str.open(fname, std::ios_base::trunc);
+	write(str, comment);
+	str.close();
+}
+
 void DataVector::write(std::ofstream& str, std::string comment)
 {
 	//"//Order	N_used	use_left use_right is_set_left is_set_right left_value right_value"

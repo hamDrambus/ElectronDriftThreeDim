@@ -127,7 +127,7 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 				double PS_l = (*ps_pos)[l].getY(i);
 				for (std::size_t j = 0, j_end_ = (*ps_neg)[l].size(); j!=j_end_; ++j) {
 					if (((*ps_neg)[l].getX(j)<k)&&((*ps_neg)[l].getX(j)>k_l_neg_written)){
-						str<< pow((*ps_neg)[l].getX(j)/a_h_bar_2e_m_e_SIconst, 2)<< "\t"<< (*ps_neg)[l].getY(j)<<std::endl;
+						str<< pow((*ps_neg)[l].getX(j)/gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)<< "\t"<< (*ps_neg)[l].getY(j)<<std::endl;
 						k_l_neg_written = (*ps_neg)[l].getX(j);
 					}
 					if ((*ps_neg)[l].getX(j)==k) {
@@ -135,16 +135,16 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 						break;
 					}
 				}
-				str<< pow(k/a_h_bar_2e_m_e_SIconst, 2)<< "\t"<< PS_l<<std::endl;
+				str<< pow(k/ gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)<< "\t"<< PS_l<<std::endl;
 			}
 		}
 		if (l<ps_pos->size()) { //only ps_pos is present
 			for (std::size_t i = 0, i_end_ = (*ps_pos)[l].size(); i!=i_end_; ++i) {
-				str<< pow((*ps_pos)[l].getX(i)/a_h_bar_2e_m_e_SIconst, 2)<< "\t"<< (*ps_pos)[l].getY(i)<<std::endl;
+				str<< pow((*ps_pos)[l].getX(i)/ gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)<< "\t"<< (*ps_pos)[l].getY(i)<<std::endl;
 			}
 		} else { //only ps_neg is present
 			for (std::size_t i = 0, i_end_ = (*ps_neg)[l].size(); i!=i_end_; ++i) {
-				str<< pow((*ps_neg)[l].getX(i)/a_h_bar_2e_m_e_SIconst, 2)<< "\t"<< (*ps_neg)[l].getY(i)<<std::endl;
+				str<< pow((*ps_neg)[l].getX(i)/ gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)<< "\t"<< (*ps_neg)[l].getY(i)<<std::endl;
 			}
 		}
 		str.close();
@@ -160,7 +160,7 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 			E = EnRange.Next(err);
 			if (0!=err)
 				break;
-			k = sqrt(E)*a_h_bar_2e_m_e_SIconst;
+			k = sqrt(E)*gSettings.PhysConsts()->a_h_bar_2eM_e_SI;
 			str<<E<<"\t";
 			for (std::size_t l = 0, l_end_ = std::max(ps_pos->size(), ps_neg->size()); l!=l_end_; ++l) {
 				double PS_l;
@@ -187,9 +187,9 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 			E = EnRange.Next(err);
 			if (0!=err)
 				break;
-			if (E>THRESH_E_XS_)
+			if (E>gSettings.PhysConsts()->XS_el_En_thresold)
 				break;
-			k = sqrt(E)*a_h_bar_2e_m_e_SIconst;
+			k = sqrt(E)*gSettings.PhysConsts()->a_h_bar_2eM_e_SI;
 			str<<E<<"\t";
 			for (std::size_t l = 0, l_end = std::max(ps_pos->size(), ps_neg->size()); l!=l_end; ++l) {
 				long double ps_p, ps_n;
@@ -774,14 +774,14 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 	std::ofstream str;
 	int err;
 	{
-		double E = En_3o2_-0.05;
+		double E = gSettings.PhysConsts()->En_3o2-0.05;
 		unsigned int N_th = 600;
 		int N_lz = 0, N_gz = 0;
 		double I_lz = 0;
 		double I_gz = 0;
 		for (int i = 0; i<=N_th; ++i) {
 			double theta = i*M_PI / N_th;
-			double k = a_h_bar_2e_m_e_SIconst*sqrt(E);
+			double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E);
 			for (int L = 0; L < ArTables->ArAllData_.ArExper_.max_L(k); ++L) {
 				double prob = ArTables->ArAllData_.argon_scatter_probability_j(E, theta, 2 * L + 1, 2 * L);
 				if (prob < 0) {
@@ -919,8 +919,10 @@ void test_time_delay(ArDataTables *ArTables)
 		TLegend* legend = new TLegend(0.50, 0.75, 0.9, 0.9);
 		//legend->SetHeader("");
 		legend->SetMargin(0.25);
-		TH1D * hist1 = new TH1D(title1.c_str(), title1.c_str(), 600, 0, 1.05*4*h_bar_eVconst/std::min(Width_1o2_, Width_3o2_));
-		TH1D * hist2 = new TH1D(title2.c_str(), title2.c_str(), 600, 0, 1.05*4*h_bar_eVconst/std::min(Width_1o2_, Width_3o2_));
+		TH1D * hist1 = new TH1D(title1.c_str(), title1.c_str(), 600, 0,
+			1.05*4*gSettings.PhysConsts()->h_bar_eVs/std::min(gSettings.PhysConsts()->Width_1o2, gSettings.PhysConsts()->Width_3o2));
+		TH1D * hist2 = new TH1D(title2.c_str(), title2.c_str(), 600, 0,
+			1.05*4* gSettings.PhysConsts()->h_bar_eVs /std::min(gSettings.PhysConsts()->Width_1o2, gSettings.PhysConsts()->Width_3o2));
 		hist2->SetLineColor(kRed);
 		TRandom *random_generator_ = new TRandom1(42);
 		//unsigned long int N0 = 0, Nn0 = 0;

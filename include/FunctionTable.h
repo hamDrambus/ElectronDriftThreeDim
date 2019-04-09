@@ -33,6 +33,7 @@ public:
 	void clear (void);
 
 	void read (std::ifstream& str);
+	void write(std::string fname);
 	void write (std::ofstream& str);
 	void plot_E_Ey (void);
 	bool is_empty(void) const;
