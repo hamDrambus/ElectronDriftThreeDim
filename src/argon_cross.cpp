@@ -499,7 +499,7 @@ void ArAllData::argon_phase_values_MERT5(long double k, unsigned int l, long dou
 //In seconds. Considered non zero only for L = 1 and J = 1/2 and 3/2 (J and L are expressed in halves)
 long double ArAllData::argon_time_delay_j(long double E, int J, int L)
 {
-	if (L!=2)
+	if (L!=2) //Only Feshbach resonance is taken into the account
 		return 0;
 	if (((J != L - 1) && (J != L + 1)) || J < 0) {
 		std::cerr << "ArAllData::argon_time_delay_j: Error: No momentum J=" << J << "/2 for e(s=1/2)-Ar(s=0) scattering with L =" << L / 2 << std::endl;
@@ -602,7 +602,6 @@ long double ArAllData::argon_scatter_probability_j(long double E, long double th
 //E in eV
 long double ArAllData::argon_cross_elastic_diff(long double E, long double theta, int mode) {
 	//different formulas are used for E<0.24eV and E>0.24eV!
-	unsigned int L_MAX = 0;
 	long double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E); //recalculation from energy to atomic units
 	if (1!=mode&&2!=mode)
 	{
@@ -884,22 +883,22 @@ long double ArAllData::argon_delay_spin_flip (long double E, long double theta, 
 		long double l_p = 0; //p - positive
 		long double l_n = 0; //n - negative
 		((*this).*phase_values)(k, l, l_p, l_n);
-		l_p *= 2; //all cosines are taken from double angles
+		l_p *= 2; //all cosines and sines are taken from double angles
 		l_n *= 2;
 		cos_sum +=AP1(cos_th, l, 1)*cos(l_p);
 		cos_sum +=-1*AP1(cos_th, l, 1)*cos(l_n);
 		sin_sum +=AP1(cos_th, l, 1)*sin(l_p);
 		sin_sum +=-1*AP1(cos_th, l, 1)*sin(l_n);
 		if (l!=0) {
-			sin_delayed_sum+= -2*argon_time_delay_j(E, 2*l -1, 2*l) * -1*AP1(cos_th, l, 1) * sin(l_n);
+			sin_delayed_sum+= 2*argon_time_delay_j(E, 2*l -1, 2*l) * -1*AP1(cos_th, l, 1) * sin(l_n);
 			cos_delayed_sum+= 2*argon_time_delay_j(E, 2*l -1, 2*l) * -1*AP1(cos_th, l, 1) *cos(l_n);
 		}
-		sin_delayed_sum+= -2*argon_time_delay_j(E, 2*l +1, 2*l) * AP1(cos_th, l, 1) *sin(l_p);
+		sin_delayed_sum+= 2*argon_time_delay_j(E, 2*l +1, 2*l) * AP1(cos_th, l, 1) *sin(l_p);
 		cos_delayed_sum+= 2*argon_time_delay_j(E, 2*l +1, 2*l) * AP1(cos_th, l, 1) *cos(l_p);
 	}
 	long double cos_2 = cos_sum*cos_sum;
 	long double sin_2 = sin_sum*sin_sum;
-	return cos_2/(cos_2 + sin_2) * (sin_delayed_sum * sin_2/cos_2 + cos_delayed_sum /cos_sum);
+	return cos_2/(cos_2 + sin_2) * (sin_delayed_sum * sin_sum/cos_2 + cos_delayed_sum /cos_sum);
 }
 
 //mode = 0 or unexpected - standard formula used in simulation, called by default.
@@ -954,15 +953,15 @@ long double ArAllData::argon_delay_spin_nonflip (long double E, long double thet
 		sin_sum +=(l+1)*P1(cos_th, l)*sin(l_p);
 		sin_sum +=(l)*P1(cos_th, l)*sin(l_n);
 		if (l!=0) {
-			sin_delayed_sum+= -2*argon_time_delay_j(E, 2*l -1, 2*l) * P1(cos_th, l) * (l)*sin(l_n);
+			sin_delayed_sum+= 2*argon_time_delay_j(E, 2*l -1, 2*l) * P1(cos_th, l) * (l)*sin(l_n);
 			cos_delayed_sum+= 2*argon_time_delay_j(E, 2*l -1, 2*l) * P1(cos_th, l) * (l)*cos(l_n);
 		}
-		sin_delayed_sum+= -2*argon_time_delay_j(E, 2*l +1, 2*l) * P1(cos_th, l) * (l+1)*sin(l_p);
+		sin_delayed_sum+= 2*argon_time_delay_j(E, 2*l +1, 2*l) * P1(cos_th, l) * (l+1)*sin(l_p);
 		cos_delayed_sum+= 2*argon_time_delay_j(E, 2*l +1, 2*l) * P1(cos_th, l) * (l+1)*cos(l_p);
 	}
 	long double cos_2 = cos_sum*cos_sum;
 	long double sin_2 = sin_sum*sin_sum;
-	return cos_2/(cos_2 + sin_2) * (sin_delayed_sum * sin_2/cos_2 + cos_delayed_sum /cos_sum);
+	return cos_2/(cos_2 + sin_2) * (sin_delayed_sum * sin_sum/cos_2 + cos_delayed_sum /cos_sum);
 }
 
 long double ArAllData::argon_delay_spin_nonflip_prob (long double E, long double theta, int mode)
@@ -1165,9 +1164,6 @@ ArDataTables::ArDataTables():
 	time_delay_spin_flip_table_= new FunctionTable; //shared between processes - read only
 	time_delay_spin_nonflip_table_= new FunctionTable; //shared between processes - read only
 	time_delay_spin_nonflip_prob_table_= new FunctionTable; //shared between processes - read only
-
-	is_valid_ = false;
-	return;
 
 	ensure_file(total_cross_elastic_fname);
 	ensure_file(integral_table_fname);

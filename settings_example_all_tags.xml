@@ -1,7 +1,7 @@
 <Settings>
   <!-- TODO: add separation User-changable and "do not touch"? -->
   <!--OPT means value is optional. If it is not specified the default value/behaviour will be used-->
-  <PhysicalConstants>
+   <PhysicalConstants>
     <!--See global_definitions.h for unit and meanings description-->
     <electron_charge_SI>1.60217662e-19</electron_charge_SI>
     <electron_mass_SI>9.10938356e-31</electron_mass_SI>
@@ -33,9 +33,9 @@
       <elastic_XS_En_threshold>1.0</elastic_XS_En_threshold>
       <elastic_XS_En_smooth_width>0.1</elastic_XS_En_smooth_width>
       <elastic_XS_no_Ramsauer_minimum>false</elastic_XS_no_Ramsauer_minimum> <!--OPT-->
-      <elastic_XS_Ramsauer_minimum_En>0.3286</elastic_XS_Ramsauer_minimum_En> <!--OPT if no Ramsauer minimum is false or not specified-->
+      <elastic_XS_Ramsauer_minimum_En>0.3286</elastic_XS_Ramsauer_minimum_En> <!--OPT if no Ramsauer minimum is false of not specified-->
       <elastic_XS_at_0_En>7.491</elastic_XS_at_0_En>
-      <scattering_angle_model>0</scattering_angle_model> <!--OPT, 0 - normal, 1 - uniform-->
+      <scattering_angle_model>0</scattering_angle_model> <!--OPT-->
 
       <Feshbach_resonance_3o2_En>11.103</Feshbach_resonance_3o2_En>
       <Feshbach_resonance_1o2_En>11.270</Feshbach_resonance_1o2_En>
@@ -47,16 +47,15 @@
     </Argon>
   </PhysicalConstants>
   <ProgramConstants>
-    <is_test_version>true</is_test_version> <!--OPT for running tests before simulation. TODO: test modules and mb even submodules-->
+    <is_test_version>false</is_test_version> <!--OPT-->
     <temperature>87</temperature> <!--Kelvins-->
     <pressure>1.05e5</pressure> <!--Pascals-->
     <thread_number>6</thread_number>
     <maximal_energy>16.0</maximal_energy>
     <angle_discretization>1001</angle_discretization>
-    
     <drift_distance_ignore_history>1</drift_distance_ignore_history> <!--OPT-->
     <skip_history_rate>999</skip_history_rate> <!--OPT-->
-    <RecordedValues> <!-- if field is not specified, its value is taken as false by default (do not record) -->
+	<RecordedValues> <!-- if field is not specified, its value is taken as false by default (do not record) -->
     <!-- TODO: add profiles: for E specrtras, for V drift, Custom -->
     	<process_type>false</process_type>
 		<time_initial>true</time_initial> <!-- Used for separation of dirrerent electrons! TODO: change TTree structure so that electrons are separate -->
@@ -99,12 +98,62 @@
     
     <drift_distance>3e-3</drift_distance> <!--default value for each run-->
     <n_electrons>0</n_electrons> <!--default value for each run-->
-    <random_seed>42</random_seed> <!--default value for each run-->
-    <random_generator>TRandom1</random_generator> <!-- TRandom1 (best, slowest), TRandom2 (BAD), TRandom3 (faster, good) -->   
+    <random_seed>42</random_seed> <!--default value for each run-->   
     <Runs>
+      <Run>
+        <Td>8.3</Td>
+        <n_electrons>10</n_electrons><!--OPT-->
+        <random_seed>44</random_seed><!--OPT-->
+        <drift_distance>3e-3</drift_distance><!--OPT-->
+      </Run>
+      <Run>
+        <Td>7.5</Td>
+       </Run>
       <Run>
         <Td>7.0</Td>
       </Run>
+      <Run>
+        <Td>6.5</Td>
+      </Run>
+      <Run>
+        <Td>6.0</Td>
+      </Run>
+      <Run>
+        <Td>5.5</Td>
+      </Run>
+      <Run>
+        <Td>5.0</Td>
+      </Run>
+      <Run>
+        <Td>4.6</Td>
+      </Run>
+      <Run>
+        <Td>4.5</Td>
+      </Run>
+      <Run>
+        <Td>4.0</Td>
+      </Run>
+      <Run>
+        <Td>3.5</Td>
+      </Run>
+      <Run>
+        <Td>3.0</Td>
+      </Run>
+      <Run>
+        <Td>3.0</Td>
+      </Run>
+      <Run>
+        <Td>2.0</Td>
+      </Run>
+      <Run>
+        <Td>1.7</Td>
+      </Run>
+      <Run>
+        <Td>1.0</Td>
+      </Run>
+      <Run>
+        <Td>0.3</Td>
+      </Run>
     </Runs>
-    </ProgramConstants>
+  </ProgramConstants>
 </Settings>

@@ -64,6 +64,7 @@ bool Process(void) {
 			N_e[n] = rp->n_electrons / N_thread_active + ((N_extra>0) ? 1 : 0);
 			--N_extra;
 		}
+
 		for (unsigned int n = 0u; n < N_thread_active; ++n) {
 			_submanagers[n]->Clear();
 			_submanagers[n]->setParameters(concentration, 1e-21*rp->field*concentration, rp->drift_distance);

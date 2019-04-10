@@ -732,7 +732,7 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 
 	{
 		str.open(fname_angle_profiles, std::ios_base::trunc);
-		str << "E[eV]\tXS diff 22.5deg [1e-20m^2]\tXS diff 45deg\tXS diff 90deg\XS diff 112.5deg\tXS diff 135deg" << std::endl;
+		str << "E[eV]\tXS diff 22.5deg [1e-20m^2]\tXS diff 45deg\tXS diff 90deg\tXS diff 112.5deg\tXS diff 135deg" << std::endl;
 		EnergyScanner eScan(EnergyScanner::PlotResonances);
 		double th0 = 22.5*(M_PI) / 180;
 		double th1 = 45*(M_PI) / 180;
@@ -779,10 +779,10 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 		int N_lz = 0, N_gz = 0;
 		double I_lz = 0;
 		double I_gz = 0;
-		for (int i = 0; i<=N_th; ++i) {
+		for (unsigned int i = 0; i<=N_th; ++i) {
 			double theta = i*M_PI / N_th;
 			double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E);
-			for (int L = 0; L < ArTables->ArAllData_.ArExper_.max_L(k); ++L) {
+			for (unsigned int L = 0; L < ArTables->ArAllData_.ArExper_.max_L(k); ++L) {
 				double prob = ArTables->ArAllData_.argon_scatter_probability_j(E, theta, 2 * L + 1, 2 * L);
 				if (prob < 0) {
 					++N_lz;
@@ -863,8 +863,8 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 
 	{
 		str.open(fname_angle_profiles, std::ios_base::trunc);
-		str << "E[eV]\tXS diff 22.5deg [1e-20m^2]\tXS diff 45deg\tXS diff 90deg\XS diff 112.5deg\tXS diff 135deg"; 
-		str << "\tXS diff Pjl 22.5deg\tXS diff Pjl 45deg\tXS diff Pjl 90deg\XS diff Pjl 112.5deg\tXS diff Pjl 135deg" << std::endl;
+		str << "E[eV]\tXS diff 22.5deg [1e-20m^2]\tXS diff 45deg\tXS diff 90deg\tXS diff 112.5deg\tXS diff 135deg";
+		str << "\tXS diff Pjl 22.5deg\tXS diff Pjl 45deg\tXS diff Pjl 90deg\tXS diff Pjl 112.5deg\tXS diff Pjl 135deg" << std::endl;
 		EnergyScanner eScan(EnergyScanner::PlotResonances);
 		double th0 = 22.5*(M_PI) / 180;
 		double th1 = 45 * (M_PI) / 180;
@@ -909,29 +909,37 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 
 void test_time_delay(ArDataTables *ArTables)
 {
+	double max_delay = 1.05*6*gSettings.PhysConsts()->h_bar_eVs/std::min(gSettings.PhysConsts()->Width_1o2, gSettings.PhysConsts()->Width_3o2);
+	double min_delay = -max_delay;
 	{
-		std::string title0 = std::string("Time delay 11.075-11.125 eV");
-		std::string title1 = std::string("Time delay at 11.075-11.125 eV");
-		std::string title2 = std::string("Tabulated time delay at 11.075-11.125 eV");
+		//11.075-11.125
+		//11.047-11.30
+		double Efr = 11.075, Eto = 11.30;
+		std::stringstream En1, En2;
+		En1.precision(5);
+		En1.precision(5);
+		En1<<Efr;
+		En2<<Eto;
+		std::string title0 = std::string("Time delay ") +En1.str()+"-"+En2.str()+" eV";
+		std::string title1 = std::string("Time delay at ") +En1.str()+"-"+En2.str()+" eV";
+		std::string title2 = std::string("Tabulated time delay at ") +En1.str()+"-"+En2.str()+" eV";
 
-		TCanvas *c1 = new TCanvas(title0.c_str(), title0.c_str(), 900, 700);
+		TCanvas *c1 = new TCanvas(title0.c_str(), title0.c_str(), 1000, 700);
 		c1->SetLogy();
 		TLegend* legend = new TLegend(0.50, 0.75, 0.9, 0.9);
 		//legend->SetHeader("");
 		legend->SetMargin(0.25);
-		TH1D * hist1 = new TH1D(title1.c_str(), title1.c_str(), 600, 0,
-			1.05*4*gSettings.PhysConsts()->h_bar_eVs/std::min(gSettings.PhysConsts()->Width_1o2, gSettings.PhysConsts()->Width_3o2));
-		TH1D * hist2 = new TH1D(title2.c_str(), title2.c_str(), 600, 0,
-			1.05*4* gSettings.PhysConsts()->h_bar_eVs /std::min(gSettings.PhysConsts()->Width_1o2, gSettings.PhysConsts()->Width_3o2));
+		TH1D * hist1 = new TH1D(title1.c_str(), title1.c_str(), 600, min_delay, max_delay);
+		TH1D * hist2 = new TH1D(title2.c_str(), title2.c_str(), 600, min_delay, max_delay);
 		hist2->SetLineColor(kRed);
 		TRandom *random_generator_ = new TRandom1(42);
 		//unsigned long int N0 = 0, Nn0 = 0;
-		for (int h = 0; h < 2000000; ++h) {
-			double Energy = 11.075 + (11.125-11.075)*random_generator_->Uniform();
+		for (unsigned int h = 0; h < 2000000u; ++h) {
+			double Energy = Efr + (Eto-Efr)*random_generator_->Uniform();
 			double theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
 			double delay = ArTables->generate_time_delay_untabulated(Energy, theta, Event::Elastic, random_generator_->Uniform());
 			hist1->Fill(delay);
-			Energy = 11.075 + (11.125-11.075)*random_generator_->Uniform();
+			Energy = Efr + (Eto-Efr)*random_generator_->Uniform();
 			theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
 			delay = ArTables->generate_time_delay(Energy, theta, Event::Elastic, random_generator_->Uniform());
 			hist2->Fill(delay);
@@ -945,6 +953,70 @@ void test_time_delay(ArDataTables *ArTables)
 		hist2->Draw("same");
 		legend->Draw("same");
 	}
+
+	{
+		std::vector<double> Es = {11.093, gSettings.PhysConsts()->En_3o2 - gSettings.PhysConsts()->Width_3o2, gSettings.PhysConsts()->En_3o2, gSettings.PhysConsts()->En_1o2};
+		std::vector<Color_t> colors = {kBlue, kBlack, kRed, kGreen};
+		TLegend* legend = new TLegend(0.50, 0.75, 0.9, 0.9);
+		//legend->SetHeader("");
+		legend->SetMargin(0.25);
+		std::string title0 = std::string("Time delay for different E");
+		TCanvas *c1 = new TCanvas(title0.c_str(), title0.c_str(), 1000, 700);
+		c1->SetLogy();
+		for (std::size_t i=0; i!=Es.size(); ++i) {
+			std::stringstream En;
+			En.precision(6);
+			En<<Es[i];
+			std::string title1 = std::string("Time delay fixed E") + (i==0 ? std::string() : En.str() + " eV");
+			TH1D * hist1 = new TH1D(title1.c_str(), title1.c_str(), 600, min_delay, max_delay);
+			hist1->SetLineColor(colors[i]);
+			TRandom *random_generator_ = new TRandom1(42);
+			//unsigned long int N0 = 0, Nn0 = 0;
+			for (int h = 0; h < 2000000; ++h) {
+				double Energy = Es[i];
+				double theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
+				double delay = ArTables->generate_time_delay(Energy, theta, Event::Elastic, random_generator_->Uniform());
+				hist1->Fill(delay);
+			}
+			std::ostringstream str1;
+			str1 << hist1->GetMean();
+			legend->AddEntry(hist1, (std::string("N = 2000000, ")+En.str()+" eV, Mean = " + str1.str()).c_str(), "l");
+			if (i==0)
+				hist1->Draw();
+			else
+				hist1->Draw("same");
+			std::string fname = "tests/spin_flip-nonflip_prob_and_dt_"+En.str()+"eV.txt";
+			std::ofstream str;
+			str.open(fname, std::ios_base::trunc);
+			str<<"//E[eV] = "<<Es[i]<<std::endl;
+			str<<"//theta\tP_sflip\tT_sflip[s]\tT_snonflip[s]"<<std::endl;
+			for (unsigned int th=0, th_end_=1301; th<th_end_; ++th) {
+				double theta = M_PI*th/(th_end_-1);
+				str<<theta<<"\t"<<1-std::max((*ArTables->time_delay_spin_nonflip_prob_table_)(theta, Es[i]), 0.0)
+				<<"\t"<<(*ArTables->time_delay_spin_flip_table_)(theta, Es[i])
+				<<"\t"<<(*ArTables->time_delay_spin_nonflip_table_)(theta, Es[i])<<std::endl;
+			}
+			str.close();
+			std::string name = "tests/spin_flip-nonflip_prob_and_dt_"+En.str()+"eV.sc";
+			str.open(name, std::ios_base::trunc);
+			str<<"set ytics nomirror"<<std::endl;
+			str<<"set y2tics"<<std::endl;
+			str<<"set xlabel \"theta [rad.]\""<<std::endl;
+			str<<"set y2label \"Probability\""<<std::endl;
+			str<<"set ylabel \"Time [s]\""<<std::endl;
+			str<<"plot \""<<fname<<"\" u 1:3 axis x1y1 title \"T spin flip "<<En.str()<<" eV\""<<std::endl;
+			str<<"replot \""<<fname<<"\" u 1:4 axis x1y1 title \"T spin nonflip "<<En.str()<<" eV\""<<std::endl;
+			str<<"replot \""<<fname<<"\" u 1:2 axis x1y2 title \"P spin flip "<<En.str()<<" eV\""<<std::endl;
+			str<<"replot \""<<fname<<"\" u 1:($2*$3+(1-$2)*$4) axis x1y1 w lines lc rgb \"#000000\" title \"<T> "<<En.str()<<" eV\""<<std::endl;
+			//str<<"replot \""<<fname<<"\" u 1:(1-$2) title \"P spin nonflip "<<En.str()<<" eV\""<<std::endl;
+			str<<"pause -1"<<std::endl;
+			str.close();
+			INVOKE_GNUPLOT(name);
+		}
+		legend->Draw("same");
+	}
+
+
 }
 
 void test_backward_scatter_prob (ArDataTables *ArTables)
@@ -1156,6 +1228,10 @@ void test_total_cross_all (ArDataTables *ArTables)
 
 void test_all (ArDataTables *ArTables)
 {
+	if (! ArTables->isValid()) {
+		std::cerr<<"test_all::Argon data tables are invalid"<<std::endl;
+		return;
+	}
 	/*
 	std::cout<<"Testing polynomial fit:"<<std::endl;
 	test_polynomial_fit ();

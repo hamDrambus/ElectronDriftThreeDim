@@ -94,10 +94,12 @@ bool Settings::Load(std::string fname)
 		phys_const_.a_bohr_SI =		 physics.get<double>("a_bohr_SI"); //in 1e-10 m
 		phys_const_.Ry_eV =			 physics.get<double>("Ry_energy_eV");
 		phys_const_.boltzmann_SI =	 physics.get<double>("boltzmann_SI");
+		phys_const_.light_speed_SI=	 physics.get<double>("light_speed_SI");
 		phys_const_.a_h_bar_2eM_e_SI =
 			phys_const_.a_bohr_SI*1e-10*sqrt(2* phys_const_.e_mass_SI * phys_const_.e_charge_SI)/ phys_const_.h_bar_SI;
 		physics = physics.get_child("Argon");
 		phys_const_.Ar_mass_eV =			 physics.get<double>("Ar_mass_eV");
+		phys_const_.Ar_primal_line_nm =		 physics.get<double>("Ar_primal_line_nm");
 		phys_const_.MERT5_Lmax =			 physics.get<unsigned int>("MERT5_Lmax");
 		phys_const_.MERT5_A =				 physics.get<double>("MERT5_A");
 		phys_const_.MERT5_D =				 physics.get<double>("MERT5_D");
@@ -136,11 +138,22 @@ bool Settings::Load(std::string fname)
 		phys_const_.resonance_En_loss = physics.get_optional<double>("Feshbach_resonance_NBrS_En_loss");
 		
 		ptree params = pt.get_child("Settings.ProgramConstants");
+		prog_const_.is_test_version =	 params.get<bool>("is_test_version", false);
 		prog_const_.thread_number =		 params.get<unsigned int>("thread_number");
 		prog_const_.temperature =		 params.get<double>("temperature");
 		prog_const_.pressure =			 params.get<double>("pressure");
 		prog_const_.angle_discretization = params.get<unsigned int>("angle_discretization");
 		prog_const_.maximal_energy =	 params.get<double>("maximal_energy");
+
+		prog_const_.skip_history_rate = params.get_optional<int>("skip_history_rate");
+		prog_const_.drift_distance_ignore_history = params.get_optional<double>("drift_distance_ignore_history");
+		BOOST_FOREACH(ptree::value_type &w, params.get_child("RecordedValues")) {
+			std::string key = w.first;
+			bool value = params.get<bool>("RecordedValues." + key, false);
+			if (value) {
+				prog_const_.recorded_values[key] = value;
+			}
+		}
 
 		prog_const_.data_folder = params.get<std::string>("data_location", "data");
 		std::string prefix = prog_const_.data_folder +
@@ -168,32 +181,42 @@ bool Settings::Load(std::string fname)
 		prog_const_.tabulated_data_folder = params.get<std::string>("cache_data_folder");
 		prog_const_.tabulated_data_folder = prog_const_.tabulated_data_folder +
 			(prog_const_.tabulated_data_folder.empty() ? "" : ((prog_const_.tabulated_data_folder.back() == '/') ? "" : "/"));
-		prog_const_.is_test_version = params.get<bool>("is_test_version", false);
+		prog_const_.output_fname_pattern = params.get<std::string>("output_file");
 
-		prog_const_.skip_history_rate = params.get_optional<int>("skip_history_rate");
-		prog_const_.drift_distance_ignore_history = params.get_optional<double>("drift_distance_ignore_history");
 		prog_const_.def_drift_distance = params.get<double>("drift_distance");
 		prog_const_.def_n_electrons = params.get<unsigned int>("n_electrons");
-		prog_const_.def_seed = params.get<unsigned int>("random_seed");
+		prog_const_.def_seed = params.get<ULong_t>("random_seed");
 		std::string Ldrift = params.get<std::string>("drift_distance");
 		std::string Ne = params.get<std::string>("n_electrons");
 		std::string seed = params.get<std::string>("random_seed");
 
-		prog_const_.output_fname_pattern = params.get<std::string>("output_file");
+		std::string generator = params.get<std::string>("random_generator");
+		prog_const_.random_generator = ProgramConstants::GeneratorClass::NONE;
+		if (generator=="TRandom1")
+			prog_const_.random_generator = ProgramConstants::GeneratorClass::TRand1;
+		if (generator=="TRandom2")
+			prog_const_.random_generator = ProgramConstants::GeneratorClass::TRand2;
+		if (generator=="TRandom3")
+			prog_const_.random_generator = ProgramConstants::GeneratorClass::TRand3;
+		if (ProgramConstants::GeneratorClass::NONE==prog_const_.random_generator) {
+			BOOST_PROPERTY_TREE_THROW(ptree_bad_data(
+					std::string("conversion of type \"") + typeid(std::string).name() +
+					"\" to ProgramConstants::GeneratorClass data failed", boost::any()));
+		}
 		BOOST_FOREACH(ptree::value_type &w,
 			params.get_child("Runs"))
 		{
 			if (w.first == "Run") {
 				RunParameters run_pars;
 				ptree run_info = w.second;
-				run_pars.drift_distance = run_info.get<double>("drift_distance", prog_const_.def_drift_distance);
-				run_pars.field = run_info.get<double>("Td");
-				run_pars.seed = run_info.get<unsigned int>("random_seed", prog_const_.def_seed);
-				run_pars.n_electrons = run_info.get<unsigned int>("n_electrons", prog_const_.def_n_electrons);
+				run_pars.field =			 run_info.get<double>("Td");
+				run_pars.drift_distance =	 run_info.get<double>("drift_distance", prog_const_.def_drift_distance);
+				run_pars.seed =				 run_info.get<ULong_t>("random_seed", prog_const_.def_seed);
+				run_pars.n_electrons =		 run_info.get<unsigned int>("n_electrons", prog_const_.def_n_electrons);
 				std::string Td_str =	run_info.get<std::string>("Td");
-				std::string L_str =		run_info.get<std::string>("drift_distance", Ldrift);
-				std::string Ne_str =	run_info.get<std::string>("n_electrons", Ne);
-				std::string seed_str =	run_info.get<std::string>("random_seed", seed);
+				std::string L_str =		(prog_const_.def_drift_distance == run_pars.drift_distance ? Ldrift : run_info.get<std::string>("drift_distance"));
+				std::string Ne_str =	(prog_const_.def_n_electrons == run_pars.n_electrons ? Ne : run_info.get<std::string>("n_electrons"));
+				std::string seed_str =	(prog_const_.def_seed == run_pars.seed ? seed : run_info.get<std::string>("random_seed"));
 				std::string Td_key =	"($Td)";
 				std::string L_key =		"($drift_distance)";
 				std::string Ne_key =	"($n_electrons)";
