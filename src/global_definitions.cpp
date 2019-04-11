@@ -47,11 +47,35 @@ void ensure_folder(std::string folder)
 	}
 #else
 	struct stat st;
-	stat(folder.c_str(), &st);
-	if (!S_ISDIR(st.st_mode)) {
-		int code = system(("mkdir -p \"" + folder + "\"").c_str());
-		if (code)
-			std::cout << "mkdir -p error: " << code << std::endl;
+	if (-1==stat(folder.c_str(), &st)) {
+		int err = errno;
+		switch (err) {
+		case (EACCES): {
+			std::cout<<"Access error"<<std::endl;
+			break;
+		}
+		case (ENAMETOOLONG): {
+			std::cout<<"Path is too long"<<std::endl;
+			break;
+		}
+		case (ENOENT) :
+		case (ENOTDIR): {
+			int code = system(("mkdir -p \"" + folder + "\"").c_str());
+			if (code)
+				std::cout << "mkdir -p error: " << code << std::endl;
+			break;
+		}
+		default:{
+			std::cout<<"stat(\""<<folder<<"\") returned -1; errno == "<<err<<std::endl;
+			break;
+		}
+		}
+	} else {
+		if (!S_ISDIR(st.st_mode)) {
+			int code = system(("mkdir -p \"" + folder + "\"").c_str());
+			if (code)
+				std::cout << "mkdir -p error: " << code << std::endl;
+		}
 	}
 #endif //_WIN32__
 }
