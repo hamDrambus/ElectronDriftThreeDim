@@ -2,16 +2,15 @@
 	int DEF_W = 900, DEF_H = 700;
 	double EN_MIN_=0;
 	double EN_MAX_=14;
-	int NN = 600;
-	TH1D* histE_0 = new TH1D ("EnergyC 7.0 Td [eV]","EnergyC 7.0 Td [eV]",NN,EN_MIN_, EN_MAX_);
-	TH1D* histE_1 = new TH1D ("EnergyC 7.0 Td [eV] modified","EnergyC 7.0 Td [eV] modified",NN,EN_MIN_, EN_MAX_);
+	int NN = 800;
+	TH1D* histE_0 = new TH1D ("EnergyC 7.0 Td [eV]","EnergyC 7.0 Td [eV]",NN, EN_MIN_, EN_MAX_);
+	TGraph* graph = new TGraph();
 	histE_0->SetStats(false);
-	histE_1->SetStats(false);
 	//gauss peak
 	double En_artifical_peak = 11.103;
-	double sigma_artifical_peak = 0.005;
-	double rel_area_artifical_peak = 0.05;	
-	
+	double sigma_artifical_peak = 0.05;
+	double rel_area_artifical_peak = 0.10;	
+	std::vector<double> Es, Emods, Vs, Vmods;
 	std::string fname_0("Output/v12.1/eData_7.0Td");
 	std::string out_fname0 ("Output/v12.1/Ec_forms/7.0Td.dat"); //Make sure this folder exists before launching this script!
 	std::string out_fname0_1 ("Output/v12.1/Ec_forms/7.0Td_mod.dat");
@@ -58,14 +57,60 @@
 			double En = histE_0->GetBinCenter(bin);
 			double val = histE_0->GetBinContent(bin)/Norm;
 			histE_0->SetBinContent(bin, val);
-			double extra = amplitude*exp(-0.5*pow( (En - En_artifical_peak)/sigma_artifical_peak , 2));
-			extra = std::max(extra, 0.0);			
-			histE_1->SetBinContent(bin, (val + extra)/Norm2);
-			max_val = std::max(max_val, (double) histE_0->GetBinContent(bin));
-			max_val = std::max(max_val, (double) histE_1->GetBinContent(bin));
+			Es.push_back(En);
+			Vs.push_back(val);
 	    }
+		double En = 0;
+		double Val = 0;
+		int ind = 0;
+		double dE_last = Es[Es.size()-1] - Es[Es.size()-2];
+		if (Es.back()<EN_MAX_) { //ensuring that [ind+1] in the following code is always valid.
+			Es.push_back(EN_MAX_);
+			Vs.push_back(0);
+		}
+		if (Es.back()==EN_MAX_) {
+			Es.push_back(EN_MAX_ + dE_last);
+			Vs.push_back(0);
+		}
+		Val = Vs.front();
+		Es.insert(Es.begin(), En);
+		Vs.insert(Vs.begin(), Val);
+		En = Es.front();
+		while (En< EN_MAX_) {
+			double extra = amplitude*exp(-0.5*pow( (En - En_artifical_peak)/sigma_artifical_peak , 2));
+			extra = std::max(extra, 0.0);		
+			Emods.push_back(En);	
+			Vmods.push_back((Val + extra)/Norm2);
+			//stepping is not trivial, because it is necessary to decrease dE near peak.			
+			bool hist_step = true;			
+			if ((Es[ind+1] > (En_artifical_peak - 3*sigma_artifical_peak)) 
+				&& (En < (En_artifical_peak + 3*sigma_artifical_peak)))	{
+				double dE_p = sigma_artifical_peak/15;
+				double dE_h = Es[ind+1]-En;
+				if (dE_h>dE_p)
+					hist_step = false;
+				En+= (hist_step ? dE_h : dE_p);
+				Val = Vs[ind] + (En - Es[ind])*(Vs[ind+1] - Vs[ind])/(Es[ind+1]-Es[ind]);
+				if (hist_step)
+					++ind; 			
+			} else {
+				En = Es[ind+1];
+				Val = Vs[ind+1];
+				++ind;
+			}
+		}
+		double extra = amplitude*exp(-0.5*pow( (En - En_artifical_peak)/sigma_artifical_peak , 2));
+		extra = std::max(extra, 0.0);
+		Emods.push_back(En);	
+		Vmods.push_back((Val + extra)/Norm2);
+		for (int i = 0, i_end_ = Vmods.size(); i!=i_end_; ++i)
+			max_val = std::max(max_val, Vmods[i]);
+		for (int i = 0, i_end_ = Vs.size(); i!=i_end_; ++i)
+			max_val = std::max(max_val, Vs[i]);
+		
 	}
-	max_val*=1.1;
+
+	max_val*=1.05;
 	gStyle->SetGridStyle(3);
 	gStyle->SetGridColor(14);
 	gStyle->SetGridWidth(1);
@@ -83,28 +128,30 @@
 	histE_0->SetLineColor(kRed);//(kYellow-3);
 	histE_0->Draw("hist cpsame");
 	
-	histE_1->SetLineWidth(2);
-	histE_1->SetLineColor(kBlack);//(kYellow-3);
-	histE_1->Draw("hist cpsame");
+	graph->Set(Vmods.size());
+	for (int i = 0, i_end_ = Vmods.size(); i!=i_end_; ++i)
+		graph->SetPoint(i, Emods[i], Vmods[i]);
+	graph->SetLineWidth(2);
+	graph->SetLineColor(kBlack);//(kYellow-3);
+	graph->Draw("C");
 
-	std::ofstream str0, str1;
+	std::ofstream str0;
 	str0.open(out_fname0, std::ios_base::trunc);
-	str1.open(out_fname0_1, std::ios_base::trunc);
 	str0<<"//\""<<fname_0+".root\" data"<<std::endl;
 	str0<<"//E[eV]\tSpectrum value"<<std::endl;
-	str1<<"//\""<<fname_0+".root\" data"<<std::endl;
-	str1<<"//E[eV]\tModified spectrum value"<<std::endl;
-	for (int bin = 1, bin_end = histE_0->GetNbinsX()+1; bin!=bin_end; ++bin) {
-		double En = histE_0->GetBinCenter(bin);
-		double val0 = histE_0->GetBinContent(bin);
-		double val1 = histE_1->GetBinContent(bin);
-		str0<<En<<"\t"<<val0<<std::endl;
-		str1<<En<<"\t"<<val1<<std::endl;
-	}
+	for (int i = 0, i_end_ = Vs.size(); i!=i_end_; ++i)
+		if (Es[i]<=EN_MAX_)
+			str0<<Es[i]<<"\t"<<Vs[i]<<std::endl;
 	str0.close();
-	str1.close();
+	str0.open(out_fname0_1, std::ios_base::trunc);
+	str0<<"//\""<<fname_0+".root\" data"<<std::endl;
+	str0<<"//E[eV]\tModified spectrum value"<<std::endl;
+	for (int i = 0, i_end_ = Vmods.size(); i!=i_end_; ++i)
+		str0<<Emods[i]<<"\t"<<Vmods[i]<<std::endl;
+	str0.close();
 	frame->Draw("sameaxis");
 	c_->Update();
+
 }
 
 

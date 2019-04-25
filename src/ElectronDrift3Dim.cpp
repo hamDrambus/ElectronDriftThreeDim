@@ -74,7 +74,7 @@ bool Process(void) {
 			pThreads[n]=std::thread(process_runs_in_thread, _submanagers[n]);
 		}
 		for (unsigned int n = 0u; n < N_thread_active; ++n) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			pThreads[n].join();
 			if (0 != n)
 				_submanagers[0]->Merge(_submanagers[n]);
@@ -98,7 +98,7 @@ bool Process(void) {
 		std::cout << "  Elapsed time  = \t" << diff.count() << " s." << std::endl;
 	}
 
-	for (int n = 0; n < N_threads; ++n) {
+	for (unsigned int n = 0u; n < N_threads; ++n) {
 		delete _submanagers[n];
 		delete ar_data[n];
 	}

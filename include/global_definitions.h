@@ -77,6 +77,7 @@ struct RunParameters {
 	ULong_t seed;
 	unsigned int n_electrons;
 	std::string output_file;
+	boost::optional<std::string> Ec_spectrum_file;
 };
 
 struct ProgramConstants {

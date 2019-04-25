@@ -4,12 +4,12 @@
     TH1D* histE = new TH1D ("EnergyC [eV]","EnergyC [eV]",300,0, 15);
     TH1D* hist_dE = new TH1D ("Energy increase in resonance [eV]","Energy increase in resonance [eV]",300,-0.2, 0.2);
     TH1D* hist_dE_abs = new TH1D ("Energy abs increase in resonance [eV]","Energy abs increase in resonance [eV]",300,0.0, 0.2);
-    TH1D* hist_Eloss = new TH1D ("Energy loss in resonance [eV]","Energy loss in resonance [eV]",500,0, 0.003);
+    TH1D* hist_Eloss = new TH1D ("Energy loss in resonance [eV]","Energy loss in resonance [eV]",500,0, 0.002);
     TH1D* hist_dT = new TH1D ("dTime [s]","dTime [s]",1000, 0, 2e-11);
 	TH1D* hist_Tdelay = new TH1D ("Time delay [s]","Time delay [s]",600, 0, 1e-12);
     TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
     TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
-    TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",300,3.75e-7, 6.5e-7);
+    TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",160,3.5e-7, 6.5e-7);
     TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 15);
     TH1D* hist_theta = new TH1D ("Scatter angle near 10 eV","Scatter angle near 10 eV",300, 0, 3.1416);
     //TH1D* hist_Ey = new TH1D ("Ey [eV]", "Ey [eV]",300, 0, 15);
@@ -19,7 +19,7 @@
     double E_at_time = 1e-11;
     double dt = 6e-12;
     double DRIFT_DISTANCE = 3e-3;
-    std::string fname1("Output/v12.6/eData_7.0Td.root");
+    std::string fname1("Output/v12.5/eData_7.0Td.root");
     double En_start;
     double En_collision;
     double En_finish;

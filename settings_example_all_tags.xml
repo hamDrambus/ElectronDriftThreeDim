@@ -95,6 +95,7 @@
     </DataFiles>
     <cache_data_folder>data_derived</cache_data_folder>
     <output_file>Output/v01.t/eData_($Td)Td.root</output_file>
+	<Ec_spectrum_data>Output/v12.1/Ec_forms/($Td)Td.dat</Ec_spectrum_data> <!--OPT. If set, the simulation is run in fixed Ec spectrum mode-->
     
     <drift_distance>3e-3</drift_distance> <!--default value for each run-->
     <n_electrons>0</n_electrons> <!--default value for each run-->

@@ -1,6 +1,6 @@
 {
-	std::vector<std::string> Tds = {"0.3", "1.0", "2.0", "3.0", "4.0", "4.5", "5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.3"};
-	std::string prefix = "Output/v10.2/";
+	std::vector<std::string> Tds = {"5.0", "7.0", "8.0"};
+	std::string prefix = "Output/v12.2/";
 	std::string Vd_data_fname = prefix + "V_drift.txt";
 	std::ofstream str;
 	str.open(Vd_data_fname, std::ios_base::trunc);
