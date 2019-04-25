@@ -21,17 +21,6 @@ void MTManager::ProcessAll(void)
 	}
 }
 
-bool MTManager::setRunIndex(std::size_t index)
-{
-	run_index_ = index;
-	return true;
-}
-
-boost::optional<std::size_t> MTManager::getRunIndex(void) const
-{
-	return run_index_;
-}
-
 bool MTManager::setNelectons(unsigned int Ne)
 {
 	N_electrons_ = Ne;
@@ -45,7 +34,7 @@ boost::optional<unsigned int> MTManager::getNelectons(void) const
 
 bool MTManager::isReady(void) const
 {
-	return Manager::isReady() && boost::none != N_electrons_ && boost::none != run_index_;
+	return Manager::isReady() && boost::none != N_electrons_;
 }
 
 void MTManager::Clear(void)

@@ -10,6 +10,7 @@
 #include <TTree.h>
 
 #include "global_definitions.h"
+#include "Settings.h"
 #include "argon_cross.h"
 
 class Manager
@@ -21,6 +22,7 @@ protected:
 	boost::optional<double> eField_;
 	boost::optional<double> Coefficient_;
 	boost::optional<double> Drift_distance_;
+	boost::optional<std::size_t> run_index_;
 
 	ULong_t e_first_seed_;
 	TTree * sim_data_;
@@ -60,6 +62,8 @@ public:
 	void setParameters(double T /*in K*/, double Pressure /*in SI*/, double E /*in SI*/, double drift_distance /*in m*/);
 	bool setInitialSeed(ULong_t seed);
 	boost::optional<ULong_t> getInitialSeed(void) const;
+	bool setRunIndex(std::size_t index);
+	boost::optional<std::size_t> getRunIndex(void) const;
 	Manager(ArDataTables *Ar_tables);
 	~Manager();
 	void LoopSimulation(void);

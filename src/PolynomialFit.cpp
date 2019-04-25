@@ -444,9 +444,8 @@ double DataVector::calculate(double x)
 
 PDF_routine::PDF_routine(): DataVector(1, 2)
 {
-	set_leftmost(0);
-	set_rightmost(0);
-	//TODO: same for cdf?
+	set_out_value(0);
+	//TODO: same for cdf? left=0, right =1
 }
 
 PDF_routine::PDF_routine(std::vector < double> &pdf_xx, std::vector<double> &pdf_yy)
@@ -475,7 +474,137 @@ bool PDF_routine::pdf_to_cdf(void)
 	return true;
 }
 
-PDF_routine::~PDF_routine();
-void PDF_routine::read(std::ifstream& str);
+PDF_routine::~PDF_routine()
+{}
 
-double PDF_routine::generate(double Rand); //has no internal random engine
+bool PDF_routine::read(std::string& fname)
+{
+	std::ifstream str;
+	str.open(fname);
+	if (!str.is_open() || !str.good()) {
+		std::cout << "PDF_routine::read:: Warning: Could not open file \"" << fname<<"\"" << std::endl;
+		return false;
+	}
+	read(str);
+	if (size() < getNused()) {
+		std::cout << "PDF_routine::read:: Warning: file \"" << fname << "\" contains too little data" << std::endl;
+		return false;
+	}
+	return true;
+}
+
+void PDF_routine::read(std::ifstream& str)
+{
+	clear();
+	std::vector<double> ixx, iyy;//it's better to push whole read array instead of element-wise filling
+	std::string line, word;
+	int line_n = 0;
+	while (!str.eof() && str.is_open()) {
+		std::getline(str, line);
+		++line_n;
+		if (1 == line_n) {
+			//parse "//Order	N_used	use_left use_right is_set_left is_set_right left_value right_value"
+			double dval;
+			int ival;
+			int word_n = 0;
+			if (line.size() < 2)
+				goto wrong_format;
+			if ((line[0] != '/') || (line[1] != '/'))
+				goto wrong_format;
+			line.erase(line.begin(), line.begin() + 2);
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			setOrder(ival);
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			setNused(ival);
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			use_leftmost(ival);
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			use_rightmost(ival);
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			is_set_left = ival;
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			ival = std::stoi(word);
+			is_set_right = ival;
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			dval = std::stoi(word);
+			left_value = dval;
+
+			word = strtoken(line, "\t ");
+			++word_n;
+			if (word.empty())
+				goto wrong_format;
+			dval = std::stoi(word);
+			right_value = dval;
+			continue;
+		wrong_format:
+			//std::cerr << "DataVector::read: Error on line " << line_n << " word " << word_n << ": wrong header format" << std::endl;
+			//return;
+			setOrder(1);
+			setNused(2);
+			use_leftmost(false);
+			use_rightmost(false);
+			set_out_value(0); //out of range value
+		}
+		if (line.size() >= 2) //Ignore simple c style comment
+			if ((line[0] == '/') && (line[1] == '/'))
+				continue;
+		word = strtoken(line, "\t ");
+		if (word.empty())
+			break;
+		double x = std::stod(word);
+		word = strtoken(line, "\t ");
+		if (word.empty())
+			break;
+		double val = std::stod(word);
+		push_back(x, val);
+		ixx.push_back(x);
+		iyy.push_back(val);
+	}
+	initialize(ixx, iyy, 1, 2);
+}
+
+double PDF_routine::generate(double Rand) const //has no internal random engine
+{
+	for (std::size_t i = 0, i_end_ = cdf_ys.size(); i != i_end_; ++i) {
+		if (Rand <= cdf_ys[i]) {
+			if (0 == i)
+				return xs[i];
+			double x0 = xs[i-1], x1 = xs[i];
+			double y0 = cdf_ys[i-1], y1 = cdf_ys[i];
+			return x0 + (x1 - x0)*(Rand - y0) / (y1 - y0);
+		}
+	}
+	return  (xs.size() ? xs.back() : 0);
+}

@@ -76,7 +76,7 @@ Manager::~Manager()
 bool Manager::isReady(void) const
 {
 	return (boost::none != Concentration_ && boost::none != Coefficient_ && boost::none != eField_
-		&& boost::none != initial_seed_ && boost::none!=Drift_distance_ && NULL!=random_generator_);
+		&& boost::none != initial_seed_ && boost::none!=Drift_distance_ && NULL!=random_generator_ && boost::none!= run_index_);
 }
 
 void Manager::InitTree (void)
@@ -219,6 +219,17 @@ boost::optional<ULong_t> Manager::getInitialSeed(void) const
 	return initial_seed_;
 }
 
+bool Manager::setRunIndex(std::size_t index)
+{
+	run_index_ = index;
+	return true;
+}
+
+boost::optional<std::size_t> Manager::getRunIndex(void) const
+{
+	return run_index_;
+}
+
 //Int XS(e)*sqrt(e/(e-Eny))*de
 //'to' is always > 'from'
 long double Manager::XS_integral(long double from, long double to, long double Eny, Event &event)
@@ -298,8 +309,11 @@ void Manager::Initialize(Event &event)
 	}
 	event.CrossSections.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization, 0); //+1 for Elastic
 	event.CrossSectionsSum.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization, 0);
-	event.En_start = 1 + 3*random_generator_->Uniform();
-	//event.En_start = 8;
+	const boost::optional<PDF_routine> *Ec_spec = &(gSettings.ProgConsts()->run_specifics[*run_index_].Ec_spectrum);
+	if (*Ec_spec)
+		event.En_start = (*Ec_spec)->generate(random_generator_->Uniform());
+	else 
+		event.En_start = 1 + 3*random_generator_->Uniform();
 	event.En_collision = 0;
 	event.En_finish = 0;
 	event.pos_start = 0;
@@ -637,15 +651,22 @@ void Manager::PostStepAction(Event &event)
 
 void Manager::DoGotoNext(Event &event)
 {
-	if (Event::None!=event.process) { //== for the very first event
+	if (Event::None != event.process) { //== for the very first event
+		const boost::optional<PDF_routine> *Ec_spec = &(gSettings.ProgConsts()->run_specifics[*run_index_].Ec_spectrum);
+		if (*Ec_spec) {
+			event.En_collision = (*Ec_spec)->generate(random_generator_->Uniform());
+			double Rand = random_generator_->Uniform()*2.0 - 1.0;
+			event.theta_collision = std::acos(Rand); //Actually thete_start is iniform but theta collsion is not (but close)
+		} else {
+			event.En_collision = event.En_finish;
+			event.theta_collision = event.theta_finish;
+		}
 		event.time_start += event.delta_time_full;
-		event.En_start = event.En_finish;
 		event.pos_start = event.pos_finish;
 		event.process = Event::None;
 		event.delta_time = 0;
 		event.delta_x = 0;
 		event.delta_time_full = 0;
-		event.theta_start = event.theta_finish;
 		event.photon_En = 0;
 	}
 	event_ = event;
@@ -656,8 +677,8 @@ void Manager::DoStep(Event &event)
 	if (!isReady())
 		return;
 	DoGotoNext(event);
-	DoStepLength(event);
-	DoScattering(event);
+	DoScattering(event); //I swapped Scattering and StepLength order to be able to fix Ecollision spectrum by using file data
+	DoStepLength(event); //Actually the order is unimportant and only defines the very first electron process
 	PostStepAction(event);
 }
 

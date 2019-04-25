@@ -87,6 +87,7 @@ protected:
 
 //TODO: create common parent for PDF_routine and DataVector
 //does not support indefinite domain.
+//!TODO: use boost or some libraries like normal ppl.
 class PDF_routine : public DataVector { //Probability Density Function routine - load not normalized distribution from file,
 	// construct cumulative DF and use it to generate values.
 	//TODO: calling of set/getOrder set/getNused is forbidden. PDF is fixed for order =1, but in can be generalized at the cost of performance.
@@ -98,6 +99,7 @@ public:
 	PDF_routine(std::vector < double> &pdf_xx, std::vector<double> &pdf_yy);
 	virtual ~PDF_routine();
 	virtual void read(std::ifstream& str);
+	virtual bool read(std::string& fname);
 	//std::vector<double> cdf_xs; == DataVector::xs
 	std::vector<double> cdf_ys;
 	double generate(double Rand) const; //has no internal random engine

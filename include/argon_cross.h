@@ -8,6 +8,7 @@
 #include "global_definitions.h"
 #include "PolynomialFit.h"
 #include "FunctionTable.h"
+#include "Settings.h"
 #include "LegendrePolynomials.h"
 #include "ColoredInterval.h"
 
