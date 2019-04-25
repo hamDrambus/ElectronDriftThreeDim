@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include <TRandom3.h>
+#include <TRandom2.h>
 #include <TRandom1.h>
 #include <TFile.h>
 #include <TTree.h>
@@ -15,13 +16,13 @@ class Manager
 {
 protected:
 	TRandom * random_generator_;
-	boost::optional<unsigned int> initial_seed_;
+	boost::optional<ULong_t> initial_seed_;
 	boost::optional<double> Concentration_;
 	boost::optional<double> eField_;
 	boost::optional<double> Coefficient_;
 	boost::optional<double> Drift_distance_;
 
-	unsigned int e_first_seed_;
+	ULong_t e_first_seed_;
 	TTree * sim_data_;
 	TTree * processes_data_;
 	Long64_t *processes_counters_;
@@ -57,8 +58,8 @@ public:
 	bool IsFinished(Event &event);
 	void setParameters(double Concetr /*in SI*/, double E /*in SI*/, double drift_distance /*in m*/);
 	void setParameters(double T /*in K*/, double Pressure /*in SI*/, double E /*in SI*/, double drift_distance /*in m*/);
-	bool setInitialSeed(unsigned int seed);
-	boost::optional<unsigned int> getInitialSeed(void) const;
+	bool setInitialSeed(ULong_t seed);
+	boost::optional<ULong_t> getInitialSeed(void) const;
 	Manager(ArDataTables *Ar_tables);
 	~Manager();
 	void LoopSimulation(void);

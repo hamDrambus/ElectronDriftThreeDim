@@ -47,7 +47,7 @@ protected:
 public:
 	DataVector(Int_t fit_order = 1, Int_t N_used = 2);
 	DataVector(std::vector < double> &xx, std::vector<double> &yy, Int_t fit_order, Int_t N_used);
-	~DataVector();
+	virtual ~DataVector();
 
 	void initialize(std::vector < double> &xx, std::vector<double> &yy,  Int_t fit_order, Int_t N_used);
 	void setOrder(Int_t ord);
@@ -77,12 +77,30 @@ public:
 	double getY(std::size_t n);
 
 	//save/load full state except cache from file
-	void read(std::ifstream& str);
+	virtual void read(std::ifstream& str);
 	void write(std::string fname, std::string comment = "");
 	void write(std::ofstream& str, std::string comment="");
 protected:
 	void get_indices(double point, int &n_min, int &n_max); //[n_min, n_max] are used, not [n_min,n_max). N_used==n_max-n_min+1>=order+1
 	double calculate(double x);
+};
+
+//TODO: create common parent for PDF_routine and DataVector
+//does not support indefinite domain.
+class PDF_routine : public DataVector { //Probability Density Function routine - load not normalized distribution from file,
+	// construct cumulative DF and use it to generate values.
+	//TODO: calling of set/getOrder set/getNused is forbidden. PDF is fixed for order =1, but in can be generalized at the cost of performance.
+	//TODO: use 3rd party code? CERN's ROOT or GSL has relevant methods.
+protected:
+	bool pdf_to_cdf(void);
+public:
+	PDF_routine();
+	PDF_routine(std::vector < double> &pdf_xx, std::vector<double> &pdf_yy);
+	virtual ~PDF_routine();
+	virtual void read(std::ifstream& str);
+	//std::vector<double> cdf_xs; == DataVector::xs
+	std::vector<double> cdf_ys;
+	double generate(double Rand) const; //has no internal random engine
 };
 
 #endif

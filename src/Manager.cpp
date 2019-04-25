@@ -3,7 +3,23 @@
 Manager::Manager(ArDataTables *Ar_tables) : 
 	skip_counter_(0), ArTables_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0), sim_data_(NULL)
 {
-	random_generator_ = new TRandom1(); //TRandom3 is a default. TRandom1 is slower but better
+	switch (gSettings.ProgConsts()->random_generator) {
+	case (ProgramConstants::GeneratorClass::TRand1): {
+		random_generator_ = new TRandom1();
+		break;
+	}
+	case (ProgramConstants::GeneratorClass::TRand2): {
+		random_generator_ = new TRandom2();
+		break;
+	}
+	case (ProgramConstants::GeneratorClass::TRand3): {
+		random_generator_ = new TRandom3();
+		break;
+	}
+	default: {
+		random_generator_ = NULL;
+	}
+	}
 	processes_size_ = ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization - Event::Overflow; //3 = elastic + None + Overthrow
 	processes_counters_ = new Long64_t [processes_size_];
 	processes_IDs_ = new Short_t [processes_size_];
@@ -49,7 +65,8 @@ Manager::~Manager()
 		delete [] processes_legends_[i];
 	}
 	delete [] processes_legends_;
-	random_generator_->Delete();
+	if (random_generator_)
+		random_generator_->Delete();
 	if (sim_data_)
 		sim_data_->Delete();
 	if (processes_data_)
@@ -59,46 +76,65 @@ Manager::~Manager()
 bool Manager::isReady(void) const
 {
 	return (boost::none != Concentration_ && boost::none != Coefficient_ && boost::none != eField_
-		&& boost::none != initial_seed_ && boost::none!=Drift_distance_);
+		&& boost::none != initial_seed_ && boost::none!=Drift_distance_ && NULL!=random_generator_);
 }
 
 void Manager::InitTree (void)
 {
 	if (NULL== sim_data_)
 		sim_data_ = new TTree("ElectronHistory", "ElectronHistory");
-	sim_data_->Branch("process_type", &event_.process);
+	const ProgramConstants *sets = gSettings.ProgConsts();
 
-	sim_data_->Branch("time_initial", &event_.time_start);
-	sim_data_->Branch("time_delta", &event_.delta_time);
-	sim_data_->Branch("time_delta_full", &event_.delta_time_full);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("process_type"))//only true values are stored
+		sim_data_->Branch("process_type", &event_.process);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("time_initial"))
+		sim_data_->Branch("time_initial", &event_.time_start);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("time_delta"))
+		sim_data_->Branch("time_delta", &event_.delta_time);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("time_delta_full"))
+		sim_data_->Branch("time_delta_full", &event_.delta_time_full);
 
-	bool detailed = (boost::none==gSettings.ProgConsts()->skip_history_rate);
-	if (!detailed)
-		detailed = (0 == *gSettings.ProgConsts()->skip_history_rate);
-
-	if (detailed) { //for spectra
+	if (sets->recorded_values.end()!=sets->recorded_values.find("energy_initial"))
 		sim_data_->Branch("energy_initial", &event_.En_start);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("energy_collision"))
 		sim_data_->Branch("energy_coll", &event_.En_collision);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("energy_final"))
 		sim_data_->Branch("energy_final", &event_.En_finish);
-		//sim_data_->Branch("energy_average", &event_.En_avr);
-	} else { //for V drift
+	if (sets->recorded_values.end()!=sets->recorded_values.find("energy_average"))
+		sim_data_->Branch("energy_average", &event_.En_avr);
+
+	if (sets->recorded_values.end()!=sets->recorded_values.find("position_initial"))
+		sim_data_->Branch("position_initial",&event_.pos_start);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("position_delta"))
+		sim_data_->Branch("position_delta",&event_.delta_x);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("position_final"))
 		sim_data_->Branch("position_final",&event_.pos_finish);
-		//sim_data_->Branch("position_initial",&event_.pos_start);
-		//sim_data_->Branch("position_delta",&event_.delta_x);
-	}
-	//sim_data_->Branch("theta_initial", &event_.theta_start);
-	//sim_data_->Branch("theta_coll", &event_.theta_collision);
-	//sim_data_->Branch("theta_final", &event_.theta_finish);
-	//sim_data_->Branch("theta_delta", &event_.delta_theta);
-	sim_data_->Branch("path_delta", &event_.delta_l);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("path_delta"))
+		sim_data_->Branch("path_delta", &event_.delta_l);
 
-	sim_data_->Branch("photon_energy", &event_.photon_En);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("theta_initial"))
+		sim_data_->Branch("theta_initial", &event_.theta_start);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("theta_collision"))
+		sim_data_->Branch("theta_coll", &event_.theta_collision);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("theta_delta"))
+		sim_data_->Branch("theta_delta", &event_.delta_theta);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("theta_final"))
+		sim_data_->Branch("theta_final", &event_.theta_finish);
 
-	/*sim_data_->Branch("deb_log_rand",&event_.deb_log_rand);
-	sim_data_->Branch("deb_solver_y_left",&event_.deb_solver_y_left);
-	sim_data_->Branch("deb_solver_y_right",&event_.deb_solver_y_right);
-	sim_data_->Branch("deb_solver_E_left",&event_.deb_solver_E_left);
-	sim_data_->Branch("deb_solver_E_right",&event_.deb_solver_E_right);*/
+	if (sets->recorded_values.end()!=sets->recorded_values.find("photon_energy"))
+		sim_data_->Branch("photon_energy", &event_.photon_En);
+
+	if (sets->recorded_values.end()!=sets->recorded_values.find("deb_log_rand"))
+		sim_data_->Branch("deb_log_rand",&event_.deb_log_rand);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("deb_solver_y_left"))
+		sim_data_->Branch("deb_solver_y_left",&event_.deb_solver_y_left);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("deb_solver_y_right"))
+		sim_data_->Branch("deb_solver_y_right",&event_.deb_solver_y_right);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("deb_solver_E_left"))
+		sim_data_->Branch("deb_solver_E_left",&event_.deb_solver_E_left);
+	if (sets->recorded_values.end()!=sets->recorded_values.find("deb_solver_E_right"))
+		sim_data_->Branch("deb_solver_E_right",&event_.deb_solver_E_right);
+
 	processes_data_ = new TTree("ElectronProcessCounters", "ElectronProcessCounters");
 	processes_data_->Branch("proc_size", &processes_size_, "proc_size/i");
 	processes_data_->Branch("proc_IDs", processes_IDs_, "proc_IDs[proc_size]/S");
@@ -151,14 +187,34 @@ void Manager::setParameters(double T /*in K*/, double Pressure /*in SI*/, double
 	setParameters(Pressure / (T*gSettings.PhysConsts()->boltzmann_SI), E, drift_distance);
 }
 
-bool Manager::setInitialSeed(unsigned int seed)
+bool Manager::setInitialSeed(ULong_t seed)
 {
 	initial_seed_ = seed;
-	random_generator_->SetSeed(*initial_seed_);
+	switch (gSettings.ProgConsts()->random_generator) {
+	case (ProgramConstants::GeneratorClass::TRand1): {
+		UInt_t seedlist[2]={*initial_seed_,0}; //looked into TRandom1.cxx source code.
+		//Simple SetSeed ===SetSeed2 set TRandom1 to fixed state, but this state is not defined by GetSeed().
+		//in short GetSeed()===F(SetSeed()) which is defined, but its impossible to reproduce TRandom1 using
+		((TRandom1 *)random_generator_)->SetSeeds(seedlist);
+		//->SetSeed2(*initial_seed_);
+		break;
+	}
+	case (ProgramConstants::GeneratorClass::TRand2): {
+		random_generator_->SetSeed(*initial_seed_);
+		break;
+	}
+	case (ProgramConstants::GeneratorClass::TRand3): {
+		random_generator_->SetSeed(*initial_seed_);
+		break;
+	}
+	default: {
+		return false;
+	}
+	}
 	return true;
 }
 
-boost::optional<unsigned int> Manager::getInitialSeed(void) const
+boost::optional<ULong_t> Manager::getInitialSeed(void) const
 {
 	return initial_seed_;
 }
@@ -168,7 +224,6 @@ boost::optional<unsigned int> Manager::getInitialSeed(void) const
 long double Manager::XS_integral(long double from, long double to, long double Eny, Event &event)
 {
 	double E = from, E_prev = from;
-	long double dx;
 	long double Int = 0;
 	if ((from-Eny)/from<1e-6) {//irregularity case
 		E = 1e-6*from + Eny;
@@ -202,7 +257,6 @@ long double Manager::XS_integral_table(long double from, long double to, long do
 long double Manager::XS_integral_for_test(long double from, long double to, long double Eny, long double dE)
 {
 	double E = from, E_prev = from;
-	long double dx;
 	long double Int = 0;
 	if ((from - Eny) / from<1e-6) {//irregularity case
 		E = std::min(1e-6*from + Eny, to);
@@ -340,7 +394,6 @@ void Manager::Solve_table (long double LnR, Event &event)
 {
 	event.deb_log_rand = LnR;
 	long double Eny = event.En_start*sin(event.theta_start)*sin(event.theta_start);
-	long double e_start = event.En_start;
 	short case_ = 0; //0 - normal Vx_start>0, 1 - Vx_start<0, no sign change, 2 - Vx_start<0, sign is changed
 	double INT = XS_integral_table(Eny, event.En_start, Eny, event);
 	if (event.theta_start>M_PI/2) {
@@ -496,7 +549,7 @@ void Manager::DoScattering(Event &event)
 		}
 
 	double R3 = random_generator_->Uniform();
-	event.delta_theta = ArTables_->generate_theta (event.En_collision, event.process, R2);
+	event.delta_theta = ArTables_->generate_theta (event.En_collision, event.process, R3);
 	double phi = random_generator_->Uniform()*2.0*M_PI;
 	double cos_th_f = std::cos(event.delta_theta)*std::cos(event.theta_collision) + std::sin(event.delta_theta)*std::sin(event.theta_collision)*std::cos(phi);
 	if (cos_th_f<-1.0) //just in case of precision problems
@@ -509,12 +562,11 @@ void Manager::DoScattering(Event &event)
 	double time_delay = 0;
 	switch (event.process) {
 		case (Event::Elastic): {
-#ifdef RESONANCE_EN_LOSS_
 			double width_factor = std::pow(Width_3o2_/2.0, 2)/(std::pow(Width_3o2_/2.0, 2) + std::pow((event.En_collision-En_3o2_)/2.0, 2));
 			width_factor += std::pow(Width_1o2_/2.0, 2)/(std::pow(Width_1o2_/2.0, 2) + std::pow((event.En_collision-En_1o2_)/2.0, 2));
-			width_factor *= 0.5*RESONANCE_EN_LOSS_;
+			width_factor *= 0.5**gSettings.PhysConsts()->resonance_En_loss;
 			EnergyLoss+=width_factor;
-#endif
+
 			double R5 = random_generator_->Uniform();
 			time_delay = ArTables_->generate_time_delay(event.En_collision, event.delta_theta, event.process, R5);
 			break;
@@ -537,6 +589,7 @@ void Manager::DoScattering(Event &event)
 			InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(event.process-Event::Ionization);
 			if (NULL!=p)
 				EnergyLoss = (event.En_collision > 0) ? p->get_En_thresh() : -p->get_En_thresh();
+			event.photon_En = 2*M_PI*gSettings.PhysConsts()->h_bar_eVs*gSettings.PhysConsts()->light_speed_SI/(1e-9*gSettings.PhysConsts()->Ar_primal_line_nm);
 		}
 	}
 	event.En_finish = event.En_collision - EnergyLoss;

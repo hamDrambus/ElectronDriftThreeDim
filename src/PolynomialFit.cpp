@@ -442,3 +442,40 @@ double DataVector::calculate(double x)
 	return out_;
 }
 
+PDF_routine::PDF_routine(): DataVector(1, 2)
+{
+	set_leftmost(0);
+	set_rightmost(0);
+	//TODO: same for cdf?
+}
+
+PDF_routine::PDF_routine(std::vector < double> &pdf_xx, std::vector<double> &pdf_yy)
+{
+	initialize(pdf_xx, pdf_yy, 1, 2);
+	pdf_to_cdf();
+}
+
+bool PDF_routine::pdf_to_cdf(void)
+{
+	cdf_ys.resize(xs.size());
+	double X_prev = xs.front();
+	double Y_prev = 0;
+	for (long int i = 0, i_end_ = cdf_ys.size(); i != i_end_; ++i) {
+		double X = xs[i];
+		double Y = ys[i];
+		cdf_ys[i] = 0;
+		if (i != 0) {
+			cdf_ys[i] = cdf_ys[i-1] + 0.5*(Y + Y_prev)*(X - X_prev);//Integral
+		}
+		X_prev = X;
+		Y_prev = Y;
+	}
+	for (long int i = 0, i_end_ = cdf_ys.size(); i != i_end_; ++i)
+		cdf_ys[i] /= cdf_ys[i_end_ - 1];//normalize probability function
+	return true;
+}
+
+PDF_routine::~PDF_routine();
+void PDF_routine::read(std::ifstream& str);
+
+double PDF_routine::generate(double Rand); //has no internal random engine

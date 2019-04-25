@@ -23,6 +23,7 @@
 #endif
 #include <math.h>
 #include <ctgmath>
+#include <Rtypes.h>
 
 //All energies in the program are in eV.
 struct PhysicalConstants {
@@ -34,9 +35,12 @@ struct PhysicalConstants {
 	long double a_bohr_SI; //in meters (SI) multiplied by e10 for XS to be in 1e-20 m2
 	long double Ry_eV; //Rydberg constant
 	long double boltzmann_SI; //SI
-	double Ar_mass_eV; //eV
 	//TODO: calculate after loading other constants; Calculated only once in order to increase the performance (the effect is not tested)
 	long double a_h_bar_2eM_e_SI; //in SI a_bohr*sqrt(2*Me*e)/h_bar
+	long double light_speed_SI;
+
+	double Ar_mass_eV;
+	double Ar_primal_line_nm;
 
 	unsigned int MERT5_Lmax;
 	double MERT5_A;
@@ -71,9 +75,10 @@ struct PhysicalConstants {
 struct RunParameters {
 	double field; //in Td
 	double drift_distance; //in m
-	unsigned int seed;
+	ULong_t seed;
 	unsigned int n_electrons;
 	std::string output_file;
+	boost::optional<std::string> Ec_spectrum_file;
 };
 
 struct ProgramConstants {
@@ -97,7 +102,10 @@ struct ProgramConstants {
 	
 	double def_drift_distance;
 	unsigned int def_n_electrons;
-	unsigned int def_seed;
+	ULong_t def_seed;
+	enum GeneratorClass : short {NONE =0, TRand1 = 1, TRand2 = 2, TRand3 = 3} random_generator;
+
+	std::map<std::string, bool> recorded_values;
 
 	std::vector<RunParameters> run_specifics;
 };
