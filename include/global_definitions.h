@@ -15,6 +15,7 @@
 #define NOMINMAX
 #include "Windows4Root.h"
 #include <direct.h>
+#include <kbd.h>
 #else
 #include <dirent.h>
 #include <errno.h>
