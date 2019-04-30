@@ -57,7 +57,6 @@ struct Event
 	double time_start;
 	double delta_time;
 	double delta_time_full; //with scattering (Wigner) time delay
-	double delta_time_delay; //only scattering (Wigner) time delay
 
 	double photon_En;
 

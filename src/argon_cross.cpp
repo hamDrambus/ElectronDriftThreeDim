@@ -1670,12 +1670,25 @@ double ArDataTables::generate_time_delay(double E, double theta, short type, dou
 	if (Event::Elastic != type) {
 		return 0;
 	}
-	double P = (*time_delay_spin_nonflip_prob_table_)(theta, E);
-	P = std::max(P, 0.0);
-	if (Rand < P) {
-		return (*time_delay_spin_nonflip_table_)(theta, E);
-	} else {
-		return (*time_delay_spin_flip_table_)(theta, E);
+	switch (gSettings.PhysConsts()->time_delay_model) {
+	case (PhysicalConstants::TimeDelayMode::Precise) : {
+		double P = (*time_delay_spin_nonflip_prob_table_)(theta, E);
+		P = std::max(P, 0.0);
+		if (Rand < P) {
+			return (*time_delay_spin_nonflip_table_)(theta, E);
+		} else {
+			return (*time_delay_spin_flip_table_)(theta, E);
+		}
+		return 0;
+	}
+	case (PhysicalConstants::TimeDelayMode::Rough) : {
+		double tau = ArAllData_.argon_time_delay_j(E, 3, 2);
+		tau += ArAllData_.argon_time_delay_j(E, 1, 2);
+		return tau;
+	}
+	case (PhysicalConstants::TimeDelayMode::None) : {
+		return 0;
+	}
 	}
 	return 0;
 }
@@ -1685,11 +1698,24 @@ double ArDataTables::generate_time_delay_untabulated(double E, double theta, sho
 	if (Event::Elastic != type) {
 		return 0;
 	}
-	double P = ArAllData_.argon_delay_spin_nonflip_prob(E, theta);
-	if (Rand < P) {
-		return ArAllData_.argon_delay_spin_nonflip(E, theta);
-	} else {
-		return ArAllData_.argon_delay_spin_flip(E, theta);
+	switch (gSettings.PhysConsts()->time_delay_model) {
+	case (PhysicalConstants::TimeDelayMode::Precise) : {
+		double P = ArAllData_.argon_delay_spin_nonflip_prob(E, theta);
+		if (Rand < P) {
+			return ArAllData_.argon_delay_spin_nonflip(E, theta);
+		} else {
+			return ArAllData_.argon_delay_spin_flip(E, theta);
+		}
+		return 0;
+	}
+	case (PhysicalConstants::TimeDelayMode::Rough) : {
+		double tau = ArAllData_.argon_time_delay_j(E, 3, 2);
+		tau += ArAllData_.argon_time_delay_j(E, 1, 2);
+		return tau;
+	}
+	case (PhysicalConstants::TimeDelayMode::None) : {
+		return 0;
+	}
 	}
 	return 0;
 }

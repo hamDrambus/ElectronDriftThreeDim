@@ -304,17 +304,19 @@ void Manager::Initialize(void)
 void Manager::Initialize(Event &event)
 {
 	if (!isReady()) {
-		std::cout << "Manager::Initialize: some of the parameters are not initiaized, exiting" << std::endl;
+		std::cout << "Manager::Initialize: some of the parameters are not initialized, exiting" << std::endl;
 		return;
 	}
 	event.CrossSections.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization, 0); //+1 for Elastic
 	event.CrossSectionsSum.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization, 0);
 	const boost::optional<PDF_routine> *Ec_spec = &(gSettings.ProgConsts()->run_specifics[*run_index_].Ec_spectrum);
-	if (*Ec_spec)
-		event.En_start = (*Ec_spec)->generate(random_generator_->Uniform());
-	else 
+	if (*Ec_spec) {
+		event.En_collision = (*Ec_spec)->generate(random_generator_->Uniform());
+		event.En_start= 0;
+	} else {
 		event.En_start = 1 + 3*random_generator_->Uniform();
-	event.En_collision = 0;
+		event.En_collision = 0;
+	}
 	event.En_finish = 0;
 	event.pos_start = 0;
 	event.pos_finish = 0;
@@ -516,29 +518,44 @@ long double Manager::Path_integral (long double x, long double cos_th)
 	return out;
 }
 
-void Manager::DoStepLength(Event &event)
+void Manager::DoStepLength(Event &event) //In case Ec spectrum is fixed, stepping is done reversed in time
 {
 	if (!isReady())
 		return;
-
+	bool reverse_mode = (event.En_collision!=0);
+	Event step_pars = event;
+	if (reverse_mode) {
+		step_pars.theta_start = M_PI - event.theta_collision;
+		step_pars.En_start = event.En_collision;
+	}
 	long double L = - log(random_generator_->Uniform());
 	L *= *Coefficient_; //Calculated once for fixed parameters;
 	//solving L = XS_integral(Ei, Ec) for Ec===E collision.
-	Solve_table(L, event);
+	Solve_table(L, step_pars);
 
-	//Energy is in eV
+	if (reverse_mode) {
+		event.En_start = step_pars.En_collision;
+		event.theta_start = M_PI - step_pars.theta_collision;
+	} else {
+		event.En_collision = step_pars.En_collision;
+		event.theta_collision = step_pars.theta_collision;
+	}
 	double eom = gSettings.PhysConsts()->e_charge_SI / gSettings.PhysConsts()->e_mass_SI;
 	long double vel_0 = sqrt(2.0*eom*event.En_start)*cos(event.theta_start);
 	long double vel_1 = sqrt(2.0*eom*event.En_collision)*cos(event.theta_collision);
 	event.delta_time = (vel_1 - vel_0) / (eom * *eField_); //in s
 	event.delta_x = (event.En_collision - event.En_start) / *eField_;
+	if (reverse_mode) {
+		event.delta_x *= -1;
+		event.delta_time *= 1;
+	}
 	event.pos_finish = event.pos_start + event.delta_x;
 	event.En_avr = event.En_start + *eField_*vel_0*event.delta_time / 4.0 + eom*std::pow(*eField_*event.delta_time, 2) / 6.0;
 	//Total path in meters:
 	//calculated as Int{sqrt((dy/dt)^2 + (dx/dt)^2 ) dt} from 0 to delta_time
 	long double up_limit = event.delta_time**eField_*sqrt(eom/(2*event.En_start));
 	event.delta_l = Path_integral(up_limit, event.theta_start) - Path_integral(0, event.theta_start);
-	event.delta_l*=2*event.En_start/ *eField_;
+	event.delta_l*=2*step_pars.En_start/ *eField_;
 	event_ = event;
 }
 
@@ -656,10 +673,12 @@ void Manager::DoGotoNext(Event &event)
 		if (*Ec_spec) {
 			event.En_collision = (*Ec_spec)->generate(random_generator_->Uniform());
 			double Rand = random_generator_->Uniform()*2.0 - 1.0;
-			event.theta_collision = std::acos(Rand); //Actually thete_start is iniform but theta collsion is not (but close)
+			event.theta_collision = std::acos(Rand); //Actually thete_start is uniform but theta collision is not (but close)
+			event.En_start = 0;
 		} else {
-			event.En_collision = event.En_finish;
-			event.theta_collision = event.theta_finish;
+			event.En_start = event.En_finish;
+			event.theta_start = event.theta_finish;
+			event.En_collision = 0;
 		}
 		event.time_start += event.delta_time_full;
 		event.pos_start = event.pos_finish;
@@ -677,8 +696,8 @@ void Manager::DoStep(Event &event)
 	if (!isReady())
 		return;
 	DoGotoNext(event);
-	DoScattering(event); //I swapped Scattering and StepLength order to be able to fix Ecollision spectrum by using file data
-	DoStepLength(event); //Actually the order is unimportant and only defines the very first electron process
+	DoStepLength(event); //In case Ec spectrum is fixed, stepping is done reversed in time
+	DoScattering(event);
 	PostStepAction(event);
 }
 

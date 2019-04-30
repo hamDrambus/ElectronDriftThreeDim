@@ -36,6 +36,7 @@
       <elastic_XS_Ramsauer_minimum_En>0.3286</elastic_XS_Ramsauer_minimum_En> <!--OPT if no Ramsauer minimum is false or not specified-->
       <elastic_XS_at_0_En>7.491</elastic_XS_at_0_En>
       <scattering_angle_model>0</scattering_angle_model> <!--OPT, 0 - normal, 1 - uniform-->
+      <time_delay_model>Rough</time_delay_model> <!--OPT, Precise - default - using dt = d/dE Im arg(f), Rough - using d/dE phaseshift, None - no time delay -->
 
       <Feshbach_resonance_3o2_En>11.103</Feshbach_resonance_3o2_En>
       <Feshbach_resonance_1o2_En>11.270</Feshbach_resonance_1o2_En>
@@ -98,8 +99,8 @@
     <output_file>Output/v01.t/eData_($Td)Td.root</output_file>
 	<Ec_spectrum_data>Output/v12.1/Ec_forms/($Td)Td.dat</Ec_spectrum_data> <!--OPT. If set, the simulation is run in fixed Ec spectrum mode.-->
     
-    <drift_distance>3e-3</drift_distance> <!--default value for each run-->
-    <n_electrons>0</n_electrons> <!--default value for each run-->
+    <drift_distance>1e-4</drift_distance> <!--default value for each run-->
+    <n_electrons>1</n_electrons> <!--default value for each run-->
     <random_seed>42</random_seed> <!--default value for each run-->
     <random_generator>TRandom1</random_generator> <!-- TRandom1 (best, slowest), TRandom2 (BAD), TRandom3 (faster, good) -->   
     <Runs>

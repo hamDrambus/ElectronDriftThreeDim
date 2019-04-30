@@ -154,7 +154,7 @@ public:
 	double generate_theta (double E, short type, double Rand); //tabulated
 	double generate_time_delay(double E, double theta, short type, double Rand);
 	double generate_time_delay_untabulated (double E, double theta, short type, double Rand);
-	double generate_ResNBrS_En_loss(double E, double theta, double Rand);
+	double generate_ResNBrS_En_loss(double E, double theta, double Rand); //TODO: Not implemented, tested or used yet!!!
 	
 	void setOrder(int order);
 	void setNused(int N);

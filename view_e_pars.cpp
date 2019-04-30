@@ -1,17 +1,22 @@
 {
     gStyle->SetStatY(0.9);
     gStyle->SetStatX(0.9);
-    TH1D* histE = new TH1D ("EnergyC [eV]","EnergyC [eV]",300,0, 15);
+    TH1D* histEc = new TH1D ("EnergyC [eV]","EnergyC [eV]",300,0, 14);
+	TH1D* histEi = new TH1D ("EnergyInit [eV]","EnergyInit [eV]",300,0, 14);
+	TH1D* histEf = new TH1D ("EnergyFin [eV]","EnergyFin [eV]",300,0, 14);
     TH1D* hist_dE = new TH1D ("Energy increase in resonance [eV]","Energy increase in resonance [eV]",300,-0.2, 0.2);
     TH1D* hist_dE_abs = new TH1D ("Energy abs increase in resonance [eV]","Energy abs increase in resonance [eV]",300,0.0, 0.2);
     TH1D* hist_Eloss = new TH1D ("Energy loss in resonance [eV]","Energy loss in resonance [eV]",500,0, 0.002);
-    TH1D* hist_dT = new TH1D ("dTime [s]","dTime [s]",1000, 0, 2e-11);
-	TH1D* hist_Tdelay = new TH1D ("Time delay [s]","Time delay [s]",600, 0, 1e-12);
+    TH1D* hist_dT = new TH1D ("dTime [s]","dTime [s]",1000, -1e-12, 2e-11);
+	TH1D* hist_Tdelay = new TH1D ("Time delay [s]","Time delay [s]",600, -1e-12, 1e-12);
     TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
     TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
-    TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",160,3.5e-7, 6.5e-7);
+    TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",120, 4.0e-7, 8.5e-7);
     TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 15);
     TH1D* hist_theta = new TH1D ("Scatter angle near 10 eV","Scatter angle near 10 eV",300, 0, 3.1416);
+	TH1D* hist_theta_i = new TH1D ("Initial angle distribution","Initial angle distribution",300, 0, 3.1416);
+	TH1D* hist_theta_c = new TH1D ("Collision angle distribution","Collision angle distribution",300, 0, 3.1416);
+	TH1D* hist_theta_f = new TH1D ("Final angle distribution","Final angle distribution",300, 0, 3.1416);
     //TH1D* hist_Ey = new TH1D ("Ey [eV]", "Ey [eV]",300, 0, 15);
     //TH2D* hist_E_Ey = new TH2D ("E Ey","E Ey",300, 0, 5, 300, 0, 5);
     
@@ -19,7 +24,7 @@
     double E_at_time = 1e-11;
     double dt = 6e-12;
     double DRIFT_DISTANCE = 3e-3;
-    std::string fname1("Output/v12.5/eData_7.0Td.root");
+    std::string fname1("Output/v13.4/eData_7.0Td.root");
     double En_start;
     double En_collision;
     double En_finish;
@@ -74,13 +79,18 @@
             unsigned long int _end_ = tree->GetEntries();
             for (unsigned long int i=0;i!=_end_;++i){
                 tree->GetEntry(i);
-                histE->Fill(En_collision);
+                histEc->Fill(En_collision);
+				histEi->Fill(En_start);
+				histEf->Fill(En_finish);
                 hist_dT->Fill(delta_time);
 				double delay = delta_time_full-delta_time;
-				if (delay>0)
+				if (delay!=0)
 					hist_Tdelay->Fill(delay);
                 hist_dl->Fill(delta_l);
                 histEAvr->Fill(En_collision, delta_time);
+				hist_theta_i->Fill(theta_start);
+				hist_theta_c->Fill(theta_collision);
+				hist_theta_f->Fill(theta_finish);
                 //histEy->Fill(En_start*std::sin(theta_start)*std::sin(theta_start));
                 //hist_E_Ey->Fill(En_start, En_start*std::sin(theta_start)*std::sin(theta_start));
                 if ((std::fabs(En_collision)<11.5)&&((std::fabs(En_collision)>10.8))) {
@@ -181,8 +191,12 @@
             std::cout<<"Warning: no \"ElectronProcessCounters\" TTree, using process counting from \"ElectronHistory\""<<std::endl;
             }
 
-            TCanvas *c_ = new TCanvas ("e energy before collision", "e energy before collision", DEF_W, DEF_H);
-            histE->Draw();
+			TCanvas *c_i = new TCanvas ("e energy initial", "e energy initial", DEF_W, DEF_H);
+            histEi->Draw();
+            TCanvas *c_c = new TCanvas ("e energy before collision", "e energy before collision", DEF_W, DEF_H);
+            histEc->Draw();
+			TCanvas *c_f = new TCanvas ("e energy after collision", "e energy after collision", DEF_W, DEF_H);
+            histEf->Draw();
             TCanvas *c_2 = new TCanvas ("Delta time", "Delta time", DEF_W, DEF_H);
 			c_2->SetLogy();
             hist_dT->Draw();
@@ -192,14 +206,32 @@
             TCanvas *c_3 = new TCanvas ("Drift velocity", "Drift velocity", DEF_W, DEF_H);
             hist_V_drift->Draw();
             TCanvas *c_3_5 = new TCanvas ("Drift time", "Drift time", DEF_W, DEF_H);
+			TF1 *ff = new TF1("G", "gaus", 4.0e-7, 8.5e-7);
+			hist_T_drift->Draw();
+			c_3_5->Update();
+			double lim = 6.3e-7;			
+			TLine* line = new TLine();
+			line->SetX1(lim);
+			line->SetX2(lim);
+			line->SetY1(c_3_5->GetUymin());
+			line->SetY2(c_3_5->GetUymax());
+			line->SetLineColor(kRed);
+			hist_T_drift->Fit(ff, "W", "", 4e-7, lim);
             hist_T_drift->Draw();
-			hist_T_drift->Fit("gaus");
+			line->Draw("same");
+			ff->Draw("same");
             TCanvas *c_4 = new TCanvas ("Delta L", "Delta L", DEF_W, DEF_H);
             hist_dl->Draw();
             TCanvas *c_5 = new TCanvas ("e energy average", "e energy average", DEF_W, DEF_H);
             histEAvr->Draw();
             TCanvas *c_6 = new TCanvas ("Scatter angle at 10eV", "Scatter angle at 10eV", DEF_W, DEF_H);
             hist_theta->Draw();
+			TCanvas *c_6i = new TCanvas ("Angle initial", "Angle initial", DEF_W, DEF_H);
+            hist_theta_i->Draw();
+			TCanvas *c_6c = new TCanvas ("Angle before collision", "Angle before collision", DEF_W, DEF_H);
+            hist_theta_c->Draw();
+			TCanvas *c_6f = new TCanvas ("Angle final", "Angle final", DEF_W, DEF_H);
+            hist_theta_f->Draw();
             TCanvas *c_7 = new TCanvas ("e delta E in resonance [eV]", "e delta E in resonance [eV]", DEF_W, DEF_H);
             hist_dE->Draw();
             TCanvas *c_8 = new TCanvas ("e energy loss in resonance", "e energy loss in resonance", DEF_W, DEF_H);

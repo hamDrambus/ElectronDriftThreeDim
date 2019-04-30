@@ -913,7 +913,7 @@ void test_time_delay(ArDataTables *ArTables)
 	double min_delay = -max_delay;
 	{
 		//11.075-11.125
-		//11.047-11.30
+		//11.075-11.30
 		double Efr = 11.075, Eto = 11.30;
 		std::stringstream En1, En2;
 		En1.precision(5);

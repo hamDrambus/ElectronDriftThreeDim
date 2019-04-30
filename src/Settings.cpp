@@ -65,6 +65,20 @@ bool Settings::Load(std::string fname)
 			phys_const_.scattering_angle_model = PhysicalConstants::ScatterModel::Normal;
 		}
 
+		std::string delay_model = physics.get<std::string>("time_delay_model", "");
+		phys_const_.time_delay_model = PhysicalConstants::TimeDelayMode::Invalid;
+		if (delay_model == "Precise" || delay_model == "")
+			phys_const_.time_delay_model = PhysicalConstants::TimeDelayMode::Precise;
+		if (delay_model == "Rough")
+			phys_const_.time_delay_model = PhysicalConstants::TimeDelayMode::Rough;
+		if (delay_model == "None")
+			phys_const_.time_delay_model = PhysicalConstants::TimeDelayMode::None;
+		if (PhysicalConstants::TimeDelayMode::Invalid == phys_const_.time_delay_model) {
+			BOOST_PROPERTY_TREE_THROW(ptree_bad_data(
+				std::string("conversion of type \"") + typeid(std::string).name() +
+				"\" to PhysicalConstants::TimeDelayMode data failed", boost::any()));
+		}
+
 		phys_const_.En_3o2 = physics.get<double>("Feshbach_resonance_3o2_En");
 		phys_const_.En_1o2 = physics.get<double>("Feshbach_resonance_1o2_En");
 		phys_const_.Width_3o2 = physics.get<double>("Feshbach_resonance_3o2_Width");

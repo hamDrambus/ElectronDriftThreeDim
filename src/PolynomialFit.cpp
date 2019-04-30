@@ -503,96 +503,82 @@ void PDF_routine::read(std::ifstream& str)
 		std::getline(str, line);
 		++line_n;
 		if (1 == line_n) {
-			//parse "//Order	N_used	use_left use_right is_set_left is_set_right left_value right_value"
-			double dval;
-			int ival;
-			int word_n = 0;
-			if (line.size() < 2)
-				goto wrong_format;
-			if ((line[0] != '/') || (line[1] != '/'))
-				goto wrong_format;
-			line.erase(line.begin(), line.begin() + 2);
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			setOrder(ival);
+			try { //parse "//Order	N_used	use_left use_right is_set_left is_set_right left_value right_value"
+				double dval;
+				int ival;
+				int word_n = 0;
+				if (line.size() < 2)
+					throw std::invalid_argument("Header line expected \"//Order\\tNused\\t...\"");
+				if ((line[0] != '/') || (line[1] != '/'))
+					throw std::invalid_argument("Header line expected \"//Order\\tNused\\t...\"");
+				line.erase(line.begin(), line.begin() + 2);
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = std::stoi(word);
+				setOrder(ival);
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			setNused(ival);
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = std::stoi(word);
+				setNused(ival);
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			use_leftmost(ival);
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = std::stoi(word);
+				use_leftmost(ival);
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			use_rightmost(ival);
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = std::stoi(word);
+				use_rightmost(ival);
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			is_set_left = ival;
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = std::stoi(word);
+				is_set_left = ival;
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			is_set_right = ival;
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = std::stoi(word);
+				is_set_right = ival;
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			dval = std::stoi(word);
-			left_value = dval;
+				word = strtoken(line, "\t ");
+				++word_n;
+				dval = std::stoi(word);
+				left_value = dval;
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			dval = std::stoi(word);
-			right_value = dval;
-			continue;
-		wrong_format:
-			//std::cerr << "DataVector::read: Error on line " << line_n << " word " << word_n << ": wrong header format" << std::endl;
-			//return;
-			setOrder(1);
-			setNused(2);
-			use_leftmost(false);
-			use_rightmost(false);
-			set_out_value(0); //out of range value
+				word = strtoken(line, "\t ");
+				++word_n;
+				dval = std::stoi(word);
+				right_value = dval;
+				continue;
+			} catch (std::exception &e) {
+				setOrder(1);
+				setNused(2);
+				use_leftmost(false);
+				use_rightmost(false);
+				set_out_value(0); //out of range value
+				continue;
+			}
 		}
 		if (line.size() >= 2) //Ignore simple c style comment
 			if ((line[0] == '/') && (line[1] == '/'))
 				continue;
-		word = strtoken(line, "\t ");
-		if (word.empty())
-			break;
-		double x = std::stod(word);
-		word = strtoken(line, "\t ");
-		if (word.empty())
-			break;
-		double val = std::stod(word);
+		double val, x;
+		try {
+			word = strtoken(line, "\t ");
+			x = std::stod(word);
+			word = strtoken(line, "\t ");
+			val = std::stod(word);
+		} catch (std::exception &e) {
+			continue;
+		}
 		push_back(x, val);
 		ixx.push_back(x);
 		iyy.push_back(val);
 	}
 	initialize(ixx, iyy, 1, 2);
+	pdf_to_cdf();
 }
 
 double PDF_routine::generate(double Rand) const //has no internal random engine

@@ -34,6 +34,7 @@ struct PhysicalConstants {
 	double phases_En_minimum;
 	double phases_En_threshold; //MERT 5 is applied only below this energy for differential cross-section
 	enum ScatterModel : short { Normal = 0, Uniform = 1 } scattering_angle_model;//(former #define ANGLE_UNIFORM_ for v9.x)
+	enum TimeDelayMode: short { Precise = 0, Rough = 1, None = 2, Invalid = -1} time_delay_model;
 	bool no_ramsauer_minimum;
 	double ramsauer_minimum_En;
 	double XS_el_at_0_En;

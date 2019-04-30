@@ -1,15 +1,39 @@
-version=v12.1
-#Nelectrons=10000
-#Tds=(7.0 0.3 1.0 1.7 2.0 3.0 4.0 4.5 4.6 5.5 6.0 6.5 7.5 8.3)
-#Tds=(7.0 5.5 4.0)
-#for Td in ${Tds[@]}; do
-#	echo Release/ThreeDimSimulation 42 ${Td} ${Nelectrons} "Output/${version}/eData_${Td}Td.root"
-#	Release/ThreeDimSimulation 42 ${Td} ${Nelectrons} "Output/${version}/eData_${Td}Td.root"
-#done
-
-Release/ThreeDimSimulation "Output/${version}/settings.xml"
-version=v12.3
-Release/ThreeDimSimulation "Output/${version}/settings.xml"
-version=v12.5
-Release/ThreeDimSimulation "Output/${version}/settings.xml"
-
+version=v13.2
+Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
+version=v13.3
+Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
+version=v13.4
+Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
+version=v13.5
+Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
+version=v13.6
+Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
+version=v13.7
+Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
+Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
