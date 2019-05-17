@@ -3,8 +3,9 @@
 
 #include "global_definitions.h"
 #include "Settings.h"
+#include "ColoredInterval.h"
 
-//TODO: this class and its daughters are required for generalization on scattering of e in mixtures and potentially other particles as well
+//TODO: this class and its daughters are required for generalization of scattering e in mixtures and potentially other particles as well
 class Particle {
 protected:
 	//Particle type --> list of processes
@@ -13,28 +14,35 @@ protected:
 	double width_; //in eV
 	double mass_; //in eV
 	bool is_valid_;
+	ColoredRange XS_En_sweeper_; //TODO: make different for each incident particle
 public:
 	Particle(void) {
 		is_valid_ = false;
 		name_ = "GeneralParticle";
+		mass_ = 0;
+		width_ = 0;
 	}
-	virtual ~Particle() = 0;
+	virtual ~Particle() {}
 
 	std::string GetName(void) const { return name_; }
-	unsigned int GetMass(void) const { return mass_ }
+	unsigned int GetMass(void) const { return mass_; }
 	double GetWidth(void) const { return width_; } //in eV
 	double GetHalfLife(void) const {
 		return width_ > 0 ? gSettings.PhysConsts()->h_bar_eVs/width_ : DBL_MAX;
 	} //in seconds
 
-	unsigned int GetProcessSize(const Partice *target) const {
-		auto procs = processes_.find(target->GetName();
+	unsigned int GetProcessSize(const Particle *target) const {
+		if (NULL == target)
+			return 0;
+		auto procs = processes_.find(target->GetName());
 		if (processes_.end() != procs)
 			return procs->second.size();
 		return 0;
 	}
-	std::string GetProcessName(const Partice *target, unsigned int process) const {
-		auto procs = processes_.find(target->GetName();
+	std::string GetProcessName(const Particle *target, unsigned int process) const {
+		if (NULL == target)
+			return "";
+		auto procs = processes_.find(target->GetName());
 		if (processes_.end() != procs) {
 			auto pr = procs->second.find(process);
 			if (procs->second.end()!=pr)
@@ -42,71 +50,54 @@ public:
 		}
 		return "";
 	}
-	bool isValid(void) const { return is_valid_; }
+	ColoredRange GetEnergies (void) const { return XS_En_sweeper_; }
+	virtual bool isValid(void) const { return is_valid_; }
 	
-	virtual unsigned int GetQauntStateSize(const Partice *target, double E, double theta, unsigned int process) const = 0;
-	virtual double GetCrossSection(const Partice *target, double E, unsigned int process) const = 0;
-	virtual double GetCrossSection(const Partice *target, double E, double theta, unsigned int process) const = 0;
-	virtual std::vector<Particle*> GetFinalStates(const Partice *target, double E, double theta, unsigned int process) const = 0;
+	virtual unsigned int GetQauntStateSize(const Particle *target, double E, double theta, unsigned int process) const = 0;
+	virtual double GetCrossSection(const Particle *target, double E, unsigned int process) const = 0;
+	virtual double GetCrossSection(const Particle *target, double E, double theta, unsigned int process) const = 0;
+	virtual std::vector<const Particle*> GetFinalStates(const Particle *target, double E, double theta, unsigned int process) const = 0;
 
-	virtual unsigned int GenerateProcess(const Partice *target, double E, double theta, double Rand) const = 0;
-	virtual double GenerateScatterAngle(const Partice *target, double E, double theta, unsigned int process, double Rand) const = 0;
-	//For neutral bremsstrahlung or deexcitation
-	virtual double GeneratePhoton(const Partice *target, double E, double theta, unsigned int process, double Rand) const = 0;
-	virtual double GenerateTimeDelay(const Partice *target, double E, double theta, unsigned int process, double Rand) const = 0;
-
-	//Untabulated functions:
-	virtual unsigned int GenerateUntabProcess(const Partice *target, double E, double theta, double Rand) const = 0;
-	virtual double GenerateUntabScatterAngle(const Partice *target, double E, double theta, unsigned int process, double Rand) const = 0;
-	virtual double GenerateUntabPhoton(const Partice *target, double E, double theta, unsigned int process, double Rand) const = 0;
-	virtual double GenerateUntabTimeDelay(const Partice *target, double E, double theta, unsigned int process, double Rand) const = 0;
-}
-
-//Call Normalize() after setting up compounds
-class Mixture {
-protected:
-	bool is_valid_;
-	std::map<std::string, double> components_;
-	std::string name_;
-public:
-	Mixture(std::string mixture_name) {
-		is_valid_ = false;
-		name_ = mixture_name;
-	}
-	virtual ~Mixture() = 0;
-
-	bool isValid(void) const { return is_valid_; }
-	std::string GetName(void) const { return name_; }
-	void SetName(std::string name) { name_ = name; }
-	void Normalize(void) {
-		while (true) {
-			for (auto i = components_.begin(), i_end_ = components_.end(); i != i_end_; ++i)
-				if (i->second <= 0) {
-					std::cerr << "Mixture(\"" << name_ << "\")::Normalize: Warning! Negative or zero concentration of \"" \
-						<< i->first << "\" is removed." << std::endl;
-					components_.erase(i);
-					continue;
-				}
-			break;
+	//returns negative value in case of error
+	virtual int GenerateProcess(const Particle *target, double E, double theta, double Rand) const {
+		if (NULL == target) {
+			std::cerr << GetName() << "::GenerateProcess: Error: NULL target"<<std::endl;
+			return 0;
 		}
-		double Norm = 0;
-		for (auto i = components_.begin(), i_end_ = components_.end(); i != i_end_; ++i)
-			Norm += i->second;
-		for (auto i = components_.begin(), i_end_ = components_.end(); i != i_end_; ++i)
-			i->second /= Norm;
-		is_valid_ = !components_.empty();
+		auto procs = processes_.find(target->GetName());
+		if (processes_.end()==procs) {
+			std::cerr << GetName() << "::GenerateProcess: Error: unsupported target particle \""<<target->GetName()<<"\""<<std::endl;
+			return 0;
+		}
+		std::size_t n_procs = procs->second.size();
+		std::vector<double> CrossSections(n_procs, 0.0), CrossSectionsSum(n_procs, 0.0);
+		//TODO: allocating memory each time is quite expensive. Similar issue for Mixture. Need to create cache
+		//All sizes and particle interations are static (so far), so vectors can be resized for each incident particle
+		for (std::size_t ind = 0, ind_end_ = procs->second.size(); ind!=ind_end_; ++ind) {
+			CrossSections[ind] = GetCrossSection(target, E, theta, ind);
+			CrossSectionsSum[ind] = std::max(CrossSections[ind], 0.0) + ((ind==0) ? 0.0 : CrossSectionsSum[ind - 1]);
+		}
+		for (unsigned int ind = 0, ind_end_ = procs->second.size(); ind!=ind_end_; ++ind) {
+			CrossSectionsSum[ind] /= CrossSectionsSum[ind_end_ - 1];
+			if (Rand < CrossSectionsSum[ind]) {
+				return ind;
+			}
+		}
+		std::cerr << GetName() << "::GenerateProcess: Error: failed to select process from "<<n_procs<<" candidates"<<std::endl;
+		return -1;
 	}
-	
-	virtual double GetCrossSection(const Partice *incident, const Partice *incident, double E) const = 0;
-	virtual long double GetXSIntegral(const Partice *incident, long double En_from, long double En_to, long double En_y) const = 0;
-	virtual long double GetEnergyFromXSIntegral(const Partice *incident, long double En_y, long double integral_value) const = 0;
-	virtual const Partice* GenerateScatteringParticle(const Partice *incident, double E, double Rand) const = 0;
+	virtual double GenerateScatterAngle(const Particle *target, double E, double theta, unsigned int process, double Rand) const = 0;
+	virtual double GenerateEnergyLoss(const Particle *target, double E, double theta, unsigned int process, double Rand) const = 0;
+	//For neutral bremsstrahlung or deexcitation
+	virtual double GeneratePhoton(const Particle *target, double E, double theta, unsigned int process, double Rand) const = 0;
+	virtual double GenerateTimeDelay(const Particle *target, double E, double theta, unsigned int process, double Rand) const = 0;
 
 	//Untabulated functions:
-	virtual double GetUntabCrossSection(const Partice *incident, double E) const = 0;
-	virtual long double GetUntabXSIntegral(const Partice *incident, long double En_from, long double En_to, long double En_y) const = 0;
-	virtual long double GetUntabEnergyFromXSIntegral(const Partice *incident, long double En_y, long double integral_value) const = 0;
-	virtual const Partice* GenerateUntabScatteringParticle(const Partice *incident, double E, double Rand) const = 0;
-}
+	virtual unsigned int GenerateUntabProcess(const Particle *target, double E, double theta, double Rand) const = 0;
+	virtual double GenerateUntabScatterAngle(const Particle *target, double E, double theta, unsigned int process, double Rand) const = 0;
+	virtual double GenerateUntabEnergyLoss(const Particle *target, double E, double theta, unsigned int process, double Rand) const = 0;
+	virtual double GenerateUntabPhoton(const Particle *target, double E, double theta, unsigned int process, double Rand) const = 0;
+	virtual double GenerateUntabTimeDelay(const Particle *target, double E, double theta, unsigned int process, double Rand) const = 0;
+};
 
 #endif //PARTICLE_H_

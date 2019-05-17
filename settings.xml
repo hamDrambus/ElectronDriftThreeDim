@@ -43,6 +43,10 @@
       <Feshbach_resonance_3o2_Width>2.3e-3</Feshbach_resonance_3o2_Width>
       <Feshbach_resonance_1o2_Width>2.2e-3</Feshbach_resonance_1o2_Width>
 
+      <Dissoc_attachment_En_thresh>11.548</Dissoc_attachment_En_thresh>
+      <Dissoc_attachment_XS>1e-2</Dissoc_attachment_XS>
+      <Argon_ion_decay_time>360e-9</Argon_ion_decay_time> <!--In seconds-->
+
       <Feshbach_resonance_NBrS_XS>0.0</Feshbach_resonance_NBrS_XS><!--in e-20 m^2-->
       <Feshbach_resonance_NBrS_En_loss>1e-1</Feshbach_resonance_NBrS_En_loss> <!--OPT-->
     </Argon>

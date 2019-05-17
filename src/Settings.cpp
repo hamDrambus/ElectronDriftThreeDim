@@ -83,6 +83,11 @@ bool Settings::Load(std::string fname)
 		phys_const_.En_1o2 = physics.get<double>("Feshbach_resonance_1o2_En");
 		phys_const_.Width_3o2 = physics.get<double>("Feshbach_resonance_3o2_Width");
 		phys_const_.Width_1o2 = physics.get<double>("Feshbach_resonance_1o2_Width");
+
+		phys_const_.Dissoc_attachment_En_thresh = physics.get<double>("Dissoc_attachment_En_thresh");
+		phys_const_.Dissoc_attachment_XS = physics.get<double>("Dissoc_attachment_XS");
+		phys_const_.Argon_ion_decay_time = physics.get<double>("Argon_ion_decay_time");
+
 		phys_const_.resonance_NBrS_XS = physics.get<double>("Feshbach_resonance_NBrS_XS"); //in 1e-20 m^2
 		phys_const_.resonance_En_loss = physics.get_optional<double>("Feshbach_resonance_NBrS_En_loss");
 

@@ -48,6 +48,10 @@ struct PhysicalConstants {
 	double Width_3o2;
 	double Width_1o2;
 
+	double Dissoc_attachment_En_thresh;
+	double Dissoc_attachment_XS;
+	double Argon_ion_decay_time;
+
 	double resonance_NBrS_XS;
 	boost::optional<double> resonance_En_loss;
 };

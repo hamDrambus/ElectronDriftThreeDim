@@ -61,9 +61,9 @@ struct Event
 	double photon_En;
 
 	enum ProcessType : short {Overflow = -2, None = -1, Elastic = 0, ResNBrS =1, Ionization = 2}; //Manager and Ar XS functions depend on this.
-	short process; //1 is ionization and from 2 to max are excitations (process = ID + 1).
-	std::vector<double> CrossSections; //for each process starting from Elastic=1
-	std::vector<double> CrossSectionsSum; //helper for random process selection
+	short process; //process meanings depend on interacting particle ID. ProcessType is now deprecated for positive values.
+	std::size_t particle_ID; //At the moment electron interacts only with Argon and Argon Van der Waals molecule
+	//particle_ID corresponds to the indexes of gParticleTable
 	//Debug info:
 	double deb_log_rand; //-ln R * coef. which is equal to integral of XS
 	double deb_solver_y_left;

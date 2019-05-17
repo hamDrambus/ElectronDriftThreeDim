@@ -21,48 +21,46 @@ int PolynomialFit::getOrder(void) const
 	return _order;
 }
 
-void PolynomialFit::getCoefs(TVectorD &pars) const
-{
-	pars.ResizeTo(_last_coefs);
-	pars = _last_coefs;
-}
-
-Int_t PolynomialFit::operator ()(std::vector<double> &xs_in, std::vector<double> &ys_in, double in_x0){
+TVectorD PolynomialFit::operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in, boost::optional<double> &in_x0) const {
 	return (*this)(xs_in, ys_in, 0, xs_in.size(), in_x0);
 }
 
-Int_t PolynomialFit::operator ()(std::vector<double> &xs_in, std::vector<double> &ys_in,
-	int offset, int N_points, double in_x0) //only for a part of a vector
+TVectorD PolynomialFit::operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in,
+	int offset, int N_points, boost::optional<double> &in_x0) const//only for a part of a vector
 {
+	TVectorD out(0);
 	if (xs_in.size() != ys_in.size()) {
 		std::cout<<"PolynomialFit::operator(): Error: x-y data size mismatch"<<std::endl;
-		return -1;
+		return out;
 	}
 	if ((xs_in.size()-offset) < N_points) {
 		std::cout<<"PolynomialFit::operator(): Error: N points is out of range:"<<std::endl;
 		std::cout<<"\tx.size()="<<xs_in.size()<<" offset="<<offset<<" N_points="<<N_points<<std::endl;
-		return -2;
+		return out;
 	}
 	if (offset < 0) {
 		std::cout<<"PolynomialFit::operator(): Error: offset is out of range:"<<std::endl;
 		std::cout<<"\tx.size()="<<xs_in.size()<<" offset="<<offset<<" N_points="<<N_points<<std::endl;
-		return -3;
+		return out;
 	}
 	if (N_points < (_order + 1)) {
 		std::cout<<"PolynomialFit::operator(): Error: no enough N points for fit:"<<std::endl;
 		std::cout<<"\torder="<<_order<<" N_points="<<N_points<<std::endl;
-		return -4;
+		return out;
 	}
+	in_x0 = (in_x0 ? *in_x0 : xs_in[offset]); //It is bad to set x0 to some fixed value (e.g. 0) because
+	//interpolating too far from it will result in unstable results due to limited precision.
+	//Ideally x0 should be set to the point at which we interpolate the data.
 	if (1 == _order) {
-		_last_coefs.ResizeTo(_order + 1);
-		_last_coefs[1] = (ys_in[offset + 1] - ys_in[offset]) / (xs_in[offset + 1] - xs_in[offset]);
-		_last_coefs[0] = ys_in[offset] + (in_x0 - xs_in[offset])*_last_coefs[1];
+		out.ResizeTo(_order + 1);
+		out[1] = (ys_in[offset + 1] - ys_in[offset]) / (xs_in[offset + 1] - xs_in[offset]);
+		out[0] = ys_in[offset] + (*in_x0 - xs_in[offset])*out[1];
 		//^value at in_x0 point
 	} else {
 		TMatrixD mat(N_points, _order + 1);
 		for (int col = 0; col < mat.GetNcols(); col++)
 			for (int row = 0; row < mat.GetNrows(); row++)
-				mat[row][col] = pow(xs_in[offset + row] - in_x0, col);
+				mat[row][col] = pow(xs_in[offset + row] - *in_x0, col);
 		TVectorD Y(N_points);
 		for (int row = 0; row < Y.GetNrows(); row++)
 			Y[row] = ys_in[offset + row];
@@ -70,18 +68,22 @@ Int_t PolynomialFit::operator ()(std::vector<double> &xs_in, std::vector<double>
 		mT.T();
 		TMatrixD In(mT*mat);//because normal assignment like mat = mT*mat does not work! First resizing must be done.
 		In.SetTol(1e-40);
-		_last_coefs.ResizeTo(_order + 1);
-		_last_coefs = (In.Invert())*mT*Y;
+		In.Invert();
+		if (!In.IsValid()) // Do not proceed if the matrix is singular
+			return out;
+		out.ResizeTo(_order + 1);
+		out = In*mT*Y;
 	}
-	if (_last_coefs.GetNrows()!=(_order+1)) {
-		return -5;
+	if (out.GetNrows() != (_order+1)) {
+		out.ResizeTo(0);
+		return out;
 	}
-	return 0;
+	return out;
 }
 
 //=========================================================
 
-DataVector::DataVector(Int_t fit_order, Int_t N_used_): x0_used(0), isCached(false), cache_n_from(0), cache_n_to(0),
+DataVector::DataVector(Int_t fit_order, Int_t N_used_) :
 		fitter(fit_order), use_left(false), use_right(false), is_set_left(false),
 		is_set_right (false), left_value(DBL_MAX), right_value(DBL_MAX)
 {
@@ -98,7 +100,6 @@ void DataVector::initialize(std::vector < double> &xx, std::vector<double> &yy, 
 {
 	N_used = std::max(1, N_used_);
 	fitter.setOrder(fit_order);
-	isCached = false;
 	if (xx.size()!=yy.size()) {
 		std::cout<<"DataVector::initialize(): Error: x and y data size mismatch!"<<std::endl;
 		return;
@@ -126,29 +127,16 @@ void DataVector::initialize(std::vector < double> &xx, std::vector<double> &yy, 
 }
 
 void DataVector::setOrder(Int_t ord)
-{	isCached = false;
-	fitter.setOrder(ord); }
+{	fitter.setOrder(ord); }
 
-Int_t DataVector::getOrder(void)
+Int_t DataVector::getOrder(void) const
 {	return fitter.getOrder(); }
 
 void DataVector::setNused(Int_t N)
-{	isCached = false;
-	N_used = std::max(1, N); }
+{	N_used = std::max(1, N); }
 
-Int_t DataVector::getNused(void)
+Int_t DataVector::getNused(void) const
 {	return N_used; }
-
-std::vector<double> DataVector::getCoefs(void)
-{
-	std::vector<double> out;
-	TVectorD coefs;
-	fitter.getCoefs(coefs);
-	out.resize(coefs.GetNrows());
-	for (long unsigned int i=0, i_end=out.size(); i!=i_end; ++i)
-		out[i] = coefs[i];
-	return out;
-}
 
 void DataVector::use_leftmost(bool use)
 {
@@ -195,43 +183,38 @@ void DataVector::push (double x, double y) //do not disrupt order
 		if (*i>x) {
 			xs.insert(i,x);
 			ys.insert(j,y);
-			isCached = false;
 			return;
 		}
 	}
 	xs.insert(xs.end(),x);
 	ys.insert(ys.end(),y);
-	isCached = false;
 }
 
 void DataVector::push_back (double x, double y)//does not check that the new array is ordered, but faster
 {
 	xs.push_back(x);
 	ys.push_back(y);
-	isCached = false;
 }
 
 void DataVector::erase (std::size_t n)
 {
 	xs.erase(xs.begin()+n);
 	ys.erase(ys.begin()+n);
-	isCached = false;
 }
 
 void DataVector::clear (void)
 {
 	xs.clear();
 	ys.clear();
-	isCached = false;
 }
 
-std::size_t DataVector::size (void)
+std::size_t DataVector::size (void) const
 {	return std::min(xs.size(), ys.size());}
 
-double DataVector::getX(std::size_t n)
+double DataVector::getX(std::size_t n) const
 {	return xs[n]; }
 
-double DataVector::getY(std::size_t n)
+double DataVector::getY(std::size_t n) const
 {	return ys[n]; }
 
 void DataVector::read(std::ifstream& str) //TODO: add try/catch for handling stoi and stod
@@ -327,7 +310,7 @@ void DataVector::read(std::ifstream& str) //TODO: add try/catch for handling sto
 	}
 }
 
-void DataVector::write(std::string fname, std::string comment)
+void DataVector::write(std::string fname, std::string comment) const
 {
 	std::ofstream str;
 	str.open(fname, std::ios_base::trunc);
@@ -335,7 +318,7 @@ void DataVector::write(std::string fname, std::string comment)
 	str.close();
 }
 
-void DataVector::write(std::ofstream& str, std::string comment)
+void DataVector::write(std::ofstream& str, std::string comment) const
 {
 	//"//Order	N_used	use_left use_right is_set_left is_set_right left_value right_value"
 	str << "//" << getOrder() << "\t" << N_used << "\t" << (use_left ? 1 : 0) << "\t" << (use_right ? 1 : 0)
@@ -346,7 +329,7 @@ void DataVector::write(std::ofstream& str, std::string comment)
 	}
 }
 
-double DataVector::operator()(double point)
+double DataVector::operator()(double point, boost::optional<double> x0) const
 {
 	if (xs.empty()||ys.empty())
 		return DBL_MAX;
@@ -364,31 +347,14 @@ double DataVector::operator()(double point)
 	}
 	int n_min, n_max;
 	get_indices(point, n_min, n_max);
-	if (isCached)
-		if ((n_min == cache_n_from) && (n_max == cache_n_to))
-			return calculate(point); //same polynomial is used
-	cache_n_from = n_min;
-	cache_n_to = n_max;
-	isCached = true;
-	Int_t ret_code = fitter(xs, ys, n_min, n_max-n_min+1 /*==N_used*/, x0_used);
-	if (0==ret_code)
-		return calculate(point);
-	if (-5==ret_code) {//matrix inversion failed
-		if (x0_used!=xs[(n_min+n_max)/2])
-			return (*this)(point, xs[(n_min+n_max)/2]);
-	}
+	TVectorD coefs = fitter(xs, ys, n_min, n_max-n_min+1, x0); //n_max-n_min+1==N_used
+	if (0!=coefs.GetNrows())
+		return calculate(point, *x0, coefs);
 	return DBL_MAX;
 }
 
-double DataVector::operator()(double point, double x0)
-{
-	isCached = isCached&&(x0_used == x0);
-	x0_used = x0;
-	return (*this)(point);
-}
-
 //[n_min, n_max] are used, not [n_min,n_max). N_used==n_max-n_min+1>=order+1
-void DataVector::get_indices(double x, int &n_min, int &n_max)
+void DataVector::get_indices(double x, int &n_min, int &n_max) const
 {
 	if (x <= xs.front())
 	{
@@ -431,14 +397,12 @@ void DataVector::get_indices(double x, int &n_min, int &n_max)
 	}
 }
 
-double DataVector::calculate(double x)
+double DataVector::calculate(double x, double x0, const TVectorD& coefs) const
 {
-	TVectorD coefs;
-	fitter.getCoefs(coefs);
 	Int_t order = coefs.GetNrows();
 	double out_ = 0;
 	for (int o_O = 0; o_O < order; ++o_O)
-		out_ += coefs[o_O]*pow(x-x0_used, o_O);
+		out_ += coefs[o_O]*pow(x-x0, o_O);
 	return out_;
 }
 
