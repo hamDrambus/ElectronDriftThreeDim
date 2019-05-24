@@ -34,9 +34,14 @@
 #endif //__WIN32__
 
 std::string strtoken(std::string &in, std::string break_symbs);
+void open_output_file(std::string name, std::ofstream &str, std::ios_base::openmode _mode);
 void ensure_file(std::string fname); //makes sure file can be created later on
 void ensure_folder(std::string folder);
 char* c_str_cp (const std::string &str);
+
+#define ELECTRON_NAME "electron"
+#define ARGON_NAME "Argon"
+#define ARGON_VAN_DER_WAALS_NAME "Argon Van der Waals Molecule"
 
 struct Event
 {
@@ -64,6 +69,8 @@ struct Event
 	short process; //process meanings depend on interacting particle ID. ProcessType is now deprecated for positive values.
 	std::size_t particle_ID; //At the moment electron interacts only with Argon and Argon Van der Waals molecule
 	//particle_ID corresponds to the indexes of gParticleTable
+	std::size_t particle_ID_finish;
+	std::size_t particle_ID_target;
 	//Debug info:
 	double deb_log_rand; //-ln R * coef. which is equal to integral of XS
 	double deb_solver_y_left;

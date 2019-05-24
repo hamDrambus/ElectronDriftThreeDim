@@ -2,10 +2,10 @@
 
 ArgonVanDerWaalsParticle::ArgonVanDerWaalsParticle(void) : Particle()
 {
-	name_ = "Argon Van der Waals Molecule";
+	name_ = ARGON_VAN_DER_WAALS_NAME;
 	mass_ = 2*gSettings.PhysConsts()->Ar_mass_eV;
 	width_ = 0;
-	std::cout<<"Loading Ar data tables..."<<std::endl;
+	is_valid_ = true;
 
 	XS_En_sweeper_ = ColoredInterval (gSettings.PhysConsts()->Dissoc_attachment_En_thresh, gSettings.PhysConsts()->XS_el_En_maximum, 1e-3);
 
@@ -105,7 +105,7 @@ std::vector<const Particle*> ArgonVanDerWaalsParticle::GetFinalStates(const Part
 	return out;
 }
 
-double ArgonVanDerWaalsParticle::GenerateScatterAngle(const Particle *target, double E, double theta, unsigned int process, double Rand) const
+double ArgonVanDerWaalsParticle::GenerateScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const
 {
 	if (NULL == target) {
 		std::cerr << GetName() << "::GenerateScatterAngle: Error: NULL target"<<std::endl;
@@ -205,7 +205,7 @@ double ArgonVanDerWaalsParticle::GenerateTimeDelay(const Particle *target, doubl
 			return 0;
 		}
 		if (1 == process) {
-			return -1*log(1-Rand)/gSettings.PhysConsts()->Argon_ion_decay_time;
+			return -1*log(1-Rand)*gSettings.PhysConsts()->Argon_ion_decay_time;
 		}
 		return 0;
 	}
@@ -213,14 +213,14 @@ double ArgonVanDerWaalsParticle::GenerateTimeDelay(const Particle *target, doubl
 }
 
 //Untabulated functions:
-unsigned int ArgonVanDerWaalsParticle::GenerateUntabProcess(const Particle *target, double E, double theta, double Rand) const
+unsigned int ArgonVanDerWaalsParticle::GenerateUntabProcess(const Particle *target, double E, double Rand) const
 {
-	return GenerateProcess(target, E, theta, Rand);
+	return GenerateProcess(target, E, Rand);
 }
 
-double ArgonVanDerWaalsParticle::GenerateUntabScatterAngle(const Particle *target, double E, double theta, unsigned int process, double Rand) const
+double ArgonVanDerWaalsParticle::GenerateUntabScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const
 {
-	return GenerateScatterAngle(target, E, theta, process, Rand);
+	return GenerateScatterAngle(target, E, process, Rand);
 }
 
 double ArgonVanDerWaalsParticle::GenerateUntabEnergyLoss(const Particle *target, double E, double theta, unsigned int process, double Rand) const

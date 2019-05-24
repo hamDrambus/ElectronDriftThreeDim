@@ -1,7 +1,7 @@
 #include "MTManager.h"
 
-MTManager::MTManager(ArDataTables *Ar_tables, int instance) :
-	Manager(Ar_tables), instance_(instance)
+MTManager::MTManager(const Mixture *material, int instance) :
+	Manager(material), instance_(instance)
 {}
 
 void MTManager::ProcessAll(void)
@@ -50,8 +50,10 @@ void MTManager::Merge(MTManager *with)
 	list->Add(with->sim_data_);
 	sim_data_->Merge(list);
 	with->sim_data_->Reset();
-	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
-		processes_counters_[i]+=with->processes_counters_[i];
-		with->processes_counters_[i] = 0;
+	for (std::size_t i = 0, i_end_ = processes_counters_.size(); i != i_end_; ++i) {
+		for (std::size_t pr = 0, pr_end_ = processes_counters_[i].size(); pr != pr_end_; ++pr) {
+			processes_counters_[i][pr]+=with->processes_counters_[i][pr];
+			with->processes_counters_[i][pr] = 0;
+		}
 	}
 }

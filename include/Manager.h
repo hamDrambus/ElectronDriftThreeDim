@@ -34,7 +34,7 @@ protected:
 	std::vector<std::vector<std::string> > processes_legends_; //particle_ID->process_ID->NULL terminated String
 
 	Event event_;
-	Mixture *material_;
+	const Mixture *material_;
 	int skip_counter_;
 	bool skipping_early_events;
 	Long64_t num_of_events;
@@ -66,7 +66,7 @@ public:
 	boost::optional<ULong_t> getInitialSeed(void) const;
 	bool setRunIndex(std::size_t index);
 	boost::optional<std::size_t> getRunIndex(void) const;
-	Manager(Mixture *material);
+	Manager(const Mixture *material);
 	virtual ~Manager();
 	void LoopSimulation(void);
 	void WriteHistory(std::string root_fname);

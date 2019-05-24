@@ -23,7 +23,7 @@ void Mixture::AddComponent(const Particle* part, double fraction) {
 		}
 	}
 	if (!duplicate)
-		components_[part] = std::max(fraction, 0.0);
+		components_.push_back(std::pair<const Particle*, double>(part, std::max(fraction, 0.0)));
 }
 
 void Mixture::AddComponent(std::string name, double fraction) {

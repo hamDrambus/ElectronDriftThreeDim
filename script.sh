@@ -1,39 +1,11 @@
-version=v13.2
-Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
+version=v13.8
 Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
-version=v13.3
-Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
 Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
-version=v13.4
-Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
-version=v13.5
-Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
-version=v13.6
-Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
-version=v13.7
-Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
-Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
+#version=v13.3
+#Release/ThreeDimSimulation "Output/${version}/settings_SP.xml"
+#Release/ThreeDimSimulation "Output/${version}/settings_SR.xml"
+#Release/ThreeDimSimulation "Output/${version}/settings_SN.xml"
+#Release/ThreeDimSimulation "Output/${version}/settings_VP.xml"
+#Release/ThreeDimSimulation "Output/${version}/settings_VR.xml"
+#Release/ThreeDimSimulation "Output/${version}/settings_VN.xml"
+

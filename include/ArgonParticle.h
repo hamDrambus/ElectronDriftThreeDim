@@ -91,9 +91,9 @@ public:
 	long double argon_cross_elastic_diff(long double E, long double theta, int mode = 0) const;
 	long double argon_cross_elastic(long double E, int mode = 0) const;
 
-	long double argon_back_scatter_prob(long double E);
-	long double argon_TM_forward(long double E);
-	long double argon_TM_backward(long double E);
+	long double argon_back_scatter_prob(long double E) const;
+	long double argon_TM_forward(long double E) const;
+	long double argon_TM_backward(long double E) const;
 
 	//have to make these 2 public for testing. UPD: these functions are useless. Time delay is calculated differently
 	long double argon_scatter_probability_j(long double E, long double theta, int J, int L, int mode=0) const;
@@ -170,15 +170,15 @@ public:
 	virtual double GetCrossSection(const Particle *target, double E, double theta, unsigned int process) const;
 	virtual std::vector<const Particle*> GetFinalStates(const Particle *target, double E, double theta, unsigned int process) const;
 
-	virtual double GenerateScatterAngle(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
+	virtual double GenerateScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const;
 	virtual double GenerateEnergyLoss(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
 	//For neutral bremsstrahlung or deexcitation
 	virtual double GeneratePhoton(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
 	virtual double GenerateTimeDelay(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
 
 	//Untabulated functions:
-	virtual unsigned int GenerateUntabProcess(const Particle *target, double E, double theta, double Rand) const;
-	virtual double GenerateUntabScatterAngle(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
+	virtual unsigned int GenerateUntabProcess(const Particle *target, double E, double Rand) const;
+	virtual double GenerateUntabScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const;
 	virtual double GenerateUntabEnergyLoss(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
 	virtual double GenerateUntabPhoton(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
 	virtual double GenerateUntabTimeDelay(const Particle *target, double E, double theta, unsigned int process, double Rand) const;

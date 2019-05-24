@@ -8,7 +8,6 @@
 
 #include <iostream>
 #include <TApplication.h>
-#include "argon_cross.h"
 #include "MTManager.h"
 #include "tests.h"
 
@@ -26,19 +25,19 @@ bool Process(void) {
 		N_threads = 1u;
 	std::vector<std::thread> pThreads;
 	std::vector<MTManager*> _submanagers;
-	std::vector<ArDataTables*> ar_data;
+	Mixture mixture ("Gaseous argon");
+	for (std::size_t comp = 0, comp_end_ = gSettings.ProgConsts()->mixture_components.size(); comp != comp_end_; ++comp)
+		mixture.AddComponent(gSettings.ProgConsts()->mixture_components[comp], gSettings.ProgConsts()->mixture_component_fractions[comp]);
+	mixture.Prepare();
 	//TODO: It is currently implied that calling FunctionTable methods is thread-safe because there is only reading and no changes in their internal states.
 	//It would be better to fix this fact in the code explicitly (cost methods, locks, etc.)
-	ArDataTables ArDataTables_;
 	for (unsigned int n = 0u; n < N_threads; ++n) {
-		ar_data.push_back(new ArDataTables(ArDataTables_)); //shallow copy, no repeated table constructions.
-		_submanagers.push_back(new MTManager(ar_data[n], n));
+		_submanagers.push_back(new MTManager(&mixture, n));
 		pThreads.push_back(std::thread());
 	}
 	if (true == gSettings.ProgConsts()->is_test_version) {
 		//MTManager test_man(&ArDataTables_, -1, 1, seed);
-		//ArDataTables_.ArAllData_.argon_cross_elastic_diff(0.1, 0.5);
-		test_all(&ArDataTables_);
+		test_all();
 		//test_man.Test();
 	}
 	for (std::size_t run = 0, run_end_ = gSettings.ProgConsts()->run_specifics.size(); run != run_end_; ++run) {
@@ -56,6 +55,9 @@ bool Process(void) {
 		std::cout << "  Thread number = \t" << N_thread_active << std::endl;
 		std::cout << "  Output file = \t \"" << rp->output_file << "\"" << std::endl;
 		std::cout << "  Random generator seed = \t" << rp->seed << std::endl;
+		std::cout << "  Mixture: \""<<mixture.GetName()<<"\""<<std::endl;
+		for (std::size_t c = 0, c_end_ = mixture.GetNComponent(); c != c_end_; ++c)
+			std::cout << "    "<<mixture.GetComponent(c)->GetName()<<": "<<mixture.GetComponentFraction(c)<<std::endl;
 
 		ensure_file(rp->output_file);
 		int N_extra = rp->n_electrons % (N_thread_active>0 ? N_thread_active : 1);
@@ -95,14 +97,14 @@ bool Process(void) {
 		std::cout << "  Thread number = \t" << N_thread_active << std::endl;
 		std::cout << "  Output file = \t \"" << rp->output_file << "\"" << std::endl;
 		std::cout << "  Random generator seed = \t" << rp->seed << std::endl;
-		std::cout << "  Elapsed time  = \t" << diff.count() << " s." << std::endl;
+		std::cout << "  Mixture: \""<<mixture.GetName()<<"\""<<std::endl;
+		for (std::size_t c = 0, c_end_ = mixture.GetNComponent(); c != c_end_; ++c)
+			std::cout << "    "<<mixture.GetComponent(c)->GetName()<<": "<<mixture.GetComponentFraction(c)<<std::endl;
+		std::cout << std::endl << "  Elapsed time  = \t" << diff.count() << " s." << std::endl;
 	}
-
 	for (unsigned int n = 0u; n < N_threads; ++n) {
 		delete _submanagers[n];
-		delete ar_data[n];
 	}
-	ArDataTables_.DeleteData(); //TODO: implement shared pointers on data tables properly.
 	auto end = std::chrono::system_clock::now();
 	std::chrono::duration<double> diff = end - start;
 	std::cout << "Finished simulation." << std::endl;
@@ -125,7 +127,7 @@ int main(int argn, char * argv[]) {
 	if (!gSettings.isValid()) {
 		return 1;
 	}
-	ensure_file("tests/t");
+	gParticleTable.Load();
 	TApplication* app = NULL;
 	if (gSettings.ProgConsts()->is_test_version) {
 		int n_par = 0;

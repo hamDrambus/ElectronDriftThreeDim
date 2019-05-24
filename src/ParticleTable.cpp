@@ -2,17 +2,31 @@
 
 ParticleTable gParticleTable;
 
-ParticleTable::ParticleTable() : electron_(), argon_(), argon_van_der_waals_()
+ParticleTable::ParticleTable() : electron_(NULL), argon_(NULL), argon_van_der_waals_(NULL)
+{}
+
+ParticleTable::~ParticleTable()
 {
-	list_.push_back(&electron_);
-	list_.push_back(&argon_);
-	list_.push_back(&argon_van_der_waals_);
+	if (electron_)
+		delete electron_;
+	if (argon_)
+		delete argon_;
+	if (argon_van_der_waals_)
+		delete argon_van_der_waals_;
+}
+
+void ParticleTable::Load(void)
+{
+	electron_ = new ElectronParticle();
+	argon_ = new ArgonParticle;
+	argon_van_der_waals_ = new ArgonVanDerWaalsParticle();
+	list_.push_back(electron_);
+	list_.push_back(argon_);
+	list_.push_back(argon_van_der_waals_);
 	for (auto p = list_.begin(), p_end_ = list_.end(); p!=p_end_; ++p)
 		if (!(*p)->isValid())
 			std::cerr<<"Error ParticleTable::ParticleTable(): invalid particle "<<(*p)->GetName()<<std::endl;
 }
-
-ParticleTable::~ParticleTable() {}
 
 const Particle* ParticleTable::GetParticle(std::string name) const
 {

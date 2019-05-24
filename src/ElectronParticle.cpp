@@ -2,9 +2,10 @@
 
 ElectronParticle::ElectronParticle(void) : Particle()
 {
-	name_ = "electron";
+	name_ = ELECTRON_NAME;
 	mass_ = gSettings.PhysConsts()->e_mass_eV;
 	width_ = 0;
+	is_valid_ = true;
 	XS_En_sweeper_;
 	processes_;
 }
@@ -85,7 +86,7 @@ std::vector<const Particle*> ElectronParticle::GetFinalStates(const Particle *ta
 	return out;
 }
 
-double ElectronParticle::GenerateScatterAngle(const Particle *target, double E, double theta, unsigned int process, double Rand) const
+double ElectronParticle::GenerateScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const
 {
 	if (NULL == target) {
 		std::cerr << GetName() << "::GenerateScatterAngle: Error: NULL target"<<std::endl;
@@ -163,14 +164,14 @@ double ElectronParticle::GenerateTimeDelay(const Particle *target, double E, dou
 }
 
 //Untabulated functions:
-unsigned int ElectronParticle::GenerateUntabProcess(const Particle *target, double E, double theta, double Rand) const
+unsigned int ElectronParticle::GenerateUntabProcess(const Particle *target, double E, double Rand) const
 {
-	return GenerateProcess(target, E, theta, Rand);
+	return GenerateProcess(target, E, Rand);
 }
 
-double ElectronParticle::GenerateUntabScatterAngle(const Particle *target, double E, double theta, unsigned int process, double Rand) const
+double ElectronParticle::GenerateUntabScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const
 {
-	return GenerateScatterAngle(target, E, theta, process, Rand);
+	return GenerateScatterAngle(target, E, process, Rand);
 }
 
 double ElectronParticle::GenerateUntabEnergyLoss(const Particle *target, double E, double theta, unsigned int process, double Rand) const

@@ -36,7 +36,7 @@
       <elastic_XS_Ramsauer_minimum_En>0.3286</elastic_XS_Ramsauer_minimum_En> <!--OPT if no Ramsauer minimum is false or not specified-->
       <elastic_XS_at_0_En>7.491</elastic_XS_at_0_En>
       <scattering_angle_model>0</scattering_angle_model> <!--OPT, 0 - normal, 1 - uniform-->
-      <time_delay_model>Rough</time_delay_model> <!--OPT, Precise - default - using dt = d/dE Im arg(f), Rough - using d/dE phaseshift, None - no time delay -->
+      <time_delay_model>None</time_delay_model> <!--OPT, Precise - default - using dt = d/dE Im arg(f), Rough - using d/dE phaseshift, None - no time delay -->
 
       <Feshbach_resonance_3o2_En>11.103</Feshbach_resonance_3o2_En>
       <Feshbach_resonance_1o2_En>11.270</Feshbach_resonance_1o2_En>
@@ -48,19 +48,19 @@
       <Argon_ion_decay_time>360e-9</Argon_ion_decay_time> <!--In seconds-->
 
       <Feshbach_resonance_NBrS_XS>0.0</Feshbach_resonance_NBrS_XS><!--in e-20 m^2-->
-      <Feshbach_resonance_NBrS_En_loss>1e-1</Feshbach_resonance_NBrS_En_loss> <!--OPT-->
+      <Feshbach_resonance_NBrS_En_loss>0.0</Feshbach_resonance_NBrS_En_loss> <!--OPT-->
     </Argon>
   </PhysicalConstants>
   <ProgramConstants>
-    <is_test_version>true</is_test_version> <!--OPT for running tests before simulation. TODO: test modules and mb even submodules-->
+    <is_test_version>false</is_test_version> <!--OPT for running tests before simulation. TODO: test modules and mb even submodules-->
     <temperature>87</temperature> <!--Kelvins-->
     <pressure>1.05e5</pressure> <!--Pascals-->
-    <thread_number>6</thread_number>
+    <thread_number>1</thread_number>
     <maximal_energy>16.0</maximal_energy>
     <angle_discretization>1001</angle_discretization>
     
-    <drift_distance_ignore_history>1</drift_distance_ignore_history> <!--OPT-->
-    <skip_history_rate>999</skip_history_rate> <!--OPT-->
+    <drift_distance_ignore_history>0</drift_distance_ignore_history> <!--OPT-->
+    <skip_history_rate>0</skip_history_rate> <!--OPT-->
     <RecordedValues> <!-- if field is not specified, its value is taken as false by default (do not record) -->
     <!-- TODO: add profiles: for E specrtras, for V drift, Custom -->
     	<process_type>false</process_type>
@@ -68,7 +68,7 @@
 		<time_delta>true</time_delta>
 		<time_delta_full>true</time_delta_full>
 
-    	<energy_initial>false</energy_initial>
+    	<energy_initial>true</energy_initial>
     	<energy_collision>true</energy_collision>
     	<energy_final>false</energy_final>
     	<energy_average>false</energy_average> <!-- useless -->
@@ -99,14 +99,18 @@
       <excitation_XS_data>data/ArExcitations_Magboltz.dat</excitation_XS_data> <!--OPT-->
       <ionization_XS_data>data/ArIonizations_Magboltz.dat</ionization_XS_data> <!--OPT-->
     </DataFiles>
-    <cache_data_folder>data_derived</cache_data_folder>
+    <cache_data_folder>data_derived_dev</cache_data_folder>
+    <test_folder>tests_dev</test_folder> <!-- OPT -->
     <output_file>Output/v01.t/eData_($Td)Td.root</output_file>
-	<Ec_spectrum_data>Output/v12.1/Ec_forms/($Td)Td.dat</Ec_spectrum_data> <!--OPT. If set, the simulation is run in fixed Ec spectrum mode.-->
-    
+	
     <drift_distance>1e-4</drift_distance> <!--default value for each run-->
-    <n_electrons>1</n_electrons> <!--default value for each run-->
+    <n_electrons>2</n_electrons> <!--default value for each run-->
     <random_seed>42</random_seed> <!--default value for each run-->
-    <random_generator>TRandom1</random_generator> <!-- TRandom1 (best, slowest), TRandom2 (BAD), TRandom3 (faster, good) -->   
+    <random_generator>TRandom1</random_generator> <!-- TRandom1 (best, slowest), TRandom2 (BAD), TRandom3 (faster, good) --> 
+    <Mixture>
+    	<Argon>0.99</Argon>
+    	<ArgonVanDerWaals>0.01</ArgonVanDerWaals>
+    </Mixture>  
     <Runs>
       <Run>
         <Td>7.0</Td>

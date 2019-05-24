@@ -7,19 +7,20 @@
 	TGraph* graph = new TGraph();
 	histE_0->SetStats(false);
 	//gauss peak
-	double En_artifical_peak = 11.100;
-	double sigma_artifical_peak = 0.002;
-	double rel_area_artifical_peak = 0.10;	
+	double En_artifical_peak = 11.050;
+	double sigma_artifical_peak = 0.1;
+	double rel_area_artifical_peak = 0.20;	
 	std::vector<double> Es, Emods, Vs, Vmods;
 	std::string fname_0("Output/v12.1/eData_7.0Td");
 	std::string out_fname0 ("Output/v12.1/Ec_forms/7.0Td.dat"); //Make sure this folder exists before launching this script!
-	std::string out_fname0_1 ("Output/v12.1/Ec_forms/7.0Td_mod_6.dat");
+	std::string out_fname0_1 ("Output/v12.1/Ec_forms/7.0Td_mod_7.dat");
 	//mod_1: En = 11.091, Sigma=0.005, rel_area = 0.10
 	//mod_2: En = 11.101, Sigma=0.005, rel_area = 0.10
 	//mod_3: En = 11.081, Sigma=0.005, rel_area = 0.10
 	//mod_4: En = 11.091, Sigma=0.010, rel_area = 0.10
 	//mod_5: En = 11.091, Sigma=0.002, rel_area = 0.10
 	//mod_6: En = 11.100, Sigma=0.002, rel_area = 0.10
+	//mod_7: En = 11.050, Sigma=0.1, rel_area = 0.20
 	double En_collision;
 	double delta_time;
 

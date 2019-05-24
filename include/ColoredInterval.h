@@ -18,11 +18,13 @@ protected:
 	long double right_;
 public:
 	ColoredInterval(long double left, long double right, long double color);
+	ColoredRange operator += (const ColoredRange &r);
+	ColoredRange operator += (const ColoredInterval &r);
 
 	friend class ColoredRange;
-	friend ColoredRange operator+ (ColoredRange l, const ColoredInterval& r);
-	friend ColoredRange operator+ (ColoredInterval l, const ColoredRange& r);
-	friend ColoredRange operator+ (ColoredInterval l, const ColoredInterval& r);
+	friend ColoredRange operator+ (const ColoredRange &l, const ColoredInterval& r);
+	friend ColoredRange operator+ (const ColoredInterval &l, const ColoredRange& r);
+	friend ColoredRange operator+ (const ColoredInterval &l, const ColoredInterval& r);
 };
 
 class ColoredRange
@@ -38,15 +40,18 @@ public:
 	void Trim (long double left, long double right);
 	void Print(std::ostream & str);
 
-	friend ColoredRange operator+ (ColoredRange l, const ColoredRange& r);
-	friend ColoredRange operator+ (ColoredRange l, const ColoredInterval& r);
-	friend ColoredRange operator+ (ColoredInterval l, const ColoredRange& r);
-	friend ColoredRange operator+ (ColoredInterval l, const ColoredInterval& r);
+	ColoredRange& operator += (const ColoredRange &r);
+	ColoredRange& operator += (const ColoredInterval &r);
+
+	friend ColoredRange operator+ (const ColoredRange &l, const ColoredRange& r);
+	friend ColoredRange operator+ (const ColoredRange &l, const ColoredInterval& r);
+	friend ColoredRange operator+ (const ColoredInterval &l, const ColoredRange& r);
+	friend ColoredRange operator+ (const ColoredInterval &l, const ColoredInterval& r);
 };
 
-ColoredRange operator+ (ColoredRange l, const ColoredRange& r);
-ColoredRange operator+ (ColoredRange l, const ColoredInterval& r);
-ColoredRange operator+ (ColoredInterval l, const ColoredRange& r);
-ColoredRange operator+ (ColoredInterval l, const ColoredInterval& r);
+ColoredRange operator+ (const ColoredRange &l, const ColoredRange& r);
+ColoredRange operator+ (const ColoredRange &l, const ColoredInterval& r);
+ColoredRange operator+ (const ColoredInterval &l, const ColoredRange& r);
+ColoredRange operator+ (const ColoredInterval &l, const ColoredInterval& r);
 
 #endif

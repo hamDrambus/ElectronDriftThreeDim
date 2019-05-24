@@ -22,6 +22,15 @@ std::string strtoken(std::string &in, std::string break_symbs)
 	return out;
 }
 
+void open_output_file(std::string name, std::ofstream &str, std::ios_base::openmode _mode)
+{
+	ensure_file(name);
+	str.open(name.c_str(), _mode);
+	if (!str.is_open()){
+		std::cout << "Failed to open \"" << name << "\"" << std::endl;
+	}
+}
+
 void ensure_file(std::string fname)
 {
 	std::string folder = fname;

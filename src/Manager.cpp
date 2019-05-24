@@ -1,7 +1,7 @@
 #include "Manager.h"
 
-Manager::Manager(Mixture *Ar_tables) :
-	skip_counter_(0), material_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0), sim_data_(NULL)
+Manager::Manager(const Mixture *Ar_tables) :
+	skip_counter_(0), material_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0), sim_data_(NULL), processes_data_(NULL)
 {
 	switch (gSettings.ProgConsts()->random_generator) {
 	case (ProgramConstants::GeneratorClass::TRand1): {
@@ -44,12 +44,15 @@ Manager::Manager(Mixture *Ar_tables) :
 
 Manager::~Manager()
 {
-	if (random_generator_)
-		random_generator_->Delete();
-	if (sim_data_)
-		sim_data_->Delete();
-	if (processes_data_)
-		processes_data_->Delete();
+	if (random_generator_) {
+		delete random_generator_;
+	}
+	if (sim_data_) {
+		delete sim_data_;
+	}
+	if (processes_data_) {
+		delete processes_data_;
+	}
 }
 
 bool Manager::isReady(void) const
@@ -114,18 +117,21 @@ void Manager::InitTree (void)
 	if (sets->recorded_values.end()!=sets->recorded_values.find("deb_solver_E_right"))
 		sim_data_->Branch("deb_solver_E_right",&event_.deb_solver_E_right);
 
-	if (processes_data_)
-		processes_data_->Delete();
+	if (processes_data_) {;
+		delete processes_data_;
+	}
 	processes_data_ = NULL;
 }
 
 void Manager::Clear(void)
 {
-	if (sim_data_)
-		sim_data_->Delete();
+	if (sim_data_) {
+		delete sim_data_;
+	}
 	sim_data_ = NULL;
-	if (processes_data_)
-		processes_data_ ->Delete();
+	if (processes_data_) {
+		delete processes_data_;
+	}
 	processes_data_ = NULL;
 	skip_counter_ = 0;
 	skipping_early_events = true;
@@ -252,7 +258,7 @@ long double Manager::XS_integral_for_test(long double from, long double to, long
 {
 	double E = from, E_prev = from;
 	long double Int = 0;
-	const Particle * particle = gParticleTable.GetParticle("electron");
+	const Particle * particle = gParticleTable.GetParticle(ELECTRON_NAME);
 	if ((from - Eny) / from<1e-6) {//irregularity case
 		E = std::min(1e-6*from + Eny, to);
 		Int += 0.5*(material_->GetCrossSection(particle, E) + material_->GetCrossSection(particle, from))*sqrt(E*(E - Eny));
@@ -307,6 +313,7 @@ void Manager::Initialize(Event &event)
 	event.delta_time = 0;
 	event.delta_time_full = 0;
 	event.process = Event::None;
+	event.particle_ID = gParticleTable.GetParticleID(ELECTRON_NAME);
 
 	event.theta_start = 0;
 	event.theta_collision = 0;
@@ -549,6 +556,7 @@ void Manager::DoScattering(Event &event)
 {
 	if (!isReady())
 		return;
+	bool is_overflow = (event.process==Event::Overflow);
 	const Particle* incident = gParticleTable.GetParticle(event.particle_ID);
 	double R2 = random_generator_->Uniform(); //R1 is used in DoStepLength
 	const Particle* target = material_->GenerateScatteringParticle(incident, event.En_collision, R2);
@@ -562,65 +570,42 @@ void Manager::DoScattering(Event &event)
 			target = material_->GetDominatingParticle(incident, event.En_collision);
 			if (NULL == target) {
 				//throw;
+				event_ = event;
 				return;
 			}
 		}
 	}
-
-	bool is_overflow = (event.process==Event::Overflow);
-	double R2 = random_generator_->Uniform();
-	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i)
-		if (R2<event.CrossSectionsSum[i]) {
-			event.process = i + Event::Elastic;
-			break;
-		}
-
 	double R3 = random_generator_->Uniform();
-	event.delta_theta = ArTables_->generate_theta (event.En_collision, event.process, R3);
+	event.process = target->GenerateProcess(incident, event.En_collision, R3);
+	if (Event::None == event.process) {
+		//throw
+		event_ = event;
+		return;
+	}
+	double R4 = random_generator_->Uniform();
+	event.delta_theta = target->GenerateScatterAngle(incident, event.En_collision, event.process, R4);
 	double phi = random_generator_->Uniform()*2.0*M_PI;
 	double cos_th_f = std::cos(event.delta_theta)*std::cos(event.theta_collision) + std::sin(event.delta_theta)*std::sin(event.theta_collision)*std::cos(phi);
 	if (cos_th_f<-1.0) //just in case of precision problems
 		cos_th_f = -1.0;
 	if (cos_th_f>1.0)
 		cos_th_f = 1.0;
-	event.theta_finish = std::acos(cos_th_f);// event.theta_collision + (R3<0.5 ? event.delta_theta: -event.delta_theta); - v7.x - 2D implementation
-	long double gamma_f = gSettings.PhysConsts()->e_mass_eV/ gSettings.PhysConsts()->Ar_mass_eV;
-	double EnergyLoss = 2*(1-cos(event.delta_theta))*event.En_collision*gamma_f /pow(1 + gamma_f, 2);
-	double time_delay = 0;
-	switch (event.process) {
-		case (Event::Elastic): {
-			double width_factor = std::pow(Width_3o2_/2.0, 2)/(std::pow(Width_3o2_/2.0, 2) + std::pow((event.En_collision-En_3o2_)/2.0, 2));
-			width_factor += std::pow(Width_1o2_/2.0, 2)/(std::pow(Width_1o2_/2.0, 2) + std::pow((event.En_collision-En_1o2_)/2.0, 2));
-			width_factor *= 0.5**gSettings.PhysConsts()->resonance_En_loss;
-			EnergyLoss+=width_factor;
-
-			double R5 = random_generator_->Uniform();
-			time_delay = ArTables_->generate_time_delay(event.En_collision, event.delta_theta, event.process, R5);
-			break;
-		}
-		case (Event::ResNBrS): {
-			double R5 = random_generator_->Uniform();
-			EnergyLoss = ArTables_->generate_ResNBrS_En_loss(event.En_collision, event.delta_theta, R5);
-			event.photon_En = EnergyLoss;
-			break;
-		}
-		case (Event::Ionization): {
-			const InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(event.process-Event::Ionization);
-			if (NULL!=p) {
-				EnergyLoss = (event.En_collision > 0) ? p->get_En_thresh() : -p->get_En_thresh();
-				EnergyLoss += (event.En_collision - EnergyLoss)/2.0; //Consider that residual energy is equally divided between 2 electrons
-			}
-			break;
-		}
-		default: {
-			const InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(event.process-Event::Ionization);
-			if (NULL!=p)
-				EnergyLoss = (event.En_collision > 0) ? p->get_En_thresh() : -p->get_En_thresh();
-			event.photon_En = 2*M_PI*gSettings.PhysConsts()->h_bar_eVs*gSettings.PhysConsts()->light_speed_SI/(1e-9*gSettings.PhysConsts()->Ar_primal_line_nm);
-		}
-	}
+	event.theta_finish = std::acos(cos_th_f);
+	double R5 = random_generator_->Uniform();
+	double EnergyLoss = target->GenerateEnergyLoss(incident, event.En_collision, event.delta_theta, event.process, R5);
+	event.photon_En = target->GeneratePhoton(incident, event.En_collision, event.delta_theta, event.process, R5); //same random value must be used!
 	event.En_finish = event.En_collision - EnergyLoss;
+	double R6 = random_generator_->Uniform();
+	double time_delay = target->GenerateTimeDelay(incident, event.En_collision, event.delta_theta, event.process, R6);
 	event.delta_time_full = event.delta_time + time_delay;
+	std::vector<const Particle*> outputs = target->GetFinalStates(incident, event.En_collision, event.delta_theta, event.process);
+	if (outputs.size()<2) {
+		//throw
+		event_ = event;
+		return;
+	}
+	event.particle_ID_finish = gParticleTable.GetParticleID(outputs[1]);
+	event.particle_ID_target = gParticleTable.GetParticleID(outputs[0]);
 	if (is_overflow)
 		event.process = Event::Overflow;
 	event_ = event;
@@ -630,9 +615,10 @@ void Manager::PostStepAction(Event &event)
 {
 	if (!isReady())
 		return;
-	for (int i = 0, i_end_ = processes_counters_.size(); i!=i_end_; ++i) {
-		if (i == event.particle_ID) {
-			for (int j = 0, j_end_ = processes_counters_.size(); j!=j_end_; ++j) {
+	std::size_t e_ID = gParticleTable.GetParticleID(ELECTRON_NAME);
+	for (int i = 0, i_end_ = processes_counters_.size(); i != i_end_; ++i) {
+		if (i == event.particle_ID_target && e_ID == event.particle_ID) {
+			for (int j = 0, j_end_ = processes_counters_[i].size(); j!=j_end_; ++j) {
 				if (processes_IDs_[i][j] == event.process) {
 					++processes_counters_[i][j];
 					break;
@@ -687,6 +673,7 @@ void Manager::DoGotoNext(Event &event)
 		event.delta_x = 0;
 		event.delta_time_full = 0;
 		event.photon_En = 0;
+		event.particle_ID = event.particle_ID_finish;
 	}
 	event_ = event;
 }
@@ -714,8 +701,8 @@ void Manager::LoopSimulation(void)
 	Initialize();
 	if (!isReady())
 		return;
-	if (!ArTables_->isValid()) {
-		std::cerr << "Manager::LoopSimulation: invalid data tables" << std::endl;
+	if (!material_->isValid()) {
+		std::cerr << "Manager::LoopSimulation: invalid material" << std::endl;
 		return;
 	}
 	Initialize(event_);
@@ -730,8 +717,9 @@ void Manager::WriteHistory(std::string root_fname)
 	file->cd();
 	std::cout<<"Event number: "<<sim_data_->GetEntries()<<std::endl;
 	sim_data_->Write("", TObject::kOverwrite);
-	if (NULL != processes_data_)
-		processes_data_->Delete();
+	if (NULL != processes_data_) {
+		delete processes_data_;
+	}
 	processes_data_ = new TTree("ElectronProcessCounters", "ElectronProcessCounters");
 
 	//ROOT Trees require pointers, not a standard containers
@@ -743,18 +731,47 @@ void Manager::WriteHistory(std::string root_fname)
 	char * particle_name;
 
 	processes_data_->Branch("particle_ID", &particle_ID, "particle_ID/i");
-	processes_data_->Branch("particle_name", particle_name, "particle_name/C");
 	processes_data_->Branch("proc_size", &processes_size, "proc_size/i");
-	processes_data_->Branch("proc_IDs", processes_IDs, "proc_IDs[proc_size]/S");
-	processes_data_->Branch("proc_Ns", processes_counters, "proc_Ns[proc_size]/L");
-	processes_data_->Branch("proc_names", processes_legends, "proc_names[proc_size]/C");
+	TBranch *brParticleName = processes_data_->Branch("particle_name", particle_name, "particle_name/C");
+	TBranch *brProcessesID = processes_data_->Branch("proc_IDs", processes_IDs, "proc_IDs[proc_size]/S");
+	TBranch *brProcessesCounters = processes_data_->Branch("proc_Ns", processes_counters, "proc_Ns[proc_size]/L");
+	TBranch *brProcessesName = processes_data_->Branch("proc_names", processes_legends, "proc_names[proc_size]/C");
 
-	processes_data_->Fill();
+	for (std::size_t i = 0, i_end_ = processes_counters_.size(); i!=i_end_; ++i) {
+		particle_ID = i;
+		particle_name = c_str_cp(gParticleTable.GetParticle(i)->GetName());
+		processes_size = processes_counters_[i].size();
+		processes_counters = new Long64_t [processes_size];
+		processes_IDs = new Short_t [processes_size];
+		processes_legends = new char* [processes_size];
+		for (std::size_t proc = 0; proc != processes_size; ++proc) {
+			processes_counters[proc] = processes_counters_[i][proc];
+			processes_IDs[proc] = processes_IDs_[i][proc];
+			processes_legends[proc] = c_str_cp(processes_legends_[i][proc]);
+		}
+		brParticleName->SetAddress(particle_name);
+		brProcessesID->SetAddress(processes_IDs);
+		brProcessesCounters->SetAddress(processes_counters);
+		brProcessesName->SetAddress(processes_legends);
+		processes_data_->Fill();
+		for (std::size_t proc = 0; proc != processes_size; ++proc) {
+			delete [] processes_legends[proc];
+		}
+		delete [] processes_counters;
+		delete [] processes_IDs;
+		delete [] processes_legends;
+		delete [] particle_name;
+	}
 
 	processes_data_->Write("", TObject::kOverwrite);
-	file->Close();
+	file->Close(); //should delete both trees
+	delete file;
+	//delete processes_data_; //This ROOT memory management, argh!
+	processes_data_ = NULL;
+	sim_data_ = NULL;
 }
 
+/*
 void Manager::Test(void)
 {
 	std::cout << "Testing Manager->Solve():" << std::endl;
@@ -847,3 +864,4 @@ void Manager::Test(void)
 
 	std::cout << "===============================================" << std::endl << std::endl << std::endl;
 }
+*/

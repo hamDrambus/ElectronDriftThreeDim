@@ -986,7 +986,7 @@ long double ArAllData::argon_ResNBrS_XS(long double E) const //Normalization con
 	return width_factor*gSettings.PhysConsts()->resonance_NBrS_XS;
 }
 
-long double ArAllData::argon_back_scatter_prob(long double E)
+long double ArAllData::argon_back_scatter_prob(long double E) const
 {
 	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) const = 0;
 	unsigned int L_MAX = 0;
@@ -1021,7 +1021,7 @@ long double ArAllData::argon_back_scatter_prob(long double E)
 	return W / (2 * cross);
 }
 //energy loss and input are in eV
-long double ArAllData::argon_TM_forward(long double E)
+long double ArAllData::argon_TM_forward(long double E) const
 {
 	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) const = 0;
 	unsigned int L_MAX = 0;
@@ -1056,7 +1056,7 @@ long double ArAllData::argon_TM_forward(long double E)
 	return W / cross;
 }
 
-long double ArAllData::argon_TM_backward(long double E)
+long double ArAllData::argon_TM_backward(long double E) const
 {
 	void (ArAllData::*phase_values)(long double, unsigned int, long double &, long double &) const = 0;
 	unsigned int L_MAX = 0;
@@ -1135,7 +1135,7 @@ ArgonParticle::ArgonParticle(void) : Particle(), ArAllData_(),
 	time_delay_spin_nonflip_fname(gSettings.ProgConsts()->tabulated_data_folder + "time_delay_spin_nonflip.dat"),
 	total_resonance_NBrS_spectrum_fname(gSettings.ProgConsts()->tabulated_data_folder + "ResNBrS_spectrum.dat")
 {
-	name_ = "Argon";
+	name_ = ARGON_NAME;
 	mass_ = gSettings.PhysConsts()->Ar_mass_eV;
 	width_ = 0;
 	std::cout<<"Loading Ar data tables..."<<std::endl;
@@ -1146,7 +1146,7 @@ ArgonParticle::ArgonParticle(void) : Particle(), ArAllData_(),
 		std::cout << "Aborting loading data tables" << std::endl;
 		return;
 	}
-	XS_En_sweeper_ = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0.01, 0.1, 2e-4) +
+	XS_En_sweeper_ = ColoredInterval (0, 0.001, 1e-4) + ColoredInterval (0.001, 0.01, 3e-4) + ColoredInterval (0.01, 0.1, 5e-4) +
 			ColoredInterval (0, gSettings.PhysConsts()->XS_el_En_maximum, 1e-3) +
 			ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/5) +	//coarse area
 			ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/5) +	//coarse area
@@ -1299,7 +1299,12 @@ ArgonParticle::ArgonParticle(void) : Particle(), ArAllData_(),
 	std::cout<<"Finished loading Ar data tables"<<std::endl;
 }
 
-ArgonParticle::~ArgonParticle() {};
+ArgonParticle::~ArgonParticle() {
+	delete theta_table_;
+	delete time_delay_spin_flip_table_;
+	delete time_delay_spin_nonflip_table_;
+	delete time_delay_spin_nonflip_prob_table_;
+};
 
 bool ArgonParticle::isValid(void) const
 {
@@ -1507,10 +1512,6 @@ void ArgonParticle::DeleteData(void)
 	delete time_delay_spin_flip_table_;
 	delete time_delay_spin_nonflip_table_;
 	delete time_delay_spin_nonflip_prob_table_;
-	theta_table_ = NULL;
-	time_delay_spin_flip_table_ = NULL;
-	time_delay_spin_nonflip_table_ = NULL;
-	time_delay_spin_nonflip_prob_table_ = NULL;
 }
 
 unsigned int ArgonParticle::GetQauntStateSize(const Particle *target, double E, double theta, unsigned int process) const
@@ -1605,7 +1606,7 @@ std::vector<const Particle*> ArgonParticle::GetFinalStates(const Particle *targe
 	return out;
 }
 
-double ArgonParticle::GenerateScatterAngle(const Particle *target, double E, double theta, unsigned int process, double Rand) const
+double ArgonParticle::GenerateScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const
 {
 	if (NULL == target) {
 		std::cerr << GetName() << "::GenerateScatterAngle: Error: NULL target"<<std::endl;
@@ -1780,12 +1781,12 @@ double ArgonParticle::GenerateTimeDelay(const Particle *target, double E, double
 }
 
 //Untabulated functions:
-unsigned int ArgonParticle::GenerateUntabProcess(const Particle *target, double E, double theta, double Rand) const
+unsigned int ArgonParticle::GenerateUntabProcess(const Particle *target, double E, double Rand) const
 {
-	return GenerateProcess(target, E, theta, Rand);
+	return GenerateProcess(target, E, Rand);
 }
 
-double ArgonParticle::GenerateUntabScatterAngle(const Particle *target, double E, double theta, unsigned int process, double Rand) const
+double ArgonParticle::GenerateUntabScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const
 {
 	if (NULL == target) {
 		std::cerr << GetName() << "::GenerateScatterAngle: Error: NULL target"<<std::endl;
