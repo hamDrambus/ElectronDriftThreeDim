@@ -1,4 +1,15 @@
-{
+Double_t FittingF_GE (Double_t *x, Double_t *par) {
+  //par[0] - gauss ampl
+  //par[1] - gauss mean
+  //par[2] - gause sigmna
+  //par[3] - exp start t
+  //par[4] - exp ampl
+  //par[5] - exp decay time
+  return par[0]*std::exp(-0.5*std::pow((x[0]-par[1])/par[2], 2))
+      + (x[0] > par[3] ? par[4]*std::exp(-1.0*x[0]/par[5]) : 0);
+}
+
+void view_e_pars_dev(void) {
   gStyle->SetStatY(0.9);
   gStyle->SetStatX(0.9);
   TH1D* histEc = new TH1D ("EnergyC [eV]","EnergyC [eV]",300,0, 14);
@@ -11,7 +22,8 @@
   TH1D* hist_Tdelay = new TH1D ("Time delay [s]","Time delay [s]",600, 0, 1e-5);
   TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
   TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
-  TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",120, 3.5e-7, 7.2e-7);
+  double Dtime_left = 1.0e-7, Dtime_right = 3.0e-6, lim = 4.60e-7;
+  TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",120, Dtime_left, Dtime_right);
   TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 15);
   TH1D* hist_theta = new TH1D ("Scatter angle near 10 eV","Scatter angle near 10 eV",300, 0, 3.1416);
   TH1D* hist_theta_i = new TH1D ("Initial angle distribution","Initial angle distribution",300, 0, 3.1416);
@@ -24,7 +36,7 @@
   double E_at_time = 1e-11;
   double dt = 6e-12;
   double DRIFT_DISTANCE = 3e-3;
-  std::string fname1("Output/v01.t/eData_7.0Td.root");
+  std::string fname1("Output/v14.1/eData_7.0Td_VN.root");
   double En_start;
   double En_collision;
   double En_finish;
@@ -235,23 +247,30 @@
   TCanvas *c_2_5 = new TCanvas ("Time delay", "Time delay", DEF_W, DEF_H);
   c_2_5->SetLogy();
   hist_Tdelay->Draw();
+  gStyle->SetOptFit();
   TCanvas *c_3 = new TCanvas ("Drift velocity", "Drift velocity", DEF_W, DEF_H);
   hist_V_drift->Draw();
   TCanvas *c_3_5 = new TCanvas ("Drift time", "Drift time", DEF_W, DEF_H);
-  TF1 *ff = new TF1("G", "gaus", 3.0e-7, 12.0e-7);
+  TF1 *ff = new TF1("fit", FittingF_GE, Dtime_left, Dtime_right, 6);
+  ff->SetParNames("Gaus amplitude", "Gaus mean", "Gaus sigma", "t0[s]", "Slow amplitude", "tau[s]");
+  ff->SetParLimits(0, 100, 300);
+  ff->SetParLimits(1, 2.5e-7, lim);
+  ff->SetParLimits(2, 1e-8, 2e-7);
+  ff->SetParLimits(3, lim, 5e-7);
+  ff->SetParLimits(4, 0, 500);
+  ff->SetParLimits(5, 1e-7, 1e-5);
   hist_T_drift->Draw();
   c_3_5->Update();
-  double lim = 5.70e-7;            
   TLine* line = new TLine();
   line->SetX1(lim);
   line->SetX2(lim);
   line->SetY1(c_3_5->GetUymin());
   line->SetY2(c_3_5->GetUymax());
   line->SetLineColor(kRed);
-  hist_T_drift->Fit(ff, "W", "", 3e-7, lim);
+  hist_T_drift->Fit(ff);
   hist_T_drift->Draw();
   line->Draw("same");
-  ff->Draw("same");
+  //ff->Draw("same");
   TCanvas *c_4 = new TCanvas ("Delta L", "Delta L", DEF_W, DEF_H);
   hist_dl->Draw();
   TCanvas *c_5 = new TCanvas ("e energy average", "e energy average", DEF_W, DEF_H);

@@ -51,7 +51,8 @@ double ArgonVanDerWaalsParticle::GetCrossSection(const Particle *target, double 
 			return 0;
 		}
 		if (1 == process) {
-			return gSettings.PhysConsts()->Dissoc_attachment_XS;
+			if (E > gSettings.PhysConsts()->Dissoc_attachment_En_thresh)
+				return gSettings.PhysConsts()->Dissoc_attachment_XS;
 		}
 	}
 	return 0;

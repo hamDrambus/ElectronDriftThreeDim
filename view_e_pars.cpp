@@ -11,7 +11,7 @@
 	TH1D* hist_Tdelay = new TH1D ("Time delay [s]","Time delay [s]",600, -1e-12, 1e-12);
     TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
     TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
-    TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",120, 3.6e-7, 7.2e-7);
+    TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",120, 3.8e-7, 8.0e-7);
     TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 15);
     TH1D* hist_theta = new TH1D ("Scatter angle near 10 eV","Scatter angle near 10 eV",300, 0, 3.1416);
 	TH1D* hist_theta_i = new TH1D ("Initial angle distribution","Initial angle distribution",300, 0, 3.1416);
@@ -24,7 +24,7 @@
     double E_at_time = 1e-11;
     double dt = 6e-12;
     double DRIFT_DISTANCE = 3e-3;
-    std::string fname1("Output/v13.1/eData_7.0Td_SN.root");
+    std::string fname1("Output/v13.8/eData_7.0Td_VR.root");
     double En_start;
     double En_collision;
     double En_finish;
@@ -209,7 +209,7 @@
 			TF1 *ff = new TF1("G", "gaus", 3.0e-7, 12.0e-7);
 			hist_T_drift->Draw();
 			c_3_5->Update();
-			double lim = 5.70e-7;			
+			double lim = 5.80e-7;			
 			TLine* line = new TLine();
 			line->SetX1(lim);
 			line->SetX2(lim);
