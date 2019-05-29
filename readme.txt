@@ -4,11 +4,11 @@
 WINDOWS:
 ====================================================================================
 Setups:
-1) Add 'root\include' to Project Preferences->Configuration Properties->Include Directories,
+1) Add 'root\include', '...\boost_version' to Project Preferences->Configuration Properties->Include Directories,
 	'root\lib' and 'root\bin' to Configuration Properties->Library Directories,
 	source directory for user code (if is in not default vs folder) to Configuration Properties->Source Directories
 
-2) Add 'root\include' to c/c++->General->Additional Include Directories
+2) Add 'root\include' and '...\boost_version' to c/c++->General->Additional Include Directories
 	
 3) Add _CRT_SECURE_NO_WARNINGS and __WIN32__ to c/c++->Preprocessor->Preprocessor Definitions
 
@@ -19,6 +19,8 @@ Setups:
 6) Add 'root_v5.34.34\lib\*.lib' to Linker->Input->Additional Dependencies
 
 7) Debuging->Working Directory - set to root of project folder (which contatins 'include' and 'src')
+
+8) set Linker->System->Enable Large Addresses to Yes
 
 Notes:
 #include "Windows4Root.h" instead of #include "windows.h"
