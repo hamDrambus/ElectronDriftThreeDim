@@ -22,8 +22,8 @@ void view_e_pars_dev(void) {
   TH1D* hist_Tdelay = new TH1D ("Time delay [s]","Time delay [s]",600, 0, 1e-5);
   TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
   TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
-  double Dtime_left = 1.0e-7, Dtime_right = 3.0e-6, lim = 4.60e-7;
-  TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",120, Dtime_left, Dtime_right);
+  double Dtime_left = 7.0e-6, Dtime_right = 3.5e-5, lim = 4.50e-7;
+  TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",160, Dtime_left, Dtime_right);
   TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 15);
   TH1D* hist_theta = new TH1D ("Scatter angle near 10 eV","Scatter angle near 10 eV",300, 0, 3.1416);
   TH1D* hist_theta_i = new TH1D ("Initial angle distribution","Initial angle distribution",300, 0, 3.1416);
@@ -36,7 +36,7 @@ void view_e_pars_dev(void) {
   double E_at_time = 1e-11;
   double dt = 6e-12;
   double DRIFT_DISTANCE = 3e-3;
-  std::string fname1("Output/v14.1/eData_7.0Td_VN.root");
+  std::string fname1("Output/v14.5/eData_7.0Td_VN.root");
   double En_start;
   double En_collision;
   double En_finish;
@@ -251,11 +251,12 @@ void view_e_pars_dev(void) {
   TCanvas *c_3 = new TCanvas ("Drift velocity", "Drift velocity", DEF_W, DEF_H);
   hist_V_drift->Draw();
   TCanvas *c_3_5 = new TCanvas ("Drift time", "Drift time", DEF_W, DEF_H);
+  //gPad->SetLogy();
   TF1 *ff = new TF1("fit", FittingF_GE, Dtime_left, Dtime_right, 6);
-  ff->SetParNames("Gaus amplitude", "Gaus mean", "Gaus sigma", "t0[s]", "Slow amplitude", "tau[s]");
-  ff->SetParLimits(0, 100, 300);
+  ff->SetParNames("Gaus amplitude", "Gaus mean", "Gaus sigma", "Slow t0[s]", "Slow amplitude", "Slow tau[s]");
+  ff->SetParLimits(0, 100, 2000);
   ff->SetParLimits(1, 2.5e-7, lim);
-  ff->SetParLimits(2, 1e-8, 2e-7);
+  ff->SetParLimits(2, 1e-8, 1e-7);
   ff->SetParLimits(3, lim, 5e-7);
   ff->SetParLimits(4, 0, 500);
   ff->SetParLimits(5, 1e-7, 1e-5);
@@ -267,9 +268,9 @@ void view_e_pars_dev(void) {
   line->SetY1(c_3_5->GetUymin());
   line->SetY2(c_3_5->GetUymax());
   line->SetLineColor(kRed);
-  hist_T_drift->Fit(ff);
-  hist_T_drift->Draw();
-  line->Draw("same");
+  //hist_T_drift->Fit(ff);
+  //hist_T_drift->Draw();
+  //line->Draw("same");
   //ff->Draw("same");
   TCanvas *c_4 = new TCanvas ("Delta L", "Delta L", DEF_W, DEF_H);
   hist_dl->Draw();
