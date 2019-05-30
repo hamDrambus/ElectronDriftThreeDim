@@ -28,7 +28,11 @@ bool Process(void) {
 	Mixture mixture ("Gaseous argon");
 	for (std::size_t comp = 0, comp_end_ = gSettings.ProgConsts()->mixture_components.size(); comp != comp_end_; ++comp)
 		mixture.AddComponent(gSettings.ProgConsts()->mixture_components[comp], gSettings.ProgConsts()->mixture_component_fractions[comp]);
-	mixture.Prepare();
+    auto start_t = std::chrono::system_clock::now();
+    mixture.Prepare();
+    auto end_t = std::chrono::system_clock::now();
+    std::chrono::duration<double> diff = end_t - start_t;
+    std::cout << std::endl << "  Elapsed time for prepairing mixture = \t" << diff.count() << " s." << std::endl;
 	//TODO: It is currently implied that calling FunctionTable methods is thread-safe because there is only reading and no changes in their internal states.
 	//It would be better to fix this fact in the code explicitly (cost methods, locks, etc.)
 	for (unsigned int n = 0u; n < N_threads; ++n) {
@@ -86,7 +90,7 @@ bool Process(void) {
 			_submanagers[0]->WriteHistory(rp->output_file);
 
 		auto run_end_t = std::chrono::system_clock::now();
-		std::chrono::duration<double> diff = run_end_t - run_start_t;
+        diff = run_end_t - run_start_t;
 		std::cout << "Finished run #" << run << std::endl;
 		std::cout << "  Electric field = \t" << rp->field << " Td" << std::endl;
 		std::cout << "  Temperature = \t" << gSettings.ProgConsts()->temperature << " K" << std::endl;
@@ -106,7 +110,7 @@ bool Process(void) {
 		delete _submanagers[n];
 	}
 	auto end = std::chrono::system_clock::now();
-	std::chrono::duration<double> diff = end - start;
+    diff = end - start;
 	std::cout << "Finished simulation." << std::endl;
 	std::cout << "Elapsed time  = \t" << diff.count() << " s." << std::endl;
 	return true;
@@ -127,7 +131,11 @@ int main(int argn, char * argv[]) {
 	if (!gSettings.isValid()) {
 		return 1;
 	}
+    auto start_t = std::chrono::system_clock::now();
 	gParticleTable.Load();
+    auto end_t = std::chrono::system_clock::now();
+    std::chrono::duration<double> diff = end_t - start_t;
+    std::cout << std::endl << "  Elapsed time for loading particles = \t" << diff.count() << " s." << std::endl;
 	TApplication* app = NULL;
 	if (gSettings.ProgConsts()->is_test_version) {
 		int n_par = 0;

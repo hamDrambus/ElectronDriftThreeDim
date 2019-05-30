@@ -1,0 +1,7 @@
+ Profiling (and building) is done with Qt Creator instead of Eclipse.
+30.05.2019: Starting Point:
+	t particle generating =	386.077 s
+	t particle loading =	3.89506 s
+	t mixture generating (integral table) =	2555.55 s
+	t mixture loading =		12.4232 s
+	t drift (5 e on 1e-3 m) = 158.421 s

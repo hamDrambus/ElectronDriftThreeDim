@@ -108,6 +108,7 @@ void Mixture::Prepare(void) {
 		return;
 	}
 	std::ifstream inp;
+    std::cout<<"Mixture(\"" << name_ << "\")::Prepare: Loading integral table..."<<std::endl;
 	inp.open(integral_table_fname, std::ios_base::binary);
 	if (!inp.is_open()) { //TODO: add identification of table corresponding to certain mixture
 		std::cout<<"Failed to load \""<<integral_table_fname<<"\""<<std::endl;
