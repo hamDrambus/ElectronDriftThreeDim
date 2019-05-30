@@ -27,6 +27,7 @@ protected:
 	std::pair<long int, long int> find_E_indexes_by_value (double val, std::size_t Ey_index) const;
 public:
 	FunctionTable(void);
+	virtual ~FunctionTable();
 	virtual double operator ()(double E, double Ey) const;
 	double find_E (double Ey, double val) const;
 	void push (double E, double Ey, double val);

@@ -83,6 +83,11 @@ bool Settings::Load(std::string fname)
 		phys_const_.En_1o2 = physics.get<double>("Feshbach_resonance_1o2_En");
 		phys_const_.Width_3o2 = physics.get<double>("Feshbach_resonance_3o2_Width");
 		phys_const_.Width_1o2 = physics.get<double>("Feshbach_resonance_1o2_Width");
+
+		phys_const_.Dissoc_attachment_En_thresh = physics.get<double>("Dissoc_attachment_En_thresh");
+		phys_const_.Dissoc_attachment_XS = physics.get<double>("Dissoc_attachment_XS");
+		phys_const_.Argon_ion_decay_time = physics.get<double>("Argon_ion_decay_time");
+
 		phys_const_.resonance_NBrS_XS = physics.get<double>("Feshbach_resonance_NBrS_XS"); //in 1e-20 m^2
 		phys_const_.resonance_En_loss = physics.get_optional<double>("Feshbach_resonance_NBrS_En_loss");
 
@@ -105,28 +110,31 @@ bool Settings::Load(std::string fname)
 			}
 		}
 
+		prog_const_.test_folder = params.get<std::string>("test_folder", "tests");
+		prog_const_.test_folder = prog_const_.test_folder +
+			(prog_const_.test_folder.empty() ? "" : ((prog_const_.test_folder.back() == '/') ? "" : "/"));
 		prog_const_.data_folder = params.get<std::string>("data_location", "data");
-		std::string prefix = prog_const_.data_folder +
+		prog_const_.data_folder = prog_const_.data_folder +
 			(prog_const_.data_folder.empty() ? "" : ((prog_const_.data_folder.back() == '/') ? "" : "/"));
 		try {
 			prog_const_.elastic_XS_phaseshift_fname = params.get<std::string>("DataFiles.elastic_XS_phaseshifts_data");
 		} catch (ptree_error& e) {
-			prog_const_.elastic_XS_phaseshift_fname = prefix + "McEachranArPhaseShifts.dat";
+			prog_const_.elastic_XS_phaseshift_fname = prog_const_.data_folder + "McEachranArPhaseShifts.dat";
 		}
 		try {
 			prog_const_.elastic_XS_fname = params.get<std::string>("DataFiles.elastic_XS_data");
 		} catch (ptree_error& e) {
-			prog_const_.elastic_XS_fname = prefix + "ArScatteringCross.dat";
+			prog_const_.elastic_XS_fname = prog_const_.data_folder + "ArScatteringCross.dat";
 		}
 		try {
 			prog_const_.ionization_XS_fname = params.get<std::string>("DataFiles.ionization_XS_data");
 		} catch (ptree_error& e) {
-			prog_const_.ionization_XS_fname = prefix + "ArIonizations_Magboltz.dat";
+			prog_const_.ionization_XS_fname = prog_const_.data_folder + "ArIonizations_Magboltz.dat";
 		}
 		try {
 			prog_const_.excitation_XS_fname = params.get<std::string>("DataFiles.excitation_XS_data");
 		} catch (ptree_error& e) {
-			prog_const_.excitation_XS_fname = prefix + "ArExcitations_Magboltz.dat";
+			prog_const_.excitation_XS_fname = prog_const_.data_folder + "ArExcitations_Magboltz.dat";
 		}
 		prog_const_.tabulated_data_folder = params.get<std::string>("cache_data_folder");
 		prog_const_.tabulated_data_folder = prog_const_.tabulated_data_folder +
@@ -155,6 +163,33 @@ bool Settings::Load(std::string fname)
 				std::string("conversion of type \"") + typeid(std::string).name() +
 				"\" to ProgramConstants::GeneratorClass data failed", boost::any()));
 		}
+		BOOST_FOREACH(ptree::value_type &w, params.get_child("Mixture"))
+		{
+			bool recognized = false;
+			if (w.first == "Argon") {
+				double concentr = w.second.get_value<double>();
+				prog_const_.mixture_components.push_back(ARGON_NAME);
+				prog_const_.mixture_component_fractions.push_back(concentr);
+				recognized = true;
+			}
+			if (w.first == "ArgonVanDerWaals") {
+				double concentr = w.second.get_value<double>();
+				prog_const_.mixture_components.push_back(ARGON_VAN_DER_WAALS_NAME);
+				prog_const_.mixture_component_fractions.push_back(concentr);
+				recognized = true;
+			}
+			//Electron-electron scattering is not supported.
+			//if (w.first == "Electron") {
+			//	double concentr = w.second.get_value<double>();
+			//	prog_const_.mixture_components.push_back(ELECTRON_NAME);
+			//	prog_const_.mixture_component_fractions.push_back(concentr);
+			//	recognized = true;
+			//}
+			if (!recognized) {
+				std::cout << "Settings::Load: Warning: Unknown key \"" << w.first << "\" in \"Mixture\". Ignored." << std::endl;
+			}
+		}
+
 		BOOST_FOREACH(ptree::value_type &w,
 			params.get_child("Runs"))
 		{

@@ -48,6 +48,10 @@ struct PhysicalConstants {
 	double Width_3o2;
 	double Width_1o2;
 
+	double Dissoc_attachment_En_thresh;
+	double Dissoc_attachment_XS;
+	double Argon_ion_decay_time;
+
 	double resonance_NBrS_XS;
 	boost::optional<double> resonance_En_loss;
 };
@@ -72,6 +76,7 @@ struct ProgramConstants {
 	bool is_test_version; //TODO: specify testing modules in settings.xml
 
 	std::string data_folder;
+	std::string test_folder;
 	std::string elastic_XS_fname;
 	std::string elastic_XS_phaseshift_fname;
 	std::string excitation_XS_fname;
@@ -88,6 +93,11 @@ struct ProgramConstants {
 
 	std::map<std::string, bool> recorded_values;
 
+	std::vector<std::string> mixture_components;
+	std::vector<double> mixture_component_fractions; //any positive values. Mixture will be renormalized
+	//Useless to implement them (^) as run specifics because every different mixture must recalculate its XS integral table
+	//and presently the program can't check for which mixture the stored table was calculated, so it must be
+	//removed manually between program launches. So different mixtures will correspond to different settings files.
 	std::vector<RunParameters> run_specifics;
 };
 

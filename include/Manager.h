@@ -11,7 +11,8 @@
 
 #include "global_definitions.h"
 #include "Settings.h"
-#include "argon_cross.h"
+#include "ParticleTable.h"
+#include "Mixture.h"
 
 class Manager
 {
@@ -27,12 +28,13 @@ protected:
 	ULong_t e_first_seed_;
 	TTree * sim_data_;
 	TTree * processes_data_;
-	Long64_t *processes_counters_;
-	Short_t *processes_IDs_;
-	char **processes_legends_;
-	UInt_t processes_size_;
+
+	std::vector<std::vector<Long64_t> > processes_counters_; //particle_ID->process_ID
+	std::vector<std::vector<Short_t> > processes_IDs_; //particle_ID->process_ID
+	std::vector<std::vector<std::string> > processes_legends_; //particle_ID->process_ID->NULL terminated String
+
 	Event event_;
-	ArDataTables *ArTables_;
+	const Mixture *material_;
 	int skip_counter_;
 	bool skipping_early_events;
 	Long64_t num_of_events;
@@ -47,9 +49,9 @@ protected:
 	void PostStepAction(Event &event);
 	void DoGotoNext(Event &event);
 	void InitTree (void);
-	long double XS_integral(long double from, long double to, long double Eny, Event &event);
+	//long double XS_integral(long double from, long double to, long double Eny, Event &event);
 	long double XS_integral_for_test(long double from, long double to, long double Eny, long double dE);
-	long double XS_integral_table(long double from, long double to, long double Eny, Event &event);
+	//long double XS_integral_table(long double from, long double to, long double Eny, Event &event);
 	long double Path_integral (long double x, long double cos_th);
 public:
 	virtual bool isReady(void) const;
@@ -64,8 +66,8 @@ public:
 	boost::optional<ULong_t> getInitialSeed(void) const;
 	bool setRunIndex(std::size_t index);
 	boost::optional<std::size_t> getRunIndex(void) const;
-	Manager(ArDataTables *Ar_tables);
-	~Manager();
+	Manager(const Mixture *material);
+	virtual ~Manager();
 	void LoopSimulation(void);
 	void WriteHistory(std::string root_fname);
 	void Test(void);

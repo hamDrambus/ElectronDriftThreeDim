@@ -43,8 +43,8 @@
       <Feshbach_resonance_3o2_Width>2.3e-3</Feshbach_resonance_3o2_Width>
       <Feshbach_resonance_1o2_Width>2.2e-3</Feshbach_resonance_1o2_Width>
 
-      <Dissoc_attachment_En_thresh>11.548</Dissoc_attachment_En_thresh>
-      <Dissoc_attachment_XS>1</Dissoc_attachment_XS>
+      <Dissoc_attachment_En_thresh>11.502</Dissoc_attachment_En_thresh>
+      <Dissoc_attachment_XS>1e-18</Dissoc_attachment_XS>
       <Argon_ion_decay_time>360e-9</Argon_ion_decay_time> <!--In seconds-->
 
       <Feshbach_resonance_NBrS_XS>0.0</Feshbach_resonance_NBrS_XS><!--in e-20 m^2-->
@@ -99,12 +99,12 @@
       <excitation_XS_data>data/ArExcitations_Magboltz.dat</excitation_XS_data> <!--OPT-->
       <ionization_XS_data>data/ArIonizations_Magboltz.dat</ionization_XS_data> <!--OPT-->
     </DataFiles>
-    <cache_data_folder>data_derived_dev</cache_data_folder>
-    <test_folder>tests_dev</test_folder> <!-- OPT -->
-    <output_file>Output/v01.t/eData_($Td)Td.root</output_file>
-	<!--Ec_spectrum_data>Output/v12.1/Ec_forms/($Td)Td.dat</Ec_spectrum_data> <!--OPT. If set, the simulation is run in fixed Ec spectrum mode.-->
-    <drift_distance>1e-4</drift_distance> <!--default value for each run-->
-    <n_electrons>2</n_electrons> <!--default value for each run-->
+    <cache_data_folder>Optimization/data_derived</cache_data_folder>
+    <test_folder>Optimization/tests</test_folder> <!-- OPT -->
+    <output_file>Optimization/eData_($Td)Td.root</output_file>
+	
+    <drift_distance>1e-3</drift_distance> <!--default value for each run-->
+    <n_electrons>5</n_electrons> <!--default value for each run-->
     <random_seed>42</random_seed> <!--default value for each run-->
     <random_generator>TRandom1</random_generator> <!-- TRandom1 (best, slowest), TRandom2 (BAD), TRandom3 (faster, good) --> 
     <Mixture>

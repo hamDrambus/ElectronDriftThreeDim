@@ -1,7 +1,7 @@
 #include "Manager.h"
 
-Manager::Manager(ArDataTables *Ar_tables) : 
-	skip_counter_(0), ArTables_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0), sim_data_(NULL)
+Manager::Manager(const Mixture *Ar_tables) :
+	skip_counter_(0), material_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0), sim_data_(NULL), processes_data_(NULL)
 {
 	switch (gSettings.ProgConsts()->random_generator) {
 	case (ProgramConstants::GeneratorClass::TRand1): {
@@ -20,38 +20,23 @@ Manager::Manager(ArDataTables *Ar_tables) :
 		random_generator_ = NULL;
 	}
 	}
-	processes_size_ = ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization - Event::Overflow; //3 = elastic + None + Overthrow
-	processes_counters_ = new Long64_t [processes_size_];
-	processes_IDs_ = new Short_t [processes_size_];
-	processes_legends_ = new char * [processes_size_];
-	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
-		processes_IDs_[i] = i + Event::Overflow;
-		processes_counters_[i] = 0;
-		switch (processes_IDs_[i]) {
-		case (Event::Overflow): {
-			processes_legends_[i] = c_str_cp(std::string("\"Overflow (energy exceeds ")+std::to_string(gSettings.ProgConsts()->maximal_energy) + " eV)\"");
-			break;
-		}
-		case (Event::None): {
-			processes_legends_[i] = c_str_cp(std::string("\"None\""));
-			break;
-		}
-		case (Event::Elastic): {
-			processes_legends_[i] = c_str_cp(std::string("\"Elastic scattering\""));
-			break;
-		}
-		case (Event::ResNBrS): {
-			processes_legends_[i] = c_str_cp(std::string("\"Resonance NBrS\""));
-			break;
-		}
-		default: {
-			InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(processes_IDs_[i]-Event::Ionization);
-			if (NULL!=p) {
-				processes_legends_[i] = c_str_cp(p->get_name());
-			} else {
-				processes_legends_[i] = c_str_cp(std::string("\"?Unknown?\""));
-			}
-		}
+	std::size_t N_particles = gParticleTable.GetNParticle();
+	processes_counters_.resize(N_particles);
+	processes_IDs_.resize(N_particles);
+	processes_legends_.resize(N_particles);
+	const Particle *electron = gParticleTable.GetParticle("electron");
+	for (std::size_t ptcl = 0; ptcl!= N_particles; ++ptcl) {
+		processes_counters_[ptcl].push_back(0);
+		processes_IDs_[ptcl].push_back(Event::Overflow);
+		processes_legends_[ptcl].push_back(std::string("\"Overflow (energy exceeds ")+std::to_string(gSettings.ProgConsts()->maximal_energy) + " eV)\"");
+		processes_counters_[ptcl].push_back(0);
+		processes_IDs_[ptcl].push_back(Event::None);
+		processes_legends_[ptcl].push_back("\"None\"");
+		std::size_t proc_size = gParticleTable.GetParticle(ptcl)->GetProcessSize(electron);
+		for (std::size_t proc = 0; proc!= proc_size; ++proc) {
+			processes_counters_[ptcl].push_back(0);
+			processes_IDs_[ptcl].push_back(proc);
+			processes_legends_[ptcl].push_back(gParticleTable.GetParticle(ptcl)->GetProcessName(electron, proc));
 		}
 	}
 	InitTree();
@@ -59,18 +44,15 @@ Manager::Manager(ArDataTables *Ar_tables) :
 
 Manager::~Manager()
 {
-	delete [] processes_counters_;
-	delete [] processes_IDs_;
-	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
-		delete [] processes_legends_[i];
+	if (random_generator_) {
+		delete random_generator_;
 	}
-	delete [] processes_legends_;
-	if (random_generator_)
-		random_generator_->Delete();
-	if (sim_data_)
-		sim_data_->Delete();
-	if (processes_data_)
-		processes_data_->Delete();
+	if (sim_data_) {
+		delete sim_data_;
+	}
+	if (processes_data_) {
+		delete processes_data_;
+	}
 }
 
 bool Manager::isReady(void) const
@@ -135,17 +117,22 @@ void Manager::InitTree (void)
 	if (sets->recorded_values.end()!=sets->recorded_values.find("deb_solver_E_right"))
 		sim_data_->Branch("deb_solver_E_right",&event_.deb_solver_E_right);
 
-	processes_data_ = new TTree("ElectronProcessCounters", "ElectronProcessCounters");
-	processes_data_->Branch("proc_size", &processes_size_, "proc_size/i");
-	processes_data_->Branch("proc_IDs", processes_IDs_, "proc_IDs[proc_size]/S");
-	processes_data_->Branch("proc_Ns", processes_counters_, "proc_Ns[proc_size]/L");
-	processes_data_->Branch("proc_names", processes_legends_, "proc_names[proc_size]/C");
+	if (processes_data_) {;
+		delete processes_data_;
+	}
+	processes_data_ = NULL;
 }
 
 void Manager::Clear(void)
 {
-	sim_data_->Delete();
+	if (sim_data_) {
+		delete sim_data_;
+	}
 	sim_data_ = NULL;
+	if (processes_data_) {
+		delete processes_data_;
+	}
+	processes_data_ = NULL;
 	skip_counter_ = 0;
 	skipping_early_events = true;
 	num_of_events = 0;
@@ -155,9 +142,9 @@ void Manager::Clear(void)
 	Coefficient_ = boost::none;
 	Drift_distance_ = boost::none;
 	initial_seed_ = boost::none;
-	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
-		processes_counters_[i] = 0;
-	}
+	for (std::size_t i = 0, i_end_ = processes_counters_.size(); i!=i_end_; ++i)
+		for (std::size_t j = 0, j_end_ = processes_counters_[i].size(); j!=j_end_; ++j)
+			processes_counters_[i][j] = 0;
 	InitTree();
 }
 
@@ -232,6 +219,7 @@ boost::optional<std::size_t> Manager::getRunIndex(void) const
 
 //Int XS(e)*sqrt(e/(e-Eny))*de
 //'to' is always > 'from'
+/*
 long double Manager::XS_integral(long double from, long double to, long double Eny, Event &event)
 {
 	double E = from, E_prev = from;
@@ -264,26 +252,28 @@ long double Manager::XS_integral_table(long double from, long double to, long do
 {
 	return (*ArTables_->integral_table_)(to, Eny) - (*ArTables_->integral_table_)(from, Eny);
 }
+*/
 
 long double Manager::XS_integral_for_test(long double from, long double to, long double Eny, long double dE)
 {
 	double E = from, E_prev = from;
 	long double Int = 0;
+	const Particle * particle = gParticleTable.GetParticle(ELECTRON_NAME);
 	if ((from - Eny) / from<1e-6) {//irregularity case
 		E = std::min(1e-6*from + Eny, to);
-		Int += 0.5*(ArTables_->TotalCrossSection(E) + ArTables_->TotalCrossSection(from))*sqrt(E*(E - Eny));
+		Int += 0.5*(material_->GetCrossSection(particle, E) + material_->GetCrossSection(particle, from))*sqrt(E*(E - Eny));
 		from = E;
 		E_prev = from;
 	}
 	if (from==to)
 		return Int;
 	while (E<to) {
-		Int += ArTables_->TotalCrossSection(E)*sqrt(E / (E - Eny))*dE;
+		Int += material_->GetCrossSection(particle, E)*sqrt(E / (E - Eny))*dE;
 		E_prev = E;
 		E += dE;
 	}
 	E = to;
-	Int += ArTables_->TotalCrossSection(E)*sqrt(E / (E - Eny))*(E - E_prev);
+	Int += material_->GetCrossSection(particle, E)*sqrt(E / (E - Eny))*(E - E_prev);
 	return Int;
 }
 
@@ -307,8 +297,6 @@ void Manager::Initialize(Event &event)
 		std::cout << "Manager::Initialize: some of the parameters are not initialized, exiting" << std::endl;
 		return;
 	}
-	event.CrossSections.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization, 0); //+1 for Elastic
-	event.CrossSectionsSum.resize(ArTables_->ArAllData_.ArExper_.max_process_ID + Event::Ionization, 0);
 	const boost::optional<PDF_routine> *Ec_spec = &(gSettings.ProgConsts()->run_specifics[*run_index_].Ec_spectrum);
 	if (*Ec_spec) {
 		event.En_collision = (*Ec_spec)->generate(random_generator_->Uniform());
@@ -325,6 +313,7 @@ void Manager::Initialize(Event &event)
 	event.delta_time = 0;
 	event.delta_time_full = 0;
 	event.process = Event::None;
+	event.particle_ID = gParticleTable.GetParticleID(ELECTRON_NAME);
 
 	event.theta_start = 0;
 	event.theta_collision = 0;
@@ -337,14 +326,16 @@ void Manager::Initialize(Event &event)
 	event_ = event;
 }
 
+//TODO: maybe move solving to material
 void Manager::Solve (long double LnR, Event &event)
 {
 	event.deb_log_rand = LnR;
 	long double Eny = event.En_start*sin(event.theta_start)*sin(event.theta_start);
 	long double e_start = event.En_start;
 	short case_ = 0; //0 - normal Vx_start>0, 1 - Vx_start<0, no sign change, 2 - Vx_start<0, sign is changed
+	const Particle* particle = gParticleTable.GetParticle(event.particle_ID);
 	if (event.theta_start>M_PI/2) {
-		double TURN_INT = XS_integral(Eny, event.En_start, Eny, event);
+		double TURN_INT = material_->GetUntabXSIntegral(particle, Eny, event.En_start, Eny);
 		if (LnR>TURN_INT) { //Vx changes its sign.
 			e_start = Eny;
 			LnR = LnR - TURN_INT;
@@ -357,11 +348,11 @@ void Manager::Solve (long double LnR, Event &event)
 	}
 	//approximate right point. By default it is EN_MAXIMUM_, but there are a lot of extra calculations in this case
 	long double left = e_start;
-	long double right = e_start + 10*LnR/(ArTables_->TotalCrossSection(left)*sqrt(left/(left-Eny)));
+	long double right = e_start + 10*LnR/(material_->GetCrossSection(particle, left)*sqrt(left/(left-Eny)));
 	right = std::min((double)right, gSettings.ProgConsts()->maximal_energy);
-	long double I_max = XS_integral(e_start, right, Eny, event);
+	long double I_max = material_->GetUntabXSIntegral(particle, e_start, right, Eny);
 	if (I_max < LnR) {
-		I_max = XS_integral(e_start, gSettings.ProgConsts()->maximal_energy, Eny, event);
+		I_max = material_->GetUntabXSIntegral(particle, e_start, gSettings.ProgConsts()->maximal_energy, Eny);
 		right = gSettings.ProgConsts()->maximal_energy;
 	}
 	long double e_finish = right;
@@ -380,7 +371,7 @@ void Manager::Solve (long double LnR, Event &event)
 		while (convergence_criteria < std::fabs(e_finish - prev_solution)) {
 			prev_solution = e_finish;
 			e_finish = (left*f_right - right*f_left) / (f_right - f_left);
-			f_new = XS_integral(e_start, e_finish, Eny, event) - LnR;
+			f_new = material_->GetUntabXSIntegral(particle, e_start, e_finish, Eny) - LnR;
 			if (f_new < 0) {
 				left = e_finish;
 				f_left = f_new;
@@ -411,7 +402,8 @@ void Manager::Solve_table (long double LnR, Event &event)
 	event.deb_log_rand = LnR;
 	long double Eny = event.En_start*sin(event.theta_start)*sin(event.theta_start);
 	short case_ = 0; //0 - normal Vx_start>0, 1 - Vx_start<0, no sign change, 2 - Vx_start<0, sign is changed
-	double INT = XS_integral_table(Eny, event.En_start, Eny, event);
+	const Particle* particle = gParticleTable.GetParticle(event.particle_ID);
+	double INT = material_->GetXSIntegral(particle, Eny, event.En_start, Eny);
 	if (event.theta_start>M_PI/2) {
 		if (LnR>INT) { //Vx changes its sign.
 			INT = LnR - INT; //INT(Eny, Eny)===0;
@@ -423,7 +415,7 @@ void Manager::Solve_table (long double LnR, Event &event)
 	} else {
 		INT = INT + LnR;
 	}
-	event.En_collision = ArTables_->integral_table_->find_E(Eny, INT); //TODO: add debug info - uncertainty and overflow - status output variable
+	event.En_collision = material_->GetEnergyFromXSIntegral(particle, Eny, INT); //TODO: add debug info - uncertainty and overflow - status output variable
 	if (isnan(event.En_collision))
 		event.En_collision = -1;
 	if (event.En_collision<0) {
@@ -445,9 +437,10 @@ void Manager::Solve_test (long double LnR, Event &event)
 	long double Eny = event.En_start*sin(event.theta_start)*sin(event.theta_start);
 	long double e_start = event.En_start;
 	short case_ = 0; //0 - normal Vx_start>0, 1 - Vx_start<0, no sign change, 2 - Vx_start<0, sign is changed
-	if (event.theta_start>M_PI/2) {
-		double TURN_INT = XS_integral(Eny, event.En_start, Eny, event);
-		if (LnR>TURN_INT) { //Vx changes its sign.
+	const Particle* particle = gParticleTable.GetParticle(event.particle_ID);
+	if (event.theta_start > M_PI/2) {
+		double TURN_INT = material_->GetUntabXSIntegral(particle, Eny, event.En_start, Eny);
+		if (LnR > TURN_INT) { //Vx changes its sign.
 			e_start = Eny;
 			LnR = LnR - TURN_INT;
 			case_ = 2;
@@ -459,7 +452,7 @@ void Manager::Solve_test (long double LnR, Event &event)
 	}
 	//approximate right point. By default it is EN_MAXIMUM_, but there are a lot of extra calculations in this case
 	long double left = e_start;
-	long double right = e_start + 10*LnR/(ArTables_->TotalCrossSection(left)*sqrt(left/(left-Eny)));
+	long double right = e_start + 10*LnR/(material_->GetUntabCrossSection(particle, left)*sqrt(left/(left-Eny)));
 	right = std::min((double)right, gSettings.ProgConsts()->maximal_energy);
 	long double I_max = XS_integral_for_test(e_start, right, Eny, 1e-5);
 	if (I_max < LnR) {
@@ -563,68 +556,56 @@ void Manager::DoScattering(Event &event)
 {
 	if (!isReady())
 		return;
-	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i) {
-		event.CrossSections[i] = ArTables_->CrossSection(std::fabs(event.En_collision), i + Event::Elastic);
-		//^process type == index in cross section array.
-		event.CrossSectionsSum[i] = std::max(event.CrossSections[i], 0.0) + ((i==0) ? 0.0 : event.CrossSectionsSum[i-1]);
-	}
-	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i)
-		event.CrossSectionsSum[i] /= event.CrossSectionsSum[end_-1];
-
 	bool is_overflow = (event.process==Event::Overflow);
-	double R2 = random_generator_->Uniform();
-	for (int i=0, end_ = event.CrossSections.size(); i!=end_; ++i)
-		if (R2<event.CrossSectionsSum[i]) {
-			event.process = i + Event::Elastic;
-			break;
+	const Particle* incident = gParticleTable.GetParticle(event.particle_ID);
+	double R2 = random_generator_->Uniform(); //R1 is used in DoStepLength
+	const Particle* target = material_->GenerateScatteringParticle(incident, event.En_collision, R2);
+	//TODO: implement exception system
+	if (NULL == target) {
+		std::cerr<<"Attempting again"<<std::endl;
+		R2 = random_generator_->Uniform(); //R1 is used in DoStepLength
+		target = material_->GenerateScatteringParticle(incident, event.En_collision, R2);
+		if (NULL == target) {
+			std::cerr<<"Fallback to the most abundant element in the mixture"<<std::endl;
+			target = material_->GetDominatingParticle(incident, event.En_collision);
+			if (NULL == target) {
+				//throw;
+				event_ = event;
+				return;
+			}
 		}
-
+	}
 	double R3 = random_generator_->Uniform();
-	event.delta_theta = ArTables_->generate_theta (event.En_collision, event.process, R3);
+	event.process = target->GenerateProcess(incident, event.En_collision, R3);
+	if (Event::None == event.process) {
+		//throw
+		event_ = event;
+		return;
+	}
+	double R4 = random_generator_->Uniform();
+	event.delta_theta = target->GenerateScatterAngle(incident, event.En_collision, event.process, R4);
 	double phi = random_generator_->Uniform()*2.0*M_PI;
 	double cos_th_f = std::cos(event.delta_theta)*std::cos(event.theta_collision) + std::sin(event.delta_theta)*std::sin(event.theta_collision)*std::cos(phi);
 	if (cos_th_f<-1.0) //just in case of precision problems
 		cos_th_f = -1.0;
 	if (cos_th_f>1.0)
 		cos_th_f = 1.0;
-	event.theta_finish = std::acos(cos_th_f);// event.theta_collision + (R3<0.5 ? event.delta_theta: -event.delta_theta); - v7.x - 2D implementation
-	long double gamma_f = gSettings.PhysConsts()->e_mass_eV/ gSettings.PhysConsts()->Ar_mass_eV;
-	double EnergyLoss = 2*(1-cos(event.delta_theta))*event.En_collision*gamma_f /pow(1 + gamma_f, 2);
-	double time_delay = 0;
-	switch (event.process) {
-		case (Event::Elastic): {
-			double width_factor = std::pow(Width_3o2_/2.0, 2)/(std::pow(Width_3o2_/2.0, 2) + std::pow((event.En_collision-En_3o2_)/2.0, 2));
-			width_factor += std::pow(Width_1o2_/2.0, 2)/(std::pow(Width_1o2_/2.0, 2) + std::pow((event.En_collision-En_1o2_)/2.0, 2));
-			width_factor *= 0.5**gSettings.PhysConsts()->resonance_En_loss;
-			EnergyLoss+=width_factor;
-
-			double R5 = random_generator_->Uniform();
-			time_delay = ArTables_->generate_time_delay(event.En_collision, event.delta_theta, event.process, R5);
-			break;
-		}
-		case (Event::ResNBrS): {
-			double R5 = random_generator_->Uniform();
-			EnergyLoss = ArTables_->generate_ResNBrS_En_loss(event.En_collision, event.delta_theta, R5);
-			event.photon_En = EnergyLoss;
-			break;
-		}
-		case (Event::Ionization): {
-			InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(event.process-Event::Ionization);
-			if (NULL!=p) {
-				EnergyLoss = (event.En_collision > 0) ? p->get_En_thresh() : -p->get_En_thresh();
-				EnergyLoss += (event.En_collision - EnergyLoss)/2.0; //Consider that residual energy is equally divided between 2 electrons
-			}
-			break;
-		}
-		default: {
-			InelasticProcess *p = ArTables_->ArAllData_.ArExper_.FindInelastic(event.process-Event::Ionization);
-			if (NULL!=p)
-				EnergyLoss = (event.En_collision > 0) ? p->get_En_thresh() : -p->get_En_thresh();
-			event.photon_En = 2*M_PI*gSettings.PhysConsts()->h_bar_eVs*gSettings.PhysConsts()->light_speed_SI/(1e-9*gSettings.PhysConsts()->Ar_primal_line_nm);
-		}
-	}
+	event.theta_finish = std::acos(cos_th_f);
+	double R5 = random_generator_->Uniform();
+	double EnergyLoss = target->GenerateEnergyLoss(incident, event.En_collision, event.delta_theta, event.process, R5);
+	event.photon_En = target->GeneratePhoton(incident, event.En_collision, event.delta_theta, event.process, R5); //same random value must be used!
 	event.En_finish = event.En_collision - EnergyLoss;
+	double R6 = random_generator_->Uniform();
+	double time_delay = target->GenerateTimeDelay(incident, event.En_collision, event.delta_theta, event.process, R6);
 	event.delta_time_full = event.delta_time + time_delay;
+	std::vector<const Particle*> outputs = target->GetFinalStates(incident, event.En_collision, event.delta_theta, event.process);
+	if (outputs.size()<2) {
+		//throw
+		event_ = event;
+		return;
+	}
+	event.particle_ID_finish = gParticleTable.GetParticleID(outputs[1]);
+	event.particle_ID_target = gParticleTable.GetParticleID(outputs[0]);
 	if (is_overflow)
 		event.process = Event::Overflow;
 	event_ = event;
@@ -634,14 +615,19 @@ void Manager::PostStepAction(Event &event)
 {
 	if (!isReady())
 		return;
-	for (int i = 0, i_end_ = processes_size_; i!=i_end_; ++i) {
-		if (processes_IDs_[i] == event.process) {
-			++processes_counters_[i];
-			break;
+	std::size_t e_ID = gParticleTable.GetParticleID(ELECTRON_NAME);
+	for (int i = 0, i_end_ = processes_counters_.size(); i != i_end_; ++i) {
+		if (i == event.particle_ID_target && e_ID == event.particle_ID) {
+			for (int j = 0, j_end_ = processes_counters_[i].size(); j!=j_end_; ++j) {
+				if (processes_IDs_[i][j] == event.process) {
+					++processes_counters_[i][j];
+					break;
+				}
+			}
 		}
 	}
 	if (event.pos_start>=gSettings.ProgConsts()->drift_distance_ignore_history) { //assert (double>boost::none)
-		skipping_early_events = false; //if true (set at initalization) all events with position less that gSettings.ProgConsts()->drift_distance_ignore_history (if present) are not recored.
+		skipping_early_events = false; //if true (set at initialization) all events with position less that gSettings.ProgConsts()->drift_distance_ignore_history (if present) are not recored.
 		skip_counter_ = 0;
 	}
 	if (skip_counter_ == gSettings.ProgConsts()->skip_history_rate || boost::none == gSettings.ProgConsts()->skip_history_rate)
@@ -687,6 +673,7 @@ void Manager::DoGotoNext(Event &event)
 		event.delta_x = 0;
 		event.delta_time_full = 0;
 		event.photon_En = 0;
+		event.particle_ID = event.particle_ID_finish;
 	}
 	event_ = event;
 }
@@ -714,8 +701,8 @@ void Manager::LoopSimulation(void)
 	Initialize();
 	if (!isReady())
 		return;
-	if (!ArTables_->isValid()) {
-		std::cerr << "Manager::LoopSimulation: invalid data tables" << std::endl;
+	if (!material_->isValid()) {
+		std::cerr << "Manager::LoopSimulation: invalid material" << std::endl;
 		return;
 	}
 	Initialize(event_);
@@ -730,11 +717,61 @@ void Manager::WriteHistory(std::string root_fname)
 	file->cd();
 	std::cout<<"Event number: "<<sim_data_->GetEntries()<<std::endl;
 	sim_data_->Write("", TObject::kOverwrite);
-	processes_data_->Fill();
+	if (NULL != processes_data_) {
+		delete processes_data_;
+	}
+	processes_data_ = new TTree("ElectronProcessCounters", "ElectronProcessCounters");
+
+	//ROOT Trees require pointers, not a standard containers
+	Long64_t *processes_counters; //per process_ID
+	Short_t *processes_IDs;
+	char **processes_legends; //per process_ID
+	UInt_t processes_size; //particle_ID
+	UInt_t particle_ID;
+	char * particle_name;
+
+	processes_data_->Branch("particle_ID", &particle_ID, "particle_ID/i");
+	processes_data_->Branch("proc_size", &processes_size, "proc_size/i");
+	TBranch *brParticleName = processes_data_->Branch("particle_name", particle_name, "particle_name/C");
+	TBranch *brProcessesID = processes_data_->Branch("proc_IDs", processes_IDs, "proc_IDs[proc_size]/S");
+	TBranch *brProcessesCounters = processes_data_->Branch("proc_Ns", processes_counters, "proc_Ns[proc_size]/L");
+	TBranch *brProcessesName = processes_data_->Branch("proc_names", processes_legends, "proc_names[proc_size]/C");
+
+	for (std::size_t i = 0, i_end_ = processes_counters_.size(); i!=i_end_; ++i) {
+		particle_ID = i;
+		particle_name = c_str_cp(gParticleTable.GetParticle(i)->GetName());
+		processes_size = processes_counters_[i].size();
+		processes_counters = new Long64_t [processes_size];
+		processes_IDs = new Short_t [processes_size];
+		processes_legends = new char* [processes_size];
+		for (std::size_t proc = 0; proc != processes_size; ++proc) {
+			processes_counters[proc] = processes_counters_[i][proc];
+			processes_IDs[proc] = processes_IDs_[i][proc];
+			processes_legends[proc] = c_str_cp(processes_legends_[i][proc]);
+		}
+		brParticleName->SetAddress(particle_name);
+		brProcessesID->SetAddress(processes_IDs);
+		brProcessesCounters->SetAddress(processes_counters);
+		brProcessesName->SetAddress(processes_legends);
+		processes_data_->Fill();
+		for (std::size_t proc = 0; proc != processes_size; ++proc) {
+			delete [] processes_legends[proc];
+		}
+		delete [] processes_counters;
+		delete [] processes_IDs;
+		delete [] processes_legends;
+		delete [] particle_name;
+	}
+
 	processes_data_->Write("", TObject::kOverwrite);
-	file->Close();
+	file->Close(); //should delete both trees
+	delete file;
+	//delete processes_data_; //This ROOT memory management, argh!
+	processes_data_ = NULL;
+	sim_data_ = NULL;
 }
 
+/*
 void Manager::Test(void)
 {
 	std::cout << "Testing Manager->Solve():" << std::endl;
@@ -827,3 +864,4 @@ void Manager::Test(void)
 
 	std::cout << "===============================================" << std::endl << std::endl << std::endl;
 }
+*/

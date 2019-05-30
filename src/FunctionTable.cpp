@@ -3,6 +3,9 @@
 FunctionTable::FunctionTable(void)
 {}
 
+FunctionTable::~FunctionTable()
+{}
+
 std::pair<long int, long int> FunctionTable::find_Ey_indexes (double Ey) const
 {
 	std::pair<long int, long int> out(-1,-1);

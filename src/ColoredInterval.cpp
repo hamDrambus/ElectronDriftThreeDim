@@ -7,6 +7,20 @@ ColoredInterval::ColoredInterval(long double left, long double right, long doubl
 		left_(std::min(left, right)), right_(std::max(left, right)), color_(std::fabs(color))
 {}
 
+ColoredRange ColoredInterval::operator += (const ColoredRange &r)
+{
+	ColoredRange out(*this);
+	out = out + r;
+	return out;
+}
+
+ColoredRange ColoredInterval::operator += (const ColoredInterval &r)
+{
+	ColoredRange out(*this);
+	out = out + r;
+	return out;
+}
+
 ColoredRange::ColoredRange(void) {}
 ColoredRange::ColoredRange(const ColoredInterval &inter)
 {
@@ -95,18 +109,36 @@ void ColoredRange::Print(std::ostream & str)
 	}
 }
 
-ColoredRange operator+ (ColoredRange l, const ColoredRange& r)
+ColoredRange& ColoredRange::operator += (const ColoredRange &r)
 {
-	for (int j=0, end_=r.arr_.size(); j!=end_; ++j) {
-		l = l + r.arr_[j];
-	}
-	return l;
+	*this = *this + r;
+	return *this;
 }
 
-ColoredRange operator+ (ColoredRange l, const ColoredInterval& r)
+ColoredRange& ColoredRange::operator += (const ColoredInterval &r)
+{
+	*this = *this + r;
+	return *this;
+}
+
+
+ColoredRange operator+ (const ColoredRange &l, const ColoredRange& r)
+{
+	ColoredRange out = l;
+	for (int j=0, end_=r.arr_.size(); j!=end_; ++j) {
+		out += r.arr_[j];
+	}
+	return out;
+}
+
+ColoredRange operator+ (const ColoredRange &l, const ColoredInterval& r)
 {
 	std::vector<ColoredInterval> new_l;
 	bool is_inside_r = false;
+	if (l.arr_.empty()) {
+		ColoredRange out(r);
+		return out;
+	}
 	for (int j=0, end_=l.arr_.size(); j!=end_; ++j) {
 		if (is_inside_r) {
 			if (r.right_<l.arr_[j].left_) {
@@ -165,31 +197,30 @@ ColoredRange operator+ (ColoredRange l, const ColoredInterval& r)
 			}
 		}
 	}
-	l.arr_.clear();
+	ColoredRange out;
 	for (int j =0, end_ = new_l.size(); j!=end_; ++j) {
-		if (l.arr_.empty()) {
+		if (out.arr_.empty()) {
 			if (new_l[j].right_>new_l[j].left_)
-				l.arr_.push_back(new_l[j]);
+				out.arr_.push_back(new_l[j]);
 			continue;
 		}
-		if ((l.arr_.back().color_==new_l[j].color_)&&(l.arr_.back().right_==new_l[j].left_))
-			l.arr_.back().right_ = new_l[j].right_; //merging
+		if ((out.arr_.back().color_==new_l[j].color_)&&(out.arr_.back().right_==new_l[j].left_))
+			out.arr_.back().right_ = new_l[j].right_; //merging
 		else {
 			if (new_l[j].right_>new_l[j].left_)
-				l.arr_.push_back(new_l[j]);
+				out.arr_.push_back(new_l[j]);
 		}
 	}
-	return l;
+	return out;
 }
 
-ColoredRange operator+ (ColoredInterval l, const ColoredRange& r)
+ColoredRange operator+ (const ColoredInterval &l, const ColoredRange& r)
 {
-	ColoredRange left (l);
-	return left+r;
+	return r + l;
 }
 
-ColoredRange operator+ (ColoredInterval l, const ColoredInterval& r)
+ColoredRange operator+ (const ColoredInterval &l, const ColoredInterval& r)
 {
 	ColoredRange left (l);
-	return left+r;
+	return left + r;
 }

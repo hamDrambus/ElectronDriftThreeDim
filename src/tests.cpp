@@ -2,15 +2,16 @@
 
 void test_polynomial_fit (void)
 {
-	std::string fname_raw = "tests/sinx_to_x_raw.txt";
-	std::string fname_fit1 = "tests/sinx_to_x_fit1.txt";
-	std::string fname_fit2 = "tests/sinx_to_x_fit2.txt";
-	std::string fname_fit3 = "tests/sinx_to_x_fit3.txt";
+	std::string prefix = gSettings.ProgConsts()->test_folder;
+	std::string fname_raw = prefix + "sinx_to_x_raw.txt";
+	std::string fname_fit1 = prefix + "sinx_to_x_fit1.txt";
+	std::string fname_fit2 = prefix + "sinx_to_x_fit2.txt";
+	std::string fname_fit3 = prefix + "sinx_to_x_fit3.txt";
 	std::vector<double> xs, ys;
 	xs.resize(50);
 	ys.resize(50);
 	std::ofstream str;
-	str.open(fname_raw,std::ios_base::trunc);
+	open_output_file(fname_raw, str, std::ios_base::trunc);
 	for (int i=0; i!=50;++i) { //not sorted
 		double x = i*M_PI*3/100 + 0.02;
 		xs[ i>=25 ? i-25 : i+25 ] = x;
@@ -46,7 +47,7 @@ void test_polynomial_fit (void)
 	//TESTING QUALITY:
 	data1.setOrder(4);
 	data1.setNused(5);
-	str.open(fname_fit1, std::ios_base::trunc);
+	open_output_file(fname_fit1, str, std::ios_base::trunc);
 	for (int i = 0; i<150; ++i) {
 		double x = i*M_PI*3/250;
 		double y = data1(x, x);
@@ -56,7 +57,7 @@ void test_polynomial_fit (void)
 	data1.setOrder(6);
 	data1.setNused(15);
 	data1.set_out_value(0.5);
-	str.open(fname_fit2, std::ios_base::trunc);
+	open_output_file(fname_fit2, str, std::ios_base::trunc);
 	for (int i = 0; i<150; ++i) {
 		double x = i*M_PI*3/250;
 		double y = data1(x, x);
@@ -67,19 +68,19 @@ void test_polynomial_fit (void)
 	data1.setOrder(2);
 	data1.setNused(10);
 	data1.unset_out_value();
-	str.open(fname_fit3, std::ios_base::trunc);
+	open_output_file(fname_fit3, str, std::ios_base::trunc);
 	for (int i = 0; i<150; ++i) {
 		double x = i*M_PI*3/250;
 		double y = data1(x, x);
 		str<<x<<"\t"<<y<<std::endl;
 	}
 	str.close();
-	std::string name = "tests/test_fit.sc";
-	str.open(name, std::ios_base::trunc);
-	str<<"plot \"tests/sinx_to_x_raw.txt\" u 1:2 title \"raw sin(x)/x\""<<std::endl;
-	str<<"replot \"tests/sinx_to_x_fit1.txt\" u 1:2 title \"fit1\""<<std::endl;
-	str<<"replot \"tests/sinx_to_x_fit2.txt\" u 1:2 title \"fit2\""<<std::endl;
-	str<<"replot \"tests/sinx_to_x_fit3.txt\" u 1:2 title \"fit3\""<<std::endl;
+	std::string name = prefix + "test_fit.sc";
+	open_output_file(name, str, std::ios_base::trunc);
+	str<<"plot \""<<fname_raw<<"\" u 1:2 title \"raw sin(x)/x\""<<std::endl;
+	str<<"replot \""<<fname_fit1<<"\" u 1:2 title \"fit1\""<<std::endl;
+	str<<"replot \""<<fname_fit2<<"\" u 1:2 title \"fit2\""<<std::endl;
+	str<<"replot \""<<fname_fit3<<"\" u 1:2 title \"fit3\""<<std::endl;
 	str<<"pause -1"<<std::endl;
 	str.close();
 	INVOKE_GNUPLOT(name);
@@ -105,19 +106,25 @@ void test_2_dim_table (void)
 	std::cout<<table(0.7,0.2)<<std::endl;
 }
 
-void test_phase_shift_fit (ArDataTables *ArTables)
+void test_phase_shift_fit (void)
 {
-	std::string fname_McEachran = "tests/phase_shifts_McEachran_";
-	std::string fname_MERT = "tests/phase_shifts_MERT.txt";
-	std::string fname_phase_fit = "tests/phase_shifts_fit_exp.txt";
+	std::string prefix = gSettings.ProgConsts()->test_folder;
+	std::string fname_McEachran = prefix + "phase_shifts_McEachran_";
+	std::string fname_MERT = prefix + "phase_shifts_MERT.txt";
+	std::string fname_phase_fit = prefix + "phase_shifts_fit_exp.txt";
 
 	std::ofstream str;
-	std::vector<DataVector> *ps_pos, *ps_neg;
-	ps_pos = &(ArTables->ArAllData_.ArExper_.phase_shifts_pos_);
-	ps_neg = &(ArTables->ArAllData_.ArExper_.phase_shifts_neg_);
+	const std::vector<DataVector> *ps_pos, *ps_neg;
+	const ArgonParticle* argon = (ArgonParticle*) gParticleTable.GetParticle(ARGON_NAME);
+	if (!argon->isValid()) {
+		std::cerr<<"test_phase_shift_fit:: invalid particle, quitting test"<<std::endl;
+		return;
+	}
+	ps_pos = &(argon->ArAllData_.ArExper_.phase_shifts_pos_);
+	ps_neg = &(argon->ArAllData_.ArExper_.phase_shifts_neg_);
 	for (unsigned int l=0, l_end_ = std::max(ps_pos->size(), ps_neg->size()); l!=l_end_; ++l) {
 		std::string fname = fname_McEachran + std::to_string(l) + ".txt";
-		str.open(fname, std::ios_base::trunc);
+		open_output_file(fname, str, std::ios_base::trunc);
 		str<<"E[eV]\tphase shift "<<l<<std::endl;
 		if ((l<ps_pos->size())&&(l<ps_neg->size())) {
 			double k_l_neg_written = -DBL_MAX;
@@ -153,7 +160,7 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 	int err;
 	double E, k;
 	{
-		str.open(fname_phase_fit, std::ios_base::trunc);
+		open_output_file(fname_phase_fit, str, std::ios_base::trunc);
 		str<<"E[eV]\tphase shifts 0, 1, ... "<<std::endl;
 		EnergyScanner EnRange(EnergyScanner::PlotDiffXS);
 		while (true) {
@@ -180,7 +187,7 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 	}
 
 	{
-		str.open(fname_MERT, std::ios_base::trunc);
+		open_output_file(fname_MERT, str, std::ios_base::trunc);
 		str<<"E[eV]\tphase shifts 0, 1, ... "<<std::endl;
 		EnergyScanner EnRange(EnergyScanner::PlotDiffXS);
 		while (true) {
@@ -193,7 +200,7 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 			str<<E<<"\t";
 			for (std::size_t l = 0, l_end = std::max(ps_pos->size(), ps_neg->size()); l!=l_end; ++l) {
 				long double ps_p, ps_n;
-				ArTables->ArAllData_.argon_phase_values_MERT5(k, l, ps_p, ps_n);
+				argon->ArAllData_.argon_phase_values_MERT5(k, l, ps_p, ps_n);
 				str<<ps_p<<"\t";
 			}
 			str<<std::endl;
@@ -202,8 +209,8 @@ void test_phase_shift_fit (ArDataTables *ArTables)
 	}
 
 	for (std::size_t l = 0, l_end = std::max(ps_pos->size(), ps_neg->size()); l!=l_end; ++l) {
-		std::string name = std::string("tests/test_phase_shift_") + std::to_string(l) + ".sc";
-		str.open(name, std::ios_base::trunc);
+		std::string name = prefix + "test_phase_shift_" + std::to_string(l) + ".sc";
+		open_output_file(name, str, std::ios_base::trunc);
 		str<<"set logscale x"<<std::endl;
 		str<<"plot '"<<fname_McEachran + std::to_string(l) + ".txt" <<"' u 1:2 title 'McEachran_"<<l<<"'"<<std::endl;
 		str<<"replot '"<<fname_MERT <<"' u 1:"<<2+l<<" w line lc rgb \"#FF0000\" title 'MERT_"<<l<<"'"<<std::endl;
@@ -622,15 +629,22 @@ void test_factor_helper (void)
 	helper1.Clear();
 }
 
-void test_diff_tot_cross (ArDataTables *ArTables)
+void test_diff_tot_cross (void)
 {
-	std::string fname_diff = "tests/diff_cross_elastic_10eV.txt";
-	std::string fname_tot_MERT5 = "tests/total_elastic_from_diff_MERT5.txt";
-	std::string fname_tot_EXP = "tests/total_elastic_from_diff_EXP.txt";
-	std::string fname_tot = "tests/total_elastic_from_diff.txt";
-	std::string fname_angle_profiles = "tests/diff_cross_elastic_profiles.txt";
+	std::string prefix = gSettings.ProgConsts()->test_folder;
+	std::string fname_diff = prefix + "diff_cross_elastic_10eV.txt";
+	std::string fname_tot_MERT5 = prefix + "total_elastic_from_diff_MERT5.txt";
+	std::string fname_tot_EXP = prefix + "total_elastic_from_diff_EXP.txt";
+	std::string fname_tot = prefix + "total_elastic_from_diff.txt";
+	std::string fname_angle_profiles = prefix + "diff_cross_elastic_profiles.txt";
 	std::ofstream str;
 	int err;
+	const ArgonParticle* argon = (ArgonParticle*) gParticleTable.GetParticle(ARGON_NAME);
+	const Particle* electron = gParticleTable.GetParticle(ELECTRON_NAME);
+	if (!electron->isValid() || !argon->isValid()) {
+		std::cerr<<"test_diff_tot_cross:: invalid particle, quitting test"<<std::endl;
+		return;
+	}
 
 	{
 		Double_t *ths, *XSs;
@@ -640,7 +654,7 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 		double Energy = 10.0;//En_3o2_ - 0.5*Width_3o2_;
 		for (int i = 0; i<400; ++i) {
 			ths[i] = i*M_PI / 399.0;
-			XSs[i] = ArTables->ArAllData_.argon_cross_elastic_diff(Energy, ths[i]);
+			XSs[i] = argon->ArAllData_.argon_cross_elastic_diff(Energy, ths[i]);
 			if (i != 0)
 				Int += 0.5*(XSs[i] + XSs[i - 1])*(ths[i] - ths[i - 1]);
 		}
@@ -651,7 +665,7 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 			(std::string("generated thetas ") + std::to_string(Energy) + "eV").c_str(), 300, 0, M_PI);
 		TRandom *random_generator_ = new TRandom1(42);
 		for (int h = 0; h<100000; ++h)
-			hist->Fill(ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform()));
+			hist->Fill(argon->GenerateScatterAngle(electron, Energy, 0, random_generator_->Uniform()));
 		double Norm = 0;
 		for (int bin = 0, bin_end = hist->GetNbinsX() + 1; bin != bin_end; ++bin)
 			Norm += hist->GetBinContent(bin)*hist->GetBinWidth(bin);
@@ -664,7 +678,7 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 	}
 
 	{
-		str.open(fname_tot_MERT5, std::ios_base::trunc);
+		open_output_file(fname_tot_MERT5, str, std::ios_base::trunc);
 		str<<"E[eV]\tXS from diff MERT5 [1e-20m^2]\tXS tot MERT5 PS [1e-20m^2]"<<std::endl;
 		{
 			EnergyScanner eScan(EnergyScanner::PlotDiffXS);
@@ -674,13 +688,13 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 					break;
 				long double integral = 0;
 				for (int j=0;j<10001; ++j)
-					integral+=(M_PI/10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0, 1)*sin(j*M_PI/10000.0);
-				str<<E<<"\t"<<integral<<"\t"<< ArTables->ArAllData_.argon_cross_elastic(E, 1)<<std::endl;
+					integral+=(M_PI/10000.0)*argon->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0, 1)*sin(j*M_PI/10000.0);
+				str<<E<<"\t"<<integral<<"\t"<< argon->ArAllData_.argon_cross_elastic(E, 1)<<std::endl;
 			}
 		}
 		str.close();
 
-		str.open(fname_tot_EXP, std::ios_base::trunc);
+		open_output_file(fname_tot_EXP, str, std::ios_base::trunc);
 		str<<"E[eV]\tXS from diff EXP [1e-20m^2]\tXS tot EXP [1e-20m^2]"<<std::endl;
 		{
 			EnergyScanner eScan(EnergyScanner::PlotDiffXS);
@@ -692,13 +706,13 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 					continue;
 				long double integral = 0;
 				for (int j=0;j<10001; ++j)
-					integral+=(M_PI/10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0, 2)*sin(j*M_PI/10000.0);
-				str<<E<<"\t"<<integral<<"\t"<< ArTables->ArAllData_.argon_cross_elastic(E, 2)<<std::endl;
+					integral+=(M_PI/10000.0)*argon->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0, 2)*sin(j*M_PI/10000.0);
+				str<<E<<"\t"<<integral<<"\t"<< argon->ArAllData_.argon_cross_elastic(E, 2)<<std::endl;
 			}
 		}
 		str.close();
 
-		str.open(fname_tot, std::ios_base::trunc);
+		open_output_file(fname_tot, str, std::ios_base::trunc);
 		str<<"E[eV]\tXS from diff [1e-20m^2]\tXS tot [1e-20m^2]"<<std::endl;
 		{
 			EnergyScanner eScan(EnergyScanner::PlotDiffXS);
@@ -708,14 +722,14 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 					break;
 				long double integral = 0;
 				for (int j=0;j<10001; ++j)
-					integral+=(M_PI/10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0)*sin(j*M_PI/10000.0);
-				str<<E<<"\t"<<integral<<"\t"<< ArTables->ArAllData_.argon_cross_elastic(E)<<std::endl;
+					integral+=(M_PI/10000.0)*argon->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0)*sin(j*M_PI/10000.0);
+				str<<E<<"\t"<<integral<<"\t"<< argon->ArAllData_.argon_cross_elastic(E)<<std::endl;
 			}
 		}
 		str.close();
 
-		std::string name = "tests/test_diff_XS_elastic_by_total.sc";
-		str.open(name, std::ios_base::trunc);
+		std::string name = prefix + "test_diff_XS_elastic_by_total.sc";
+		open_output_file(name, str, std::ios_base::trunc);
 		str<<"set logscale x"<<std::endl;
 		str<<"set logscale y"<<std::endl;
 		str<<"set key top left"<<std::endl;
@@ -731,7 +745,7 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 	}
 
 	{
-		str.open(fname_angle_profiles, std::ios_base::trunc);
+		open_output_file(fname_angle_profiles, str, std::ios_base::trunc);
 		str << "E[eV]\tXS diff 22.5deg [1e-20m^2]\tXS diff 45deg\tXS diff 90deg\tXS diff 112.5deg\tXS diff 135deg" << std::endl;
 		EnergyScanner eScan(EnergyScanner::PlotResonances);
 		double th0 = 22.5*(M_PI) / 180;
@@ -743,15 +757,15 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 			double E = eScan.Next(err);
 			if ((0 != err))
 				break;
-			str << E << "\t" << ArTables->ArAllData_.argon_cross_elastic_diff(E, th0) <<"\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th1) << "\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th2) << "\t" 
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th3) << "\t" 
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th4) <<std::endl;
+			str << E << "\t" << argon->ArAllData_.argon_cross_elastic_diff(E, th0) <<"\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th1) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th2) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th3) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th4) <<std::endl;
 			}
 		str.close();
-		std::string name = "tests/test_diff_XS_elastic_profiles.sc";
-		str.open(name, std::ios_base::trunc);
+		std::string name = prefix + "test_diff_XS_elastic_profiles.sc";
+		open_output_file(name, str, std::ios_base::trunc);
 		str << "set key top right" << std::endl;
 		str << "set xlabel \"E [eV]\"" << std::endl;
 		str << "plot \"" << fname_angle_profiles << "\" u 1:2 w l title \"diff. XS 22.5 deg.\"" << std::endl;
@@ -766,13 +780,20 @@ void test_diff_tot_cross (ArDataTables *ArTables)
 
 }
 
-void test_J_L_probabilities(ArDataTables *ArTables)
+void test_J_L_probabilities(void)
 {
-	std::string fname_diff = "tests/diff_cross_elastic_10eV_Pjl.txt";
-	std::string fname_tot = "tests/total_elastic_from_diff_Pjl.txt";
-	std::string fname_angle_profiles = "tests/diff_cross_elastic_profiles_Pjl.txt";
+	std::string prefix = gSettings.ProgConsts()->test_folder;
+	std::string fname_diff = prefix + "diff_cross_elastic_10eV_Pjl.txt";
+	std::string fname_tot = prefix + "total_elastic_from_diff_Pjl.txt";
+	std::string fname_angle_profiles = prefix + "diff_cross_elastic_profiles_Pjl.txt";
 	std::ofstream str;
 	int err;
+	const ArgonParticle* argon = (ArgonParticle*) gParticleTable.GetParticle(ARGON_NAME);
+	if (!argon->isValid()) {
+		std::cerr<<"test_total_cross_all:: invalid particle, quitting test"<<std::endl;
+		return;
+	}
+
 	{
 		double E = gSettings.PhysConsts()->En_3o2-0.05;
 		unsigned int N_th = 600;
@@ -782,8 +803,8 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 		for (unsigned int i = 0; i<=N_th; ++i) {
 			double theta = i*M_PI / N_th;
 			double k = gSettings.PhysConsts()->a_h_bar_2eM_e_SI*sqrt(E);
-			for (unsigned int L = 0; L < ArTables->ArAllData_.ArExper_.max_L(k); ++L) {
-				double prob = ArTables->ArAllData_.argon_scatter_probability_j(E, theta, 2 * L + 1, 2 * L);
+			for (unsigned int L = 0; L < argon->ArAllData_.ArExper_.max_L(k); ++L) {
+				double prob = argon->ArAllData_.argon_scatter_probability_j(E, theta, 2 * L + 1, 2 * L);
 				if (prob < 0) {
 					++N_lz;
 					I_lz += prob;
@@ -792,7 +813,7 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 					++N_gz;
 				}
 				if (L > 0) {
-					prob = ArTables->ArAllData_.argon_scatter_probability_j(E, theta, 2 * L - 1, 2 * L);
+					prob = argon->ArAllData_.argon_scatter_probability_j(E, theta, 2 * L - 1, 2 * L);
 					if (prob < 0) {
 						++N_lz;
 						I_lz += prob;
@@ -812,15 +833,15 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 	}
 
 	{
-		str.open(fname_diff, std::ios_base::trunc);
+		open_output_file(fname_diff, str, std::ios_base::trunc);
 		str<<"theta[deg]\tdiff.XS_standard[1e-20m^2]\tdiff.XS_Pjl[1e-20m^2]"<<std::endl;
 		for (int i=0; i<600; ++i) {
 			double th = i*(M_PI)/599;
-			str<<th*180/M_PI<<"\t"<< ArTables->ArAllData_.argon_cross_elastic_diff(10.0, th)<<"\t"<< ArTables->ArAllData_.argon_cross_elastic_diff(10.0, th, 3) <<std::endl;
+			str<<th*180/M_PI<<"\t"<< argon->ArAllData_.argon_cross_elastic_diff(10.0, th)<<"\t"<< argon->ArAllData_.argon_cross_elastic_diff(10.0, th, 3) <<std::endl;
 		}
 		str.close();
-		std::string name = "tests/test_diff_XS_elastic_10eV_Pjl.sc";
-		str.open(name, std::ios_base::trunc);
+		std::string name = prefix + "test_diff_XS_elastic_10eV_Pjl.sc";
+		open_output_file(name, str, std::ios_base::trunc);
 		str<<"plot \""<<fname_diff<<"\" u 1:2 title \"Diff. XS at 10 eV\""<<std::endl;
 		str << "replot \"" << fname_diff << "\" u 1:3 title \"Diff. XS at 10 eV using l-j probabilities\"" << std::endl;
 		str<<"pause -1"<<std::endl;
@@ -829,7 +850,7 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 	}
 	
 	{
-		str.open(fname_tot, std::ios_base::trunc);
+		open_output_file(fname_tot, str, std::ios_base::trunc);
 		str << "E[eV]\tXS tot [1e-20m^2]\tXS from diff [1e-20m^2]\tXS from diff Pjl [1e-20m^2]" << std::endl;
 		{
 			EnergyScanner eScan(EnergyScanner::PlotDiffXS);
@@ -840,16 +861,16 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 				long double integral = 0;
 				long double integral2 = 0;
 				for (int j = 0; j < 10001; ++j) {
-					integral += (M_PI / 10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI / 10000.0)*sin(j*M_PI / 10000.0);
-					integral2 += (M_PI / 10000.0)*ArTables->ArAllData_.argon_cross_elastic_diff(E, j*M_PI / 10000.0, 3)*sin(j*M_PI / 10000.0);
+					integral += (M_PI / 10000.0)*argon->ArAllData_.argon_cross_elastic_diff(E, j*M_PI / 10000.0)*sin(j*M_PI / 10000.0);
+					integral2 += (M_PI / 10000.0)*argon->ArAllData_.argon_cross_elastic_diff(E, j*M_PI / 10000.0, 3)*sin(j*M_PI / 10000.0);
 				}
-				str << E << "\t" << ArTables->ArAllData_.argon_cross_elastic(E)<<"\t" << integral << "\t" << integral2 << std::endl;
+				str << E << "\t" << argon->ArAllData_.argon_cross_elastic(E)<<"\t" << integral << "\t" << integral2 << std::endl;
 			}
 		}
 		str.close();
 
-		std::string name = "tests/test_diff_XS_elastic_by_total_Pjl.sc";
-		str.open(name, std::ios_base::trunc);
+		std::string name = prefix + "test_diff_XS_elastic_by_total_Pjl.sc";
+		open_output_file(name, str, std::ios_base::trunc);
 		str << "set logscale x" << std::endl;
 		str << "set logscale y" << std::endl;
 		str << "set key top left" << std::endl;
@@ -862,7 +883,7 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 	}
 
 	{
-		str.open(fname_angle_profiles, std::ios_base::trunc);
+		open_output_file(fname_angle_profiles, str, std::ios_base::trunc);
 		str << "E[eV]\tXS diff 22.5deg [1e-20m^2]\tXS diff 45deg\tXS diff 90deg\tXS diff 112.5deg\tXS diff 135deg";
 		str << "\tXS diff Pjl 22.5deg\tXS diff Pjl 45deg\tXS diff Pjl 90deg\tXS diff Pjl 112.5deg\tXS diff Pjl 135deg" << std::endl;
 		EnergyScanner eScan(EnergyScanner::PlotResonances);
@@ -875,20 +896,20 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 			double E = eScan.Next(err);
 			if ((0 != err))
 				break;
-			str << E << "\t" << ArTables->ArAllData_.argon_cross_elastic_diff(E, th0) << "\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th1) << "\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th2) << "\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th3) << "\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th4) << "\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th0, 3) << "\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th1, 3) << "\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th2, 3) << "\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th3, 3) << "\t"
-				<< ArTables->ArAllData_.argon_cross_elastic_diff(E, th4, 3) << std::endl;
+			str << E << "\t" << argon->ArAllData_.argon_cross_elastic_diff(E, th0) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th1) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th2) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th3) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th4) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th0, 3) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th1, 3) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th2, 3) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th3, 3) << "\t"
+				<< argon->ArAllData_.argon_cross_elastic_diff(E, th4, 3) << std::endl;
 		}
 		str.close();
-		std::string name = "tests/test_diff_XS_elastic_profiles_Pjl.sc";
-		str.open(name, std::ios_base::trunc);
+		std::string name = prefix + "test_diff_XS_elastic_profiles_Pjl.sc";
+		open_output_file(name, str, std::ios_base::trunc);
 		str << "set key top right" << std::endl;
 		str << "set xlabel \"E [eV]\"" << std::endl;
 		str << "plot \"" << fname_angle_profiles << "\" u 1:2 w l title \"diff. XS 22.5 deg.\"" << std::endl;
@@ -907,10 +928,18 @@ void test_J_L_probabilities(ArDataTables *ArTables)
 	}
 }
 
-void test_time_delay(ArDataTables *ArTables)
+void test_time_delay()
 {
+	std::string prefix = gSettings.ProgConsts()->test_folder;
 	double max_delay = 1.05*6*gSettings.PhysConsts()->h_bar_eVs/std::min(gSettings.PhysConsts()->Width_1o2, gSettings.PhysConsts()->Width_3o2);
 	double min_delay = -max_delay;
+	const ArgonParticle* argon = (ArgonParticle*) gParticleTable.GetParticle(ARGON_NAME);
+	const Particle* electron = gParticleTable.GetParticle(ELECTRON_NAME);
+	if (!electron->isValid() || !argon->isValid()) {
+		std::cerr<<"test_time_delay:: invalid particle, quitting test"<<std::endl;
+		return;
+	}
+
 	{
 		//11.075-11.125
 		//11.075-11.30
@@ -936,12 +965,12 @@ void test_time_delay(ArDataTables *ArTables)
 		//unsigned long int N0 = 0, Nn0 = 0;
 		for (unsigned int h = 0; h < 2000000u; ++h) {
 			double Energy = Efr + (Eto-Efr)*random_generator_->Uniform();
-			double theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
-			double delay = ArTables->generate_time_delay_untabulated(Energy, theta, Event::Elastic, random_generator_->Uniform());
+			double theta = argon->GenerateUntabScatterAngle(electron, Energy, 0, random_generator_->Uniform());
+			double delay = argon->GenerateUntabTimeDelay(electron, Energy, theta, 0, random_generator_->Uniform());
 			hist1->Fill(delay);
 			Energy = Efr + (Eto-Efr)*random_generator_->Uniform();
-			theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
-			delay = ArTables->generate_time_delay(Energy, theta, Event::Elastic, random_generator_->Uniform());
+			theta = argon->GenerateScatterAngle(electron, Energy, 0, random_generator_->Uniform());
+			delay = argon->GenerateTimeDelay(electron, Energy, theta, 0, random_generator_->Uniform());
 			hist2->Fill(delay);
 		}
 		std::ostringstream str1, str2;
@@ -974,8 +1003,8 @@ void test_time_delay(ArDataTables *ArTables)
 			//unsigned long int N0 = 0, Nn0 = 0;
 			for (int h = 0; h < 2000000; ++h) {
 				double Energy = Es[i];
-				double theta = ArTables->generate_theta(Energy, Event::Elastic, random_generator_->Uniform());
-				double delay = ArTables->generate_time_delay(Energy, theta, Event::Elastic, random_generator_->Uniform());
+				double theta = argon->GenerateUntabScatterAngle(electron, Energy, 0, random_generator_->Uniform());
+				double delay = argon->GenerateUntabTimeDelay(electron, Energy, theta, 0, random_generator_->Uniform());
 				hist1->Fill(delay);
 			}
 			std::ostringstream str1;
@@ -985,20 +1014,20 @@ void test_time_delay(ArDataTables *ArTables)
 				hist1->Draw();
 			else
 				hist1->Draw("same");
-			std::string fname = "tests/spin_flip-nonflip_prob_and_dt_"+En.str()+"eV.txt";
+			std::string fname = prefix + "spin_flip-nonflip_prob_and_dt_"+En.str()+"eV.txt";
 			std::ofstream str;
-			str.open(fname, std::ios_base::trunc);
+			open_output_file(fname, str, std::ios_base::trunc);
 			str<<"//E[eV] = "<<Es[i]<<std::endl;
 			str<<"//theta\tP_sflip\tT_sflip[s]\tT_snonflip[s]"<<std::endl;
 			for (unsigned int th=0, th_end_=1301; th<th_end_; ++th) {
 				double theta = M_PI*th/(th_end_-1);
-				str<<theta<<"\t"<<1-std::max((*ArTables->time_delay_spin_nonflip_prob_table_)(theta, Es[i]), 0.0)
-				<<"\t"<<(*ArTables->time_delay_spin_flip_table_)(theta, Es[i])
-				<<"\t"<<(*ArTables->time_delay_spin_nonflip_table_)(theta, Es[i])<<std::endl;
+				str<<theta<<"\t"<<1-std::max((*argon->time_delay_spin_nonflip_prob_table_)(theta, Es[i]), 0.0)
+				<<"\t"<<(*argon->time_delay_spin_flip_table_)(theta, Es[i])
+				<<"\t"<<(*argon->time_delay_spin_nonflip_table_)(theta, Es[i])<<std::endl;
 			}
 			str.close();
-			std::string name = "tests/spin_flip-nonflip_prob_and_dt_"+En.str()+"eV.sc";
-			str.open(name, std::ios_base::trunc);
+			std::string name = prefix + "spin_flip-nonflip_prob_and_dt_"+En.str()+"eV.sc";
+			open_output_file(name, str, std::ios_base::trunc);
 			str<<"set ytics nomirror"<<std::endl;
 			str<<"set y2tics"<<std::endl;
 			str<<"set xlabel \"theta [rad.]\""<<std::endl;
@@ -1019,25 +1048,32 @@ void test_time_delay(ArDataTables *ArTables)
 
 }
 
-void test_backward_scatter_prob (ArDataTables *ArTables)
+void test_backward_scatter_prob (void)
 {
-	std::string fname = "tests/backward_scattering_prob.txt";
+	std::string prefix = gSettings.ProgConsts()->test_folder;
+	std::string fname = prefix + "backward_scattering_prob.txt";
 	std::ofstream str;
 	int err;
+	const ArgonParticle* argon = (ArgonParticle*) gParticleTable.GetParticle(ARGON_NAME);
+	if (!argon->isValid()) {
+		std::cerr<<"test_backward_scatter_prob:: invalid particle, quitting test"<<std::endl;
+		return;
+	}
+
 	{
-		str.open(fname, std::ios_base::trunc);
+		open_output_file(fname, str, std::ios_base::trunc);
 		str<<"E[eV]\tW_backward"<<std::endl;
 		EnergyScanner eScan(EnergyScanner::PlotDiffXS);
 		while (true) {
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<<"\t"<<ArTables->ArAllData_.argon_back_scatter_prob(E)<<std::endl;
+			str<<E<<"\t"<<argon->ArAllData_.argon_back_scatter_prob(E)<<std::endl;
 		}
 		str.close();
 	}
-	std::string name = "tests/test_backward_scatter.sc";
-	str.open(name, std::ios_base::trunc);
+	std::string name = prefix + "test_backward_scatter.sc";
+	open_output_file(name, str, std::ios_base::trunc);
 	//str<<"set logscale x"<<std::endl;
 	str<<"plot \""<<fname<<"\" u 1:2 title \"W_backward\""<<std::endl;
 	str<<"pause -1"<<std::endl;
@@ -1045,25 +1081,32 @@ void test_backward_scatter_prob (ArDataTables *ArTables)
 	INVOKE_GNUPLOT(name);
 }
 
-void test_TM_forward (ArDataTables *ArTables)
+void test_TM_forward (void)
 {
-	std::string fname = "tests/TM_forward.txt";
+	std::string prefix = gSettings.ProgConsts()->test_folder;
+	std::string fname = prefix + "TM_forward.txt";
 	std::ofstream str;
 	int err;
+	const ArgonParticle* argon = (ArgonParticle*) gParticleTable.GetParticle(ARGON_NAME);
+	if (!argon->isValid()) {
+		std::cerr<<"test_TM_forward:: invalid particle, quitting test"<<std::endl;
+		return;
+	}
+
 	{
-		str.open(fname, std::ios_base::trunc);
+		open_output_file(fname, str, std::ios_base::trunc);
 		str<<"E[eV]\tTM_forward"<<std::endl;
 		EnergyScanner eScan(EnergyScanner::PlotDiffXS);
 		while (true) {
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<<"\t"<<ArTables->ArAllData_.argon_TM_forward(E)<<std::endl;
+			str<<E<<"\t"<<argon->ArAllData_.argon_TM_forward(E)<<std::endl;
 		}
 		str.close();
 	}
-	std::string name = "tests/test_TM_forward.sc";
-	str.open(name, std::ios_base::trunc);
+	std::string name = prefix + "test_TM_forward.sc";
+	open_output_file(name, str, std::ios_base::trunc);
 	//str<<"set logscale x"<<std::endl;
 	str<<"plot \""<<fname<<"\" u 1:2 title \"TM_forward\""<<std::endl;
 	str<<"pause -1"<<std::endl;
@@ -1071,25 +1114,32 @@ void test_TM_forward (ArDataTables *ArTables)
 	INVOKE_GNUPLOT(name);
 }
 
-void test_TM_backward (ArDataTables *ArTables)
+void test_TM_backward (void)
 {
-	std::string fname = "tests/TM_backward.txt";
+	std::string prefix = gSettings.ProgConsts()->test_folder;
+	std::string fname = prefix + "TM_backward.txt";
 	std::ofstream str;
 	int err;
+	const ArgonParticle* argon = (ArgonParticle*) gParticleTable.GetParticle(ARGON_NAME);
+	if (!argon->isValid()) {
+		std::cerr<<"test_TM_backward:: invalid particle, quitting test"<<std::endl;
+		return;
+	}
+
 	{
-		str.open(fname, std::ios_base::trunc);
+		open_output_file(fname, str, std::ios_base::trunc);
 		str<<"E[eV]\tTM_backward"<<std::endl;
 		EnergyScanner eScan(EnergyScanner::PlotDiffXS);
 		while (true) {
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<<"\t"<<ArTables->ArAllData_.argon_TM_backward(E)<<std::endl;
+			str<<E<<"\t"<<argon->ArAllData_.argon_TM_backward(E)<<std::endl;
 		}
 		str.close();
 	}
-	std::string name = "tests/test_TM_backward.sc";
-	str.open(name, std::ios_base::trunc);
+	std::string name = prefix + "test_TM_backward.sc";
+	open_output_file(name, str, std::ios_base::trunc);
 	//str<<"set logscale x"<<std::endl;
 	str<<"plot \""<<fname<<"\" u 1:2 title \"TM_backward\""<<std::endl;
 	str<<"pause -1"<<std::endl;
@@ -1097,21 +1147,29 @@ void test_TM_backward (ArDataTables *ArTables)
 	INVOKE_GNUPLOT(name);
 }
 
-void test_total_cross_all (ArDataTables *ArTables)
+void test_total_cross_all (void)
 {
+	std::string prefix = gSettings.ProgConsts()->test_folder;
 	std::ofstream str, str1;
 
-	std::string fname_XS = "tests/total_elastic_and_resonances_XS.txt";
-	std::string fname_XS_res = "tests/total_resonances_XS.txt";
-	std::string fname_XS_ext = "tests/excitation_XS.txt";
-	std::string fname_XS_ext2 = "tests/excitation_XS2.txt";
+	std::string fname_XS = prefix + "total_elastic_and_resonances_XS.txt";
+	std::string fname_XS_res = prefix + "total_resonances_XS.txt";
+	std::string fname_XS_ext = prefix + "excitation_XS.txt";
+	std::string fname_XS_ext2 = prefix + "excitation_XS2.txt";
 	int err;
+	const ArgonParticle* argon = (ArgonParticle*) gParticleTable.GetParticle(ARGON_NAME);
+	const Particle* electron = gParticleTable.GetParticle(ELECTRON_NAME);
+	if (!electron->isValid() || !argon->isValid()) {
+		std::cerr<<"test_total_cross_all:: invalid particle, quitting test"<<std::endl;
+		return;
+	}
+
 	{
 		EnergyScanner EnRange(EnergyScanner::PlotAllXS);
-		str.open(fname_XS, std::ios_base::trunc);
+		open_output_file(fname_XS, str, std::ios_base::trunc);
 		str<<std::scientific;
 		str<<"E[eV]\tXS elastic+Feshbach resonances total [1e-20 m^2]\tXS elastic total from table"<<std::endl;
-		str1.open(fname_XS_ext, std::ios_base::trunc);
+		open_output_file(fname_XS_ext, str1, std::ios_base::trunc);
 		str1<<std::scientific;
 		str1<<"E[eV]\tXS S ext.[1e-20 m^2]\tXS P ext.\tXS sum ext.\tXS ion."<<std::endl;
 		while (true) {
@@ -1119,18 +1177,18 @@ void test_total_cross_all (ArDataTables *ArTables)
 			if (0!=err)
 				break;
 
-			str<<E<<"\t"<<ArTables->ArAllData_.argon_cross_elastic(E) <<"\t"<<ArTables->XS_elastic(E)<<std::endl;
+			str<<E<<"\t"<<argon->ArAllData_.argon_cross_elastic(E) << "\t" << argon->GetCrossSection(electron, E, 0) <<std::endl;
 			double XS_S=0, XS_P=0, XS_EXT=0, XS_ION=0;
-			for (int j =0, end_ = ArTables->ArAllData_.ArExper_.ionizations.size(); j!=end_; ++j) {
-				XS_ION+= ArTables->ArAllData_.ArExper_.ionizations[j](E);
+			for (int j =0, end_ = argon->ArAllData_.ArExper_.ionizations.size(); j!=end_; ++j) {
+				XS_ION+= argon->ArAllData_.ArExper_.ionizations[j](E);
 			}
-			for (int j =0, end_ = ArTables->ArAllData_.ArExper_.excitations.size(); j!=end_; ++j) {
-				std::string name = ArTables->ArAllData_.ArExper_.excitations[j].get_name();
+			for (int j =0, end_ = argon->ArAllData_.ArExper_.excitations.size(); j!=end_; ++j) {
+				std::string name = argon->ArAllData_.ArExper_.excitations[j].get_name();
 				if (name.find("S")!=std::string::npos)
-					XS_S+= ArTables->ArAllData_.ArExper_.excitations[j](E);
+					XS_S+= argon->ArAllData_.ArExper_.excitations[j](E);
 				if (name.find("P")!=std::string::npos)
-					XS_P+= ArTables->ArAllData_.ArExper_.excitations[j](E);
-				XS_EXT+= ArTables->ArAllData_.ArExper_.excitations[j](E);
+					XS_P+= argon->ArAllData_.ArExper_.excitations[j](E);
+				XS_EXT+= argon->ArAllData_.ArExper_.excitations[j](E);
 			}
 			XS_S = std::max(1e-4, XS_S); //for logscale
 			XS_P = std::max(1e-4, XS_P);
@@ -1140,16 +1198,16 @@ void test_total_cross_all (ArDataTables *ArTables)
 		}
 		str.close();
 		str1.close();
-		std::string name = "tests/test_table_XS.sc";
-		str.open(name, std::ios_base::trunc);
+		std::string name = prefix + "test_table_XS.sc";
+		open_output_file(name, str, std::ios_base::trunc);
 		str << "set logscale x" << std::endl;
 		str << "plot \"" << fname_XS << "\" u 1:2 w lines title \"XS from function\"" << std::endl;
 		str << "replot \"" << fname_XS << "\" u 1:3 title \"XS from table\"" << std::endl;
 		str << "pause -1" << std::endl;
 		str.close();
 		INVOKE_GNUPLOT(name);
-		name = "tests/test_XS_all.sc";
-		str.open(name, std::ios_base::trunc);
+		name = prefix + "test_XS_all.sc";
+		open_output_file(name, str, std::ios_base::trunc);
 		str << "set logscale x" << std::endl;
 		str << "set logscale y" << std::endl;
 		str << "plot \"" << fname_XS << "\" u 1:2 w lines lc rgb \"#000000\" title \"XS elastic + Fishbach resonance\"" << std::endl;
@@ -1164,7 +1222,7 @@ void test_total_cross_all (ArDataTables *ArTables)
 
 	{
 		EnergyScanner EnRange(EnergyScanner::PlotInelasticXS);
-		str.open(fname_XS_ext2, std::ios_base::trunc);
+		open_output_file(fname_XS_ext2, str, std::ios_base::trunc);
 		str<<std::scientific;
 		str<<"E[eV]\tXS S ext.[1e-20 m^2]\tXS P ext.\tXS sum ext.\tXS ion."<<std::endl;
 		while (true) {
@@ -1172,16 +1230,16 @@ void test_total_cross_all (ArDataTables *ArTables)
 			if (0!=err)
 				break;
 			double XS_S=0, XS_P=0, XS_EXT=0, XS_ION=0;
-			for (int j =0, end_ = ArTables->ArAllData_.ArExper_.ionizations.size(); j!=end_; ++j) {
-				XS_ION+= ArTables->ArAllData_.ArExper_.ionizations[j](E);
+			for (int j =0, end_ = argon->ArAllData_.ArExper_.ionizations.size(); j!=end_; ++j) {
+				XS_ION+= argon->ArAllData_.ArExper_.ionizations[j](E);
 			}
-			for (int j =0, end_ = ArTables->ArAllData_.ArExper_.excitations.size(); j!=end_; ++j) {
-				std::string name = ArTables->ArAllData_.ArExper_.excitations[j].get_name();
+			for (int j =0, end_ = argon->ArAllData_.ArExper_.excitations.size(); j!=end_; ++j) {
+				std::string name = argon->ArAllData_.ArExper_.excitations[j].get_name();
 				if (name.find("S")!=std::string::npos)
-					XS_S+= ArTables->ArAllData_.ArExper_.excitations[j](E);
+					XS_S+= argon->ArAllData_.ArExper_.excitations[j](E);
 				if (name.find("P")!=std::string::npos)
-					XS_P+= ArTables->ArAllData_.ArExper_.excitations[j](E);
-				XS_EXT+= ArTables->ArAllData_.ArExper_.excitations[j](E);
+					XS_P+= argon->ArAllData_.ArExper_.excitations[j](E);
+				XS_EXT+= argon->ArAllData_.ArExper_.excitations[j](E);
 			}
 			XS_S = std::max(1e-4, XS_S); //for logscale
 			XS_P = std::max(1e-4, XS_P);
@@ -1190,8 +1248,8 @@ void test_total_cross_all (ArDataTables *ArTables)
 			str<<E<<"\t"<<XS_S<<"\t"<<XS_P<<"\t"<<XS_EXT<<"\t"<<XS_ION<<std::endl;
 		}
 		str.close();
-		std::string name = "tests/test_XS_ext.sc";
-		str.open(name, std::ios_base::trunc);
+		std::string name = prefix + "test_XS_ext.sc";
+		open_output_file(name, str, std::ios_base::trunc);
 		str << "set logscale x" << std::endl;
 		str << "set logscale y" << std::endl;
 		str << "plot \"" << fname_XS << "\" u 1:2 w lines lc rgb \"#000000\" title \"XS elastic + Fishbach resonance\"" << std::endl;
@@ -1206,18 +1264,18 @@ void test_total_cross_all (ArDataTables *ArTables)
 
 	{
 		EnergyScanner eScan(EnergyScanner::PlotResonances);
-		str.open(fname_XS_res, std::ios_base::trunc);
+		open_output_file(fname_XS_res, str, std::ios_base::trunc);
 		str<<"E[eV]\tXS resonance[1e-20 m^2]\tXS resonance from table"<<std::endl;
 		int err;
 		while (true) {
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<< "\t" << ArTables->ArAllData_.argon_cross_elastic(E)<<"\t"<<ArTables->XS_elastic(E)<<std::endl;
+			str<<E<< "\t" << argon->ArAllData_.argon_cross_elastic(E)<<"\t"<<argon->GetCrossSection(electron, E, 0)<<std::endl;
 		}
 		str.close();
-		std::string name = "tests/test_resonance_XS.sc";
-		str.open(name, std::ios_base::trunc);
+		std::string name = prefix + "test_resonance_XS.sc";
+		open_output_file(name, str, std::ios_base::trunc);
 		str<<"plot \"" << fname_XS_res << "\" u 1:3 w l lc rgb \"#000000\" title \"Resonance XS from table\"" << std::endl;
 		str<<"replot \""<< fname_XS_res <<"\" u 1:2 w p lc rgb \"#FF0000\" title \"Resonance XS from function\""<<std::endl;
 		str<<"pause -1"<<std::endl;
@@ -1226,17 +1284,13 @@ void test_total_cross_all (ArDataTables *ArTables)
 	}
 }
 
-void test_all (ArDataTables *ArTables)
+void test_all (void)
 {
-	if (! ArTables->isValid()) {
-		std::cerr<<"test_all::Argon data tables are invalid"<<std::endl;
-		return;
-	}
-	/*
+/*
 	std::cout<<"Testing polynomial fit:"<<std::endl;
 	test_polynomial_fit ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-	*/
+*/
 /*	std::cout<<"Testing function table:"<<std::endl;
 	test_2_dim_table ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
@@ -1249,51 +1303,47 @@ void test_all (ArDataTables *ArTables)
 	/*std::cout<<"Testing factor helping class:"<<std::endl;
 	test_factor_helper ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-	*/
+	*//*
 	std::cout<<"Testing legendre polynomials:"<<std::endl;
 	test_legendre_polynomial ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-/*
+*//*
 	std::cout<<"Testing colored intervals:"<<std::endl;
 	test_colored_interval ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-
+*//*
 	std::cout<<"Testing integrals of legendre polynomials:"<<std::endl;
 	test_legendre_intregral ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 	*/
-/*	std::cout<<"Testing differential cross section:"<<std::endl;
-	test_diff_tot_cross (ArTables);
+	std::cout<<"Testing differential cross section:"<<std::endl;
+	test_diff_tot_cross ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-*/
+
 /*	std::cout<<"Testing J-L probabilities:"<<std::endl;
-	test_J_L_probabilities (ArTables);
+	test_J_L_probabilities ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 */
 /*	std::cout<<"Testing backward scatter probability:"<<std::endl;
-	test_backward_scatter_prob (ArTables);
+	test_backward_scatter_prob ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 
 	std::cout<<"Testing forward momentum transfer factor:"<<std::endl;
-	test_TM_forward (ArTables);
+	test_TM_forward ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 
 	std::cout<<"Testing backward momentum transfer factor:"<<std::endl;
-	test_TM_backward (ArTables);
+	test_TM_backward ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 	*/
-/*	std::cout<<"Testing resonance cross section:"<<std::endl;
-	test_resonance_cross (ArTables);
-	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-*//*
+
 	std::cout<<"Testing total cross sections:"<<std::endl;
-	test_total_cross_all (ArTables);
-	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-*/
-	std::cout<<"Testing time delay:"<<std::endl;
-	test_time_delay (ArTables);
+	test_total_cross_all ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 
+	std::cout<<"Testing time delay:"<<std::endl;
+	test_time_delay();
+	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 
 	std::cout<<"Testing finished."<<std::endl<<std::endl<<std::endl;
 }

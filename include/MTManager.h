@@ -10,7 +10,7 @@ protected:
 	int instance_;
 	boost::optional<unsigned int> N_electrons_;
 public:
-	MTManager(ArDataTables *Ar_tables, int instance);
+	MTManager(const Mixture *material, int instance);
 	void ProcessAll(void);
 	bool setNelectons(unsigned int Ne);
 	boost::optional<unsigned int> getNelectons(void) const;

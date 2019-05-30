@@ -44,7 +44,7 @@
       <Feshbach_resonance_1o2_Width>2.2e-3</Feshbach_resonance_1o2_Width>
 
       <Dissoc_attachment_En_thresh>11.548</Dissoc_attachment_En_thresh>
-      <Dissoc_attachment_XS>1</Dissoc_attachment_XS>
+      <Dissoc_attachment_XS>1e-2</Dissoc_attachment_XS>
       <Argon_ion_decay_time>360e-9</Argon_ion_decay_time> <!--In seconds-->
 
       <Feshbach_resonance_NBrS_XS>0.0</Feshbach_resonance_NBrS_XS><!--in e-20 m^2-->
@@ -55,11 +55,11 @@
     <is_test_version>false</is_test_version> <!--OPT for running tests before simulation. TODO: test modules and mb even submodules-->
     <temperature>87</temperature> <!--Kelvins-->
     <pressure>1.05e5</pressure> <!--Pascals-->
-    <thread_number>1</thread_number>
+    <thread_number>10</thread_number>
     <maximal_energy>16.0</maximal_energy>
     <angle_discretization>1001</angle_discretization>
     
-    <drift_distance_ignore_history>0</drift_distance_ignore_history> <!--OPT-->
+    <drift_distance_ignore_history>1</drift_distance_ignore_history> <!--OPT-->
     <skip_history_rate>0</skip_history_rate> <!--OPT-->
     <RecordedValues> <!-- if field is not specified, its value is taken as false by default (do not record) -->
     <!-- TODO: add profiles: for E specrtras, for V drift, Custom -->
@@ -75,7 +75,7 @@
     	
     	<position_initial>false</position_initial> <!-- position - coordinate against electric field (along e drift direction)-->
     	<position_delta>false</position_delta>
-    	<position_final>false</position_final> <!-- there is redundancy here -->
+    	<position_final>true</position_final> <!-- there is redundancy here -->
 		<path_delta>true</path_delta> <!-- full covered path in 3D -->
 
 		<theta_initial>false</theta_initial>
@@ -99,12 +99,12 @@
       <excitation_XS_data>data/ArExcitations_Magboltz.dat</excitation_XS_data> <!--OPT-->
       <ionization_XS_data>data/ArIonizations_Magboltz.dat</ionization_XS_data> <!--OPT-->
     </DataFiles>
-    <cache_data_folder>data_derived_dev</cache_data_folder>
+    <cache_data_folder>data_derived_dev1</cache_data_folder>
     <test_folder>tests_dev</test_folder> <!-- OPT -->
-    <output_file>Output/v01.t/eData_($Td)Td.root</output_file>
-	<!--Ec_spectrum_data>Output/v12.1/Ec_forms/($Td)Td.dat</Ec_spectrum_data> <!--OPT. If set, the simulation is run in fixed Ec spectrum mode.-->
-    <drift_distance>1e-4</drift_distance> <!--default value for each run-->
-    <n_electrons>2</n_electrons> <!--default value for each run-->
+    <output_file>Output/v14.1/eData_($Td)Td_VN.root</output_file>
+	
+    <drift_distance>3e-3</drift_distance> <!--default value for each run-->
+    <n_electrons>10000</n_electrons> <!--default value for each run-->
     <random_seed>42</random_seed> <!--default value for each run-->
     <random_generator>TRandom1</random_generator> <!-- TRandom1 (best, slowest), TRandom2 (BAD), TRandom3 (faster, good) --> 
     <Mixture>
