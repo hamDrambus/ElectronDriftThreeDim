@@ -2,15 +2,16 @@
 #define ARGON_VAN_DER_WAALS_PARTICLE_H_
 
 #include "global_definitions.h"
-#include "Particle.h"
+#include "ArgonParticle.h"
 
-class ArgonVanDerWaalsParticle : public Particle {
+class ArgonVanDerWaalsParticle : public ArgonParticle {
+protected:
+	ArgonVanDerWaalsParticle() = default;
 public:
-	ArgonVanDerWaalsParticle(void);
+	ArgonVanDerWaalsParticle(ArgonParticle* argon); //copies pointers to tables from argon to avoid storing dublicate data in the memory.
 	virtual ~ArgonVanDerWaalsParticle();
 	ArgonVanDerWaalsParticle (const ArgonVanDerWaalsParticle & ) = default;
 
-	virtual unsigned int GetQauntStateSize(const Particle *target, double E, double theta, unsigned int process) const;
 	virtual double GetCrossSection(const Particle *target, double E, unsigned int process) const;
 	virtual double GetCrossSection(const Particle *target, double E, double theta, unsigned int process) const;
 	virtual std::vector<const Particle*> GetFinalStates(const Particle *target, double E, double theta, unsigned int process) const;

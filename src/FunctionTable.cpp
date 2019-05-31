@@ -514,6 +514,7 @@ bool FunctionTable::is_empty(void) const
 
 void FunctionTable::plot_E_Ey (void)
 {
+#ifndef _NO_CERN_ROOT
 	TCanvas *c1 = new TCanvas("E_Ey", "E_Ey", 900, 700);
 	TH2D * hist = new TH2D ("E_Ey points", "E_Ey points", 5000, 0, 5, 5000, 0, 5);
 	for (std::size_t ey = 0, ey_end_ = _Eys.size(); ey!=ey_end_; ++ey) {
@@ -522,5 +523,8 @@ void FunctionTable::plot_E_Ey (void)
 		}
 	}
 	hist->Draw();
+#else //_NO_CERN_ROOT
+	std::cerr << "FunctionTable::plot_E_Ey: Error: plotting histograms is not supported without ROOT" << std::endl;
+#endif //_NO_CERN_ROOT
 }
 

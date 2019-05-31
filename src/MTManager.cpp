@@ -46,10 +46,12 @@ void MTManager::Clear(void)
 
 void MTManager::Merge(MTManager *with)
 {
+#ifndef _NO_CERN_ROOT
 	TList *list = new TList;
 	list->Add(with->sim_data_);
 	sim_data_->Merge(list);
 	with->sim_data_->Reset();
+#endif //_NO_CERN_ROOT
 	for (std::size_t i = 0, i_end_ = processes_counters_.size(); i != i_end_; ++i) {
 		for (std::size_t pr = 0, pr_end_ = processes_counters_[i].size(); pr != pr_end_; ++pr) {
 			processes_counters_[i][pr]+=with->processes_counters_[i][pr];

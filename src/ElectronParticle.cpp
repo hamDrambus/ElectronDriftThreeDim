@@ -12,20 +12,6 @@ ElectronParticle::ElectronParticle(void) : Particle()
 
 ElectronParticle::~ElectronParticle() {};
 
-unsigned int ElectronParticle::GetQauntStateSize(const Particle *target, double E, double theta, unsigned int process) const
-{
-	if (NULL == target) {
-		std::cerr << GetName() << "::GetQauntStateSize: Error: NULL target"<<std::endl;
-		return 0;
-	}
-	auto procs = processes_.find(target->GetName());
-	if (processes_.end()==procs) {
-		std::cerr << GetName() << "::GetQauntStateSize: Error: unsupported target particle \""<<target->GetName()<<"\""<<std::endl;
-		return 0;
-	}
-	return 0;
-}
-
 double ElectronParticle::GetCrossSection(const Particle *target, double E, unsigned int process) const
 {
 	if (NULL == target) {

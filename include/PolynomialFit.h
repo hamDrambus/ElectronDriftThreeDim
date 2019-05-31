@@ -4,28 +4,28 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <TMath.h>
-#include "TMatrixD.h"
-#include "TVectorD.h"
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/lu.hpp>
 #include "global_definitions.h"
 
 //TVectorD parameters are [0]+[1]*x+[2]*x^2+...
 class PolynomialFit {
 protected:
-	Int_t _order;
+	int _order;
 public:
-	PolynomialFit(Int_t order);
+	PolynomialFit(int order);
 	virtual ~PolynomialFit();
-	virtual void setOrder(Int_t n); //TODO: actually is is a bad practice to call virtual method from the constructor
-	//but is is ok here, since derivative class only limits setOrder() possible values to {2}
+	virtual void setOrder(int n); //TODO: actually is is a bad practice to call virtual method from the constructor
+	//but it is ok here, since derivative class only limits setOrder() possible values to {2}
 
-	Int_t getOrder(void) const;
+	int getOrder(void) const;
 
 	//in_x0 - in what poInt_t set zero x (In the SG filter it is convenient to set x_in
 	//to the poInt_t in which value is calculated
-	virtual TVectorD operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in, boost::optional<double> &in_x0) const;
+	virtual std::vector<double> operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in, boost::optional<double> &in_x0) const;
 	//Fit only part of a vector. offset+N_points-1 must in the range of the vector
-	virtual TVectorD operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in,
+	virtual std::vector<double> operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in,
 		int offset, int N_points, boost::optional<double> &in_x0) const;
 };
 
@@ -37,20 +37,20 @@ protected:
 	std::vector<double> xs;
 	std::vector<double> ys;
 	PolynomialFit fitter;
-	Int_t N_used;
+	int N_used;
 
 	bool use_left, use_right, is_set_left, is_set_right;
 	double left_value, right_value;
 public:
-	DataVector(Int_t fit_order = 1, Int_t N_used = 2);
-	DataVector(std::vector < double> &xx, std::vector<double> &yy, Int_t fit_order, Int_t N_used);
+	DataVector(int fit_order = 1, int N_used = 2);
+	DataVector(std::vector < double> &xx, std::vector<double> &yy, int fit_order, int N_used);
 	virtual ~DataVector();
 
-	void initialize(std::vector < double> &xx, std::vector<double> &yy,  Int_t fit_order, Int_t N_used);
-	void setOrder(Int_t ord);
-	Int_t getOrder(void) const;
-	void setNused(Int_t ord);
-	Int_t getNused(void) const;
+	void initialize(std::vector < double> &xx, std::vector<double> &yy,  int fit_order, int N_used);
+	void setOrder(int ord);
+	int getOrder(void) const;
+	void setNused(int ord);
+	int getNused(void) const;
 
 	//precedence goes to use_left-/right-most methods.
 	void use_leftmost(bool use);
@@ -77,7 +77,7 @@ public:
 	void write(std::ofstream& str, std::string comment="") const;
 protected:
 	void get_indices(double point, int &n_min, int &n_max) const; //[n_min, n_max] are used, not [n_min,n_max). N_used==n_max-n_min+1>=order+1
-	double calculate(double x, double x0, const TVectorD& coefs) const;
+	double calculate(double x, double x0, const std::vector<double>& coefs) const;
 };
 
 //TODO: create common parent for PDF_routine and DataVector

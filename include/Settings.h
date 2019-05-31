@@ -59,7 +59,7 @@ struct PhysicalConstants {
 struct RunParameters {
 	double field; //in Td
 	double drift_distance; //in m
-	ULong_t seed;
+	unsigned long int seed;
 	unsigned int n_electrons;
 	std::string output_file;
 	boost::optional<PDF_routine> Ec_spectrum;
@@ -88,8 +88,8 @@ struct ProgramConstants {
 
 	double def_drift_distance;
 	unsigned int def_n_electrons;
-	ULong_t def_seed;
-	enum GeneratorClass : short { NONE = 0, TRand1 = 1, TRand2 = 2, TRand3 = 3 } random_generator;
+	unsigned long int def_seed;
+	enum GeneratorClass : short { NONE = 0, TRand1 = 1, TRand2 = 2, TRand3 = 3, BOOST_hellekalek1995} random_generator;
 
 	std::map<std::string, bool> recorded_values;
 

@@ -5,10 +5,12 @@
 #include <fstream>
 #include <vector>
 #include <deque>
+#ifndef _NO_CERN_ROOT
 #include <TCanvas.h>
 #include <TGraph.h>
 #include <TH1D.h>
 #include <TH2D.h>
+#endif //_NO_CERN_ROOT
 #include "global_definitions.h"
 #include "PolynomialFit.h"
 

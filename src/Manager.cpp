@@ -1,23 +1,45 @@
 #include "Manager.h"
 
 Manager::Manager(const Mixture *Ar_tables) :
-	skip_counter_(0), material_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0), sim_data_(NULL), processes_data_(NULL)
+	skip_counter_(0), material_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0)
+#ifndef _NO_CERN_ROOT
+	, sim_data_(NULL), processes_data_(NULL)
+#endif //_NO_CERN_ROOT
 {
 	switch (gSettings.ProgConsts()->random_generator) {
 	case (ProgramConstants::GeneratorClass::TRand1): {
+#ifndef _NO_CERN_ROOT
 		random_generator_ = new TRandom1();
+		boost_random_generator = NULL;
 		break;
+#endif //_NO_CERN_ROOT
 	}
 	case (ProgramConstants::GeneratorClass::TRand2): {
+#ifndef _NO_CERN_ROOT
 		random_generator_ = new TRandom2();
+		boost_random_generator = NULL;
 		break;
+#endif //_NO_CERN_ROOT
 	}
 	case (ProgramConstants::GeneratorClass::TRand3): {
+#ifndef _NO_CERN_ROOT
 		random_generator_ = new TRandom3();
+		boost_random_generator = NULL;
+		break;
+#endif //_NO_CERN_ROOT
+	}
+	case (ProgramConstants::GeneratorClass::BOOST_hellekalek1995): {
+		boost_random_generator = new boost::random::hellekalek1995();
+#ifndef _NO_CERN_ROOT
+		random_generator_ = NULL;
+#endif //_NO_CERN_ROOT
 		break;
 	}
 	default: {
+#ifndef _NO_CERN_ROOT
 		random_generator_ = NULL;
+		boost_random_generator = NULL;
+#endif //_NO_CERN_ROOT
 	}
 	}
 	std::size_t N_particles = gParticleTable.GetNParticle();
@@ -44,6 +66,10 @@ Manager::Manager(const Mixture *Ar_tables) :
 
 Manager::~Manager()
 {
+	if (boost_random_generator) {
+		delete boost_random_generator;
+	}
+#ifndef _NO_CERN_ROOT
 	if (random_generator_) {
 		delete random_generator_;
 	}
@@ -53,16 +79,24 @@ Manager::~Manager()
 	if (processes_data_) {
 		delete processes_data_;
 	}
+#endif //_NO_CERN_ROOT
 }
 
 bool Manager::isReady(void) const
 {
 	return (boost::none != Concentration_ && boost::none != Coefficient_ && boost::none != eField_
-		&& boost::none != initial_seed_ && boost::none!=Drift_distance_ && NULL!=random_generator_ && boost::none!= run_index_);
+		&& boost::none != initial_seed_ && boost::none!=Drift_distance_ &&
+#ifndef _NO_CERN_ROOT
+		(NULL!=random_generator_ || NULL != boost_random_generator)
+#else //_NO_CERN_ROOT
+		NULL != boost_random_generator
+#endif //_NO_CERN_ROOT
+		&& boost::none!= run_index_);
 }
 
 void Manager::InitTree (void)
 {
+#ifndef _NO_CERN_ROOT
 	if (NULL== sim_data_)
 		sim_data_ = new TTree("ElectronHistory", "ElectronHistory");
 	const ProgramConstants *sets = gSettings.ProgConsts();
@@ -121,10 +155,14 @@ void Manager::InitTree (void)
 		delete processes_data_;
 	}
 	processes_data_ = NULL;
+#else //_NO_CERN_ROOT
+	std::cerr << "Manager::InitTree: Warning: ROOT is turned off" << std::endl;
+#endif //_NO_CERN_ROOT
 }
 
 void Manager::Clear(void)
 {
+#ifndef _NO_CERN_ROOT
 	if (sim_data_) {
 		delete sim_data_;
 	}
@@ -133,6 +171,7 @@ void Manager::Clear(void)
 		delete processes_data_;
 	}
 	processes_data_ = NULL;
+#endif //_NO_CERN_ROOT
 	skip_counter_ = 0;
 	skipping_early_events = true;
 	num_of_events = 0;
@@ -174,34 +213,44 @@ void Manager::setParameters(double T /*in K*/, double Pressure /*in SI*/, double
 	setParameters(Pressure / (T*gSettings.PhysConsts()->boltzmann_SI), E, drift_distance);
 }
 
-bool Manager::setInitialSeed(ULong_t seed)
+bool Manager::setInitialSeed(unsigned long int seed)
 {
 	initial_seed_ = seed;
-	switch (gSettings.ProgConsts()->random_generator) {
-	case (ProgramConstants::GeneratorClass::TRand1): {
-		UInt_t seedlist[2]={*initial_seed_,0}; //looked into TRandom1.cxx source code.
-		//Simple SetSeed ===SetSeed2 set TRandom1 to fixed state, but this state is not defined by GetSeed().
-		//in short GetSeed()===F(SetSeed()) which is defined, but its impossible to reproduce TRandom1 using
-		((TRandom1 *)random_generator_)->SetSeeds(seedlist);
-		//->SetSeed2(*initial_seed_);
-		break;
+#ifndef _NO_CERN_ROOT
+	if (NULL != random_generator_) {
+		switch (gSettings.ProgConsts()->random_generator) {
+		case (ProgramConstants::GeneratorClass::TRand1): {
+			unsigned long int seedlist[2] = { *initial_seed_,0 }; //looked into TRandom1.cxx source code.
+			//Simple SetSeed ===SetSeed2 set TRandom1 to fixed state, but this state is not defined by GetSeed().
+			//in short GetSeed()===F(SetSeed()) which is defined, but its impossible to reproduce TRandom1 using
+			((TRandom1 *)random_generator_)->SetSeeds(seedlist);
+			//->SetSeed2(*initial_seed_);
+			break;
+		}
+		case (ProgramConstants::GeneratorClass::TRand2): {
+			random_generator_->SetSeed(*initial_seed_);
+			break;
+		}
+		case (ProgramConstants::GeneratorClass::TRand3): {
+			random_generator_->SetSeed(*initial_seed_);
+			break;
+		}
+		default: {
+			initial_seed_ = boost::none;
+			return false;
+		}
+		}
 	}
-	case (ProgramConstants::GeneratorClass::TRand2): {
-		random_generator_->SetSeed(*initial_seed_);
-		break;
-	}
-	case (ProgramConstants::GeneratorClass::TRand3): {
-		random_generator_->SetSeed(*initial_seed_);
-		break;
-	}
-	default: {
+#endif //_NO_CERN_ROOT
+	if (NULL == boost_random_generator) {
+		initial_seed_ = boost::none;
 		return false;
 	}
-	}
+	boost_random_generator->seed(*initial_seed_);
 	return true;
 }
 
-boost::optional<ULong_t> Manager::getInitialSeed(void) const
+boost::optional<unsigned long int> Manager::getInitialSeed(void) const
 {
 	return initial_seed_;
 }
@@ -254,6 +303,17 @@ long double Manager::XS_integral_table(long double from, long double to, long do
 }
 */
 
+double Manager::Uniform()
+{
+	//not called when not ready, so no checks
+#ifndef _NO_CERN_ROOT
+	if (NULL != random_generator_)
+		return random_generator_->Uniform();
+#endif //_NO_CERN_ROOT
+	boost::random::uniform_01<boost::random::hellekalek1995> dist(*boost_random_generator);
+	return dist();
+}
+
 long double Manager::XS_integral_for_test(long double from, long double to, long double Eny, long double dE)
 {
 	double E = from, E_prev = from;
@@ -288,7 +348,17 @@ void Manager::Initialize(void)
 	num_of_events = 0;
 	num_of_10millions = 0;
 	//processes_counters; //preserve
-	e_first_seed_ = random_generator_->GetSeed();
+#ifndef _NO_CERN_ROOT
+	if (NULL != random_generator_) {
+		e_first_seed_ = random_generator_->GetSeed();
+	} else
+#endif //_NO_CERN_ROOT
+	{
+		std::stringstream ss;
+		ss << *boost_random_generator;
+		std::string str = ss.str();
+		e_first_seed_ = std::stoul(str);
+	}
 }
 
 void Manager::Initialize(Event &event)
@@ -299,10 +369,10 @@ void Manager::Initialize(Event &event)
 	}
 	const boost::optional<PDF_routine> *Ec_spec = &(gSettings.ProgConsts()->run_specifics[*run_index_].Ec_spectrum);
 	if (*Ec_spec) {
-		event.En_collision = (*Ec_spec)->generate(random_generator_->Uniform());
+		event.En_collision = (*Ec_spec)->generate(Uniform());
 		event.En_start= 0;
 	} else {
-		event.En_start = 1 + 3*random_generator_->Uniform();
+		event.En_start = 1 + 3*Uniform();
 		event.En_collision = 0;
 	}
 	event.En_finish = 0;
@@ -521,7 +591,7 @@ void Manager::DoStepLength(Event &event) //In case Ec spectrum is fixed, steppin
 		step_pars.theta_start = M_PI - event.theta_collision;
 		step_pars.En_start = event.En_collision;
 	}
-	long double L = - log(random_generator_->Uniform());
+	long double L = - log(Uniform());
 	L *= *Coefficient_; //Calculated once for fixed parameters;
 	//solving L = XS_integral(Ei, Ec) for Ec===E collision.
 	Solve_table(L, step_pars);
@@ -558,12 +628,12 @@ void Manager::DoScattering(Event &event)
 		return;
 	bool is_overflow = (event.process==Event::Overflow);
 	const Particle* incident = gParticleTable.GetParticle(event.particle_ID);
-	double R2 = random_generator_->Uniform(); //R1 is used in DoStepLength
+	double R2 = Uniform(); //R1 is used in DoStepLength
 	const Particle* target = material_->GenerateScatteringParticle(incident, event.En_collision, R2);
 	//TODO: implement exception system
 	if (NULL == target) {
 		std::cerr<<"Attempting again"<<std::endl;
-		R2 = random_generator_->Uniform(); //R1 is used in DoStepLength
+		R2 = Uniform(); //R1 is used in DoStepLength
 		target = material_->GenerateScatteringParticle(incident, event.En_collision, R2);
 		if (NULL == target) {
 			std::cerr<<"Fallback to the most abundant element in the mixture"<<std::endl;
@@ -575,27 +645,27 @@ void Manager::DoScattering(Event &event)
 			}
 		}
 	}
-	double R3 = random_generator_->Uniform();
+	double R3 = Uniform();
 	event.process = target->GenerateProcess(incident, event.En_collision, R3);
 	if (Event::None == event.process) {
 		//throw
 		event_ = event;
 		return;
 	}
-	double R4 = random_generator_->Uniform();
+	double R4 = Uniform();
 	event.delta_theta = target->GenerateScatterAngle(incident, event.En_collision, event.process, R4);
-	double phi = random_generator_->Uniform()*2.0*M_PI;
+	double phi = Uniform()*2.0*M_PI;
 	double cos_th_f = std::cos(event.delta_theta)*std::cos(event.theta_collision) + std::sin(event.delta_theta)*std::sin(event.theta_collision)*std::cos(phi);
 	if (cos_th_f<-1.0) //just in case of precision problems
 		cos_th_f = -1.0;
 	if (cos_th_f>1.0)
 		cos_th_f = 1.0;
 	event.theta_finish = std::acos(cos_th_f);
-	double R5 = random_generator_->Uniform();
+	double R5 = Uniform();
 	double EnergyLoss = target->GenerateEnergyLoss(incident, event.En_collision, event.delta_theta, event.process, R5);
 	event.photon_En = target->GeneratePhoton(incident, event.En_collision, event.delta_theta, event.process, R5); //same random value must be used!
 	event.En_finish = event.En_collision - EnergyLoss;
-	double R6 = random_generator_->Uniform();
+	double R6 = Uniform();
 	double time_delay = target->GenerateTimeDelay(incident, event.En_collision, event.delta_theta, event.process, R6);
 	event.delta_time_full = event.delta_time + time_delay;
 	std::vector<const Particle*> outputs = target->GetFinalStates(incident, event.En_collision, event.delta_theta, event.process);
@@ -633,7 +703,9 @@ void Manager::PostStepAction(Event &event)
 	if (skip_counter_ == gSettings.ProgConsts()->skip_history_rate || boost::none == gSettings.ProgConsts()->skip_history_rate)
 		skip_counter_ = 0;
 	if ((0==num_of_events)||IsFinished(event)) { //always record first and last drift event
+#ifndef _NO_CERN_ROOT
 		sim_data_->Fill();
+#endif //_NO_CERN_ROOT
 		++skip_counter_;
 		++num_of_events;
 		return;
@@ -644,7 +716,9 @@ void Manager::PostStepAction(Event &event)
 	}
 	if (!skipping_early_events) {
 		if ((0==skip_counter_)||(event.process>Event::Elastic)) {
+#ifndef _NO_CERN_ROOT
 			sim_data_->Fill();
+#endif //_NO_CERN_ROOT
 			skip_counter_=0;
 		}
 		++skip_counter_;
@@ -657,8 +731,8 @@ void Manager::DoGotoNext(Event &event)
 	if (Event::None != event.process) { //== for the very first event
 		const boost::optional<PDF_routine> *Ec_spec = &(gSettings.ProgConsts()->run_specifics[*run_index_].Ec_spectrum);
 		if (*Ec_spec) {
-			event.En_collision = (*Ec_spec)->generate(random_generator_->Uniform());
-			double Rand = random_generator_->Uniform()*2.0 - 1.0;
+			event.En_collision = (*Ec_spec)->generate(Uniform());
+			double Rand = Uniform()*2.0 - 1.0;
 			event.theta_collision = std::acos(Rand); //Actually thete_start is uniform but theta collision is not (but close)
 			event.En_start = 0;
 		} else {
@@ -713,6 +787,7 @@ void Manager::LoopSimulation(void)
 
 void Manager::WriteHistory(std::string root_fname)
 {
+#ifndef _NO_CERN_ROOT
 	TFile *file = new TFile(root_fname.c_str(), "RECREATE");
 	file->cd();
 	std::cout<<"Event number: "<<sim_data_->GetEntries()<<std::endl;
@@ -769,6 +844,9 @@ void Manager::WriteHistory(std::string root_fname)
 	//delete processes_data_; //This ROOT memory management, argh!
 	processes_data_ = NULL;
 	sim_data_ = NULL;
+#else //_NO_CERN_ROOT
+	std::cerr << "Manager::WriteHistory: Warning: ROOT is turned off" << std::endl;
+#endif //_NO_CERN_ROOT
 }
 
 /*

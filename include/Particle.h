@@ -23,12 +23,11 @@ public:
 		width_ = 0;
 	}
 	virtual ~Particle() {}
-	// Disable copy
-	Particle(const Particle&) = delete;
-	Particle& operator=(const Particle&) = delete;
+	Particle(const Particle&) = default;
+	Particle& operator=(const Particle&) = default;
 
 	std::string GetName(void) const { return name_; }
-	unsigned int GetMass(void) const { return mass_; }
+	double GetMass(void) const { return mass_; }
 	double GetWidth(void) const { return width_; } //in eV
 	double GetHalfLife(void) const {
 		return width_ > 0 ? gSettings.PhysConsts()->h_bar_eVs/width_ : DBL_MAX;
@@ -56,7 +55,6 @@ public:
 	ColoredRange GetEnergies (void) const { return XS_En_sweeper_; }
 	virtual bool isValid(void) const { return is_valid_; }
 	
-	virtual unsigned int GetQauntStateSize(const Particle *target, double E, double theta, unsigned int process) const = 0;
 	virtual double GetCrossSection(const Particle *target, double E, unsigned int process) const = 0;
 	virtual double GetCrossSection(const Particle *target, double E, double theta, unsigned int process) const = 0;
 	virtual std::vector<const Particle*> GetFinalStates(const Particle *target, double E, double theta, unsigned int process) const = 0;

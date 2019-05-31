@@ -7,7 +7,9 @@
 //============================================================================
 
 #include <iostream>
+#ifndef _NO_CERN_ROOT
 #include <TApplication.h>
+#endif
 #include "MTManager.h"
 #include "tests.h"
 
@@ -136,13 +138,16 @@ int main(int argn, char * argv[]) {
     auto end_t = std::chrono::system_clock::now();
     std::chrono::duration<double> diff = end_t - start_t;
     std::cout << std::endl << "  Elapsed time for loading particles = \t" << diff.count() << " s." << std::endl;
+#ifndef _NO_CERN_ROOT
 	TApplication* app = NULL;
 	if (gSettings.ProgConsts()->is_test_version) {
 		int n_par = 0;
 		char **f = NULL;
 		app = new TApplication("test_app",&n_par,f);
 	}
+#endif //_NO_CERN_ROOT
 	Process();
+#ifndef _NO_CERN_ROOT
 	if (gSettings.ProgConsts()->is_test_version) {
 		if (NULL!=app)
 			app->Run();
@@ -150,5 +155,6 @@ int main(int argn, char * argv[]) {
 		std::cout<<"Enter something: ";
 		std::cin>>a;
 	}
+#endif //_NO_CERN_ROOT
 	return 0;
 }

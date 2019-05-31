@@ -1165,14 +1165,14 @@ ArgonParticle::ArgonParticle(void) : Particle(), ArAllData_(),
 			entry[2 + ID] = std::string("\"?Unknown?\"");
 		}
 	}
-	processes_["electron"] = entry;
+	processes_[ELECTRON_NAME] = entry;
 
 	is_valid_ = true;
-	//Only shallow copy:
-	theta_table_ = new FunctionTable; //shared between processes - read only
-	time_delay_spin_flip_table_= new FunctionTable; //shared between processes - read only
-	time_delay_spin_nonflip_table_= new FunctionTable; //shared between processes - read only
-	time_delay_spin_nonflip_prob_table_= new FunctionTable; //shared between processes - read only
+	//shared between threads - read only
+	theta_table_.reset(new FunctionTable);
+	time_delay_spin_flip_table_.reset(new FunctionTable);
+	time_delay_spin_nonflip_table_.reset(new FunctionTable);
+	time_delay_spin_nonflip_prob_table_.reset(new FunctionTable);
 
 	ensure_file(total_cross_elastic_fname);
 	ensure_file(theta_table_fname);
@@ -1299,12 +1299,7 @@ ArgonParticle::ArgonParticle(void) : Particle(), ArAllData_(),
 	std::cout<<"Finished loading Ar data tables"<<std::endl;
 }
 
-ArgonParticle::~ArgonParticle() {
-	delete theta_table_;
-	delete time_delay_spin_flip_table_;
-	delete time_delay_spin_nonflip_table_;
-	delete time_delay_spin_nonflip_prob_table_;
-};
+ArgonParticle::~ArgonParticle() {};
 
 bool ArgonParticle::isValid(void) const
 {
@@ -1506,28 +1501,6 @@ bool ArgonParticle::generate_ResNBrS_spectrum_table(void)
 	return true;
 }
 
-void ArgonParticle::DeleteData(void)
-{
-	delete theta_table_;
-	delete time_delay_spin_flip_table_;
-	delete time_delay_spin_nonflip_table_;
-	delete time_delay_spin_nonflip_prob_table_;
-}
-
-unsigned int ArgonParticle::GetQauntStateSize(const Particle *target, double E, double theta, unsigned int process) const
-{
-	if (NULL == target) {
-		std::cerr << GetName() << "::GetQauntStateSize: Error: NULL target"<<std::endl;
-		return 0;
-	}
-	auto procs = processes_.find(target->GetName());
-	if (processes_.end()==procs) {
-		std::cerr << GetName() << "::GetQauntStateSize: Error: unsupported target particle \""<<target->GetName()<<"\""<<std::endl;
-		return 0;
-	}
-	return 0;
-}
-
 double ArgonParticle::GetCrossSection(const Particle *target, double E, unsigned int process) const
 {
 	if (NULL == target) {
@@ -1543,7 +1516,7 @@ double ArgonParticle::GetCrossSection(const Particle *target, double E, unsigned
 		std::cerr << GetName() << "::GetCrossSection: Error: unsupported process "<<process<<" for particle \""<<target->GetName()<<"\""<<std::endl;
 		return 0;
 	}
-	if (target->GetName()=="electron") {
+	if (target->GetName()== ELECTRON_NAME) {
 		if (0 == process) {
 			return total_cross_elastic_(E, E);
 		}
@@ -1573,7 +1546,7 @@ double ArgonParticle::GetCrossSection(const Particle *target, double E, double t
 		std::cerr << GetName() << "::GetCrossSection: Error: unsupported process "<<process<<" for particle \""<<target->GetName()<<"\""<<std::endl;
 		return 0;
 	}
-	if (target->GetName()=="electron") {
+	if (target->GetName()== ELECTRON_NAME) {
 		if (0 == process) {
 			return ArAllData_.argon_cross_elastic_diff(E, theta);
 		}
@@ -1624,7 +1597,7 @@ double ArgonParticle::GenerateScatterAngle(const Particle *target, double E, uns
 		Rand = Rand*2.0 - 1.0;
 		return std::acos(Rand);
 	}
-	if (target->GetName()=="electron") {
+	if (target->GetName()== ELECTRON_NAME) {
 		if (0 == process) { //elastic
 			return theta_table_->find_E(E, Rand);
 		}
@@ -1651,7 +1624,7 @@ double ArgonParticle::GenerateEnergyLoss(const Particle *target, double E, doubl
 		std::cerr << GetName() << "::GenerateEnergyLoss: Error: unsupported process "<<process<<" for particle \""<<target->GetName()<<"\""<<std::endl;
 		return 0;
 	}
-	if (target->GetName()=="electron") {
+	if (target->GetName()== ELECTRON_NAME) {
 		if (0 == process) {
 			long double gamma_f = target->GetMass() / GetMass();
 			double EnergyLoss = 2*(1-cos(theta))*E*gamma_f /pow(1 + gamma_f, 2);
@@ -1708,7 +1681,7 @@ double ArgonParticle::GeneratePhoton(const Particle *target, double E, double th
 		std::cerr << GetName() << "::GeneratePhoton: Error: unsupported process "<<process<<" for particle \""<<target->GetName()<<"\""<<std::endl;
 		return 0;
 	}
-	if (target->GetName()=="electron") {
+	if (target->GetName()== ELECTRON_NAME) {
 		if (0 == process) {
 			return 0;
 		}
@@ -1752,7 +1725,7 @@ double ArgonParticle::GenerateTimeDelay(const Particle *target, double E, double
 		std::cerr << GetName() << "::GenerateTimeDelay: Error: unsupported process "<<process<<" for particle \""<<target->GetName()<<"\""<<std::endl;
 		return 0;
 	}
-	if (target->GetName()=="electron") {
+	if (target->GetName()== ELECTRON_NAME) {
 		if (0 == process) {
 			switch (gSettings.PhysConsts()->time_delay_model) {
 			case (PhysicalConstants::TimeDelayMode::Precise) : {
@@ -1804,7 +1777,7 @@ double ArgonParticle::GenerateUntabScatterAngle(const Particle *target, double E
 		Rand = Rand*2.0 - 1.0;
 		return std::acos(Rand);
 	}
-	if (target->GetName()=="electron") {
+	if (target->GetName()== ELECTRON_NAME) {
 		if (0 == process) { //elastic
 			std::vector<double> diff_XS, thetas;
 			diff_XS.resize(gSettings.ProgConsts()->angle_discretization, 0);
@@ -1849,7 +1822,7 @@ double ArgonParticle::GenerateUntabTimeDelay(const Particle *target, double E, d
 		std::cerr << GetName() << "::GenerateTimeDelay: Error: unsupported process "<<process<<" for particle \""<<target->GetName()<<"\""<<std::endl;
 		return 0;
 	}
-	if (target->GetName()=="electron") {
+	if (target->GetName()== ELECTRON_NAME) {
 		if (0 == process) {
 			switch (gSettings.PhysConsts()->time_delay_model) {
 			case (PhysicalConstants::TimeDelayMode::Precise) : {

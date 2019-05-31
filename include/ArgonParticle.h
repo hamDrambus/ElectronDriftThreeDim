@@ -116,11 +116,11 @@ public:
 class ArgonParticle : public Particle {
 public:
 	ArAllData ArAllData_;
-	//No deep copy
-	FunctionTable *theta_table_; 	//shared between threads after it is initialized
-	FunctionTable *time_delay_spin_flip_table_; 	//shared between threads after it is initialized
-	FunctionTable *time_delay_spin_nonflip_table_; 	//shared between threads after it is initialized
-	FunctionTable *time_delay_spin_nonflip_prob_table_; 	//shared between threads after it is initialized
+	//shared between threads - read only
+	boost::shared_ptr<FunctionTable> theta_table_; 					//shared with drived class ArgonVanDerWaalsParticle, decided agains static tables
+	boost::shared_ptr<FunctionTable> time_delay_spin_flip_table_; 	//shared with drived class ArgonVanDerWaalsParticle
+	boost::shared_ptr<FunctionTable> time_delay_spin_nonflip_table_; 		//shared with drived class ArgonVanDerWaalsParticle
+	boost::shared_ptr<FunctionTable> time_delay_spin_nonflip_prob_table_; 	//shared with drived class ArgonVanDerWaalsParticle
 protected:
 	std::string total_cross_elastic_fname; //contains Feshbach resonances
 	std::string theta_table_fname;
@@ -157,15 +157,12 @@ public:
 		return total_cross_elastic_.getNused();
 	}
 
-	void DeleteData(void);
-public:
 	ArgonParticle(void);
 	virtual ~ArgonParticle();
 	ArgonParticle (const ArgonParticle & ) = default;
 
 	virtual bool isValid(void) const;
 
-	virtual unsigned int GetQauntStateSize(const Particle *target, double E, double theta, unsigned int process) const;
 	virtual double GetCrossSection(const Particle *target, double E, unsigned int process) const;
 	virtual double GetCrossSection(const Particle *target, double E, double theta, unsigned int process) const;
 	virtual std::vector<const Particle*> GetFinalStates(const Particle *target, double E, double theta, unsigned int process) const;

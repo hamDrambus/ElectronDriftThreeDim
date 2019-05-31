@@ -43,7 +43,7 @@ void ensure_file(std::string fname)
 
 void ensure_folder(std::string folder)
 {
-#if defined(__WIN32__)
+#if defined(_WIN32)||defined(_WIN64)
 	if (!folder.empty()) {
 		DWORD ftyp = GetFileAttributesA(folder.c_str());
 		if (!(ftyp & FILE_ATTRIBUTE_DIRECTORY) || ftyp == INVALID_FILE_ATTRIBUTES) {
@@ -52,7 +52,7 @@ void ensure_folder(std::string folder)
 				std::cout << "mkdir error: " << GetLastError() << std::endl;
 		}
 	}
-#else
+#else //defined(_WIN32)||defined(_WIN64)
 	struct stat st;
 	if (-1==stat(folder.c_str(), &st)) {
 		int err = errno;
@@ -84,7 +84,7 @@ void ensure_folder(std::string folder)
 				std::cout << "mkdir -p error: " << code << std::endl;
 		}
 	}
-#endif //_WIN32__
+#endif //defined(_WIN32)||defined(_WIN64)
 }
 
 char* c_str_cp (const std::string &str)

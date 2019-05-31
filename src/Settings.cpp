@@ -144,7 +144,7 @@ bool Settings::Load(std::string fname)
 
 		prog_const_.def_drift_distance = params.get<double>("drift_distance");
 		prog_const_.def_n_electrons = params.get<unsigned int>("n_electrons");
-		prog_const_.def_seed = params.get<ULong_t>("random_seed");
+		prog_const_.def_seed = params.get<unsigned long int>("random_seed");
 		std::string Ldrift = params.get<std::string>("drift_distance");
 		std::string Ne = params.get<std::string>("n_electrons");
 		std::string seed = params.get<std::string>("random_seed");
@@ -158,6 +158,17 @@ bool Settings::Load(std::string fname)
 			prog_const_.random_generator = ProgramConstants::GeneratorClass::TRand2;
 		if (generator == "TRandom3")
 			prog_const_.random_generator = ProgramConstants::GeneratorClass::TRand3;
+		if (generator == "BOOST_hellekalek1995")
+			prog_const_.random_generator = ProgramConstants::GeneratorClass::BOOST_hellekalek1995;
+#ifdef _NO_CERN_ROOT
+		if (ProgramConstants::GeneratorClass::TRand1 == prog_const_.random_generator ||
+			ProgramConstants::GeneratorClass::TRand2 == prog_const_.random_generator ||
+			ProgramConstants::GeneratorClass::TRand3 == prog_const_.random_generator) {
+			std::cerr << "Settings::Load: Error: ROOT is turned off, impossible to use TRandom engine." << std::endl;
+			std::cerr << "    Using fallback to boost hellekalek1995 engine." << std::endl;
+			prog_const_.random_generator = ProgramConstants::GeneratorClass::BOOST_hellekalek1995;
+		}
+#endif
 		if (ProgramConstants::GeneratorClass::NONE == prog_const_.random_generator) {
 			BOOST_PROPERTY_TREE_THROW(ptree_bad_data(
 				std::string("conversion of type \"") + typeid(std::string).name() +
@@ -198,7 +209,7 @@ bool Settings::Load(std::string fname)
 				ptree run_info = w.second;
 				run_pars.field = run_info.get<double>("Td");
 				run_pars.drift_distance = run_info.get<double>("drift_distance", prog_const_.def_drift_distance);
-				run_pars.seed = run_info.get<ULong_t>("random_seed", prog_const_.def_seed);
+				run_pars.seed = run_info.get<unsigned long int> ("random_seed", prog_const_.def_seed);
 				run_pars.n_electrons = run_info.get<unsigned int>("n_electrons", prog_const_.def_n_electrons);
 				std::string Td_str = run_info.get<std::string>("Td");
 				std::string L_str = (prog_const_.def_drift_distance == run_pars.drift_distance ? Ldrift : run_info.get<std::string>("drift_distance"));

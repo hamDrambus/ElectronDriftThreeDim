@@ -1,5 +1,7 @@
 #include "PolynomialFit.h"
 
+namespace uBLAS = boost::numeric::ublas;
+
 PolynomialFit::PolynomialFit(int order)
 {
 	setOrder(order);
@@ -21,14 +23,14 @@ int PolynomialFit::getOrder(void) const
 	return _order;
 }
 
-TVectorD PolynomialFit::operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in, boost::optional<double> &in_x0) const {
+std::vector<double> PolynomialFit::operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in, boost::optional<double> &in_x0) const {
 	return (*this)(xs_in, ys_in, 0, xs_in.size(), in_x0);
 }
 
-TVectorD PolynomialFit::operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in,
+std::vector<double> PolynomialFit::operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in,
 	int offset, int N_points, boost::optional<double> &in_x0) const//only for a part of a vector
 {
-	TVectorD out(0);
+	std::vector<double> out;
 	if (xs_in.size() != ys_in.size()) {
 		std::cout<<"PolynomialFit::operator(): Error: x-y data size mismatch"<<std::endl;
 		return out;
@@ -52,30 +54,31 @@ TVectorD PolynomialFit::operator ()(const std::vector<double> &xs_in, const std:
 	//interpolating too far from it will result in unstable results due to limited precision.
 	//Ideally x0 should be set to the point at which we interpolate the data.
 	if (1 == _order) {
-		out.ResizeTo(_order + 1);
+		out.resize(2);
 		out[1] = (ys_in[offset + 1] - ys_in[offset]) / (xs_in[offset + 1] - xs_in[offset]);
 		out[0] = ys_in[offset] + (*in_x0 - xs_in[offset])*out[1];
 		//^value at in_x0 point
 	} else {
-		TMatrixD mat(N_points, _order + 1);
-		for (int col = 0; col < mat.GetNcols(); col++)
-			for (int row = 0; row < mat.GetNrows(); row++)
-				mat[row][col] = pow(xs_in[offset + row] - *in_x0, col);
-		TVectorD Y(N_points);
-		for (int row = 0; row < Y.GetNrows(); row++)
+		uBLAS::matrix<double> mat(N_points, _order + 1);
+		for (int col = 0, col_end_ = mat.size2(); col < col_end_; ++col)
+			for (int row = 0, row_end_ = mat.size1(); row < row_end_; ++row)
+				mat(row, col) = pow(xs_in[offset + row] - *in_x0, col);
+		uBLAS::vector<double> Y(N_points);
+		for (int row = 0, row_end_ = Y.size(); row < row_end_; ++row)
 			Y[row] = ys_in[offset + row];
-		TMatrixD mT(mat);
-		mT.T();
-		TMatrixD In(mT*mat);//because normal assignment like mat = mT*mat does not work! First resizing must be done.
-		In.SetTol(1e-40);
-		In.Invert();
-		if (!In.IsValid()) // Do not proceed if the matrix is singular
+		//Solve the equation mat^T*mat*X = mat^T*Y for X via LU decomposition (mat is generally not diagonal)
+		Y = uBLAS::prod(uBLAS::trans(mat), Y);
+		mat = uBLAS::prod(uBLAS::trans(mat), mat);
+		int res = uBLAS::lu_factorize(mat);
+		if (res != 0)
 			return out;
-		out.ResizeTo(_order + 1);
-		out = In*mT*Y;
+		uBLAS::inplace_solve(mat, Y, uBLAS::unit_lower_tag());
+		uBLAS::inplace_solve(mat, Y, uBLAS::upper_tag());
+		out.resize(Y.size());
+		std::copy(Y.begin(), Y.end(), out.begin());
 	}
-	if (out.GetNrows() != (_order+1)) {
-		out.ResizeTo(0);
+	if (out.size() != (_order+1)) {
+		out.resize(0);
 		return out;
 	}
 	return out;
@@ -83,20 +86,20 @@ TVectorD PolynomialFit::operator ()(const std::vector<double> &xs_in, const std:
 
 //=========================================================
 
-DataVector::DataVector(Int_t fit_order, Int_t N_used_) :
+DataVector::DataVector(int fit_order, int N_used_) :
 		fitter(fit_order), use_left(false), use_right(false), is_set_left(false),
 		is_set_right (false), left_value(DBL_MAX), right_value(DBL_MAX)
 {
 	N_used = std::max(1, N_used_);
 }
 
-DataVector::DataVector(std::vector < double> &xx, std::vector<double> &yy, Int_t fit_order, Int_t N_used_): DataVector(fit_order, N_used_)
+DataVector::DataVector(std::vector < double> &xx, std::vector<double> &yy, int fit_order, int N_used_): DataVector(fit_order, N_used_)
 {
 	initialize(xx, yy, fit_order, N_used_);
 }
 DataVector::~DataVector() {}
 
-void DataVector::initialize(std::vector < double> &xx, std::vector<double> &yy,  Int_t fit_order, Int_t N_used_)
+void DataVector::initialize(std::vector < double> &xx, std::vector<double> &yy, int fit_order, int N_used_)
 {
 	N_used = std::max(1, N_used_);
 	fitter.setOrder(fit_order);
@@ -126,16 +129,16 @@ void DataVector::initialize(std::vector < double> &xx, std::vector<double> &yy, 
 	}
 }
 
-void DataVector::setOrder(Int_t ord)
+void DataVector::setOrder(int ord)
 {	fitter.setOrder(ord); }
 
-Int_t DataVector::getOrder(void) const
+int DataVector::getOrder(void) const
 {	return fitter.getOrder(); }
 
-void DataVector::setNused(Int_t N)
+void DataVector::setNused(int N)
 {	N_used = std::max(1, N); }
 
-Int_t DataVector::getNused(void) const
+int DataVector::getNused(void) const
 {	return N_used; }
 
 void DataVector::use_leftmost(bool use)
@@ -347,8 +350,8 @@ double DataVector::operator()(double point, boost::optional<double> x0) const
 	}
 	int n_min, n_max;
 	get_indices(point, n_min, n_max);
-	TVectorD coefs = fitter(xs, ys, n_min, n_max-n_min+1, x0); //n_max-n_min+1==N_used
-	if (0!=coefs.GetNrows())
+	std::vector<double> coefs = fitter(xs, ys, n_min, n_max-n_min+1, x0); //n_max-n_min+1==N_used
+	if (0!=coefs.size())
 		return calculate(point, *x0, coefs);
 	return DBL_MAX;
 }
@@ -397,11 +400,11 @@ void DataVector::get_indices(double x, int &n_min, int &n_max) const
 	}
 }
 
-double DataVector::calculate(double x, double x0, const TVectorD& coefs) const
+double DataVector::calculate(double x, double x0, const std::vector<double>& coefs) const
 {
-	Int_t order = coefs.GetNrows();
+	std::size_t order = coefs.size();
 	double out_ = 0;
-	for (int o_O = 0; o_O < order; ++o_O)
+	for (std::size_t o_O = 0; o_O < order; ++o_O)
 		out_ += coefs[o_O]*pow(x-x0, o_O);
 	return out_;
 }

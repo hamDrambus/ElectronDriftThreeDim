@@ -10,7 +10,6 @@ public:
 	virtual ~ElectronParticle();
 	ElectronParticle (const ElectronParticle & ) = default;
 
-	virtual unsigned int GetQauntStateSize(const Particle *target, double E, double theta, unsigned int process) const;
 	virtual double GetCrossSection(const Particle *target, double E, unsigned int process) const;
 	virtual double GetCrossSection(const Particle *target, double E, double theta, unsigned int process) const;
 	virtual std::vector<const Particle*> GetFinalStates(const Particle *target, double E, double theta, unsigned int process) const;

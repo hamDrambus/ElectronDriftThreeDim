@@ -645,7 +645,7 @@ void test_diff_tot_cross (void)
 		std::cerr<<"test_diff_tot_cross:: invalid particle, quitting test"<<std::endl;
 		return;
 	}
-
+#ifndef _NO_CERN_ROOT
 	{
 		Double_t *ths, *XSs;
 		ths = new Double_t[400];
@@ -676,7 +676,9 @@ void test_diff_tot_cross (void)
 		hist->Draw();
 		gr->Draw("L");
 	}
-
+#else //_NO_CERN_ROOT
+	std::cerr << "test_diff_tot_cross: Warning: ROOT is turned off, can't draw histogram of scattering angle generation" << std::endl;
+#endif //_NO_CERN_ROOT
 	{
 		open_output_file(fname_tot_MERT5, str, std::ios_base::trunc);
 		str<<"E[eV]\tXS from diff MERT5 [1e-20m^2]\tXS tot MERT5 PS [1e-20m^2]"<<std::endl;
@@ -939,7 +941,7 @@ void test_time_delay()
 		std::cerr<<"test_time_delay:: invalid particle, quitting test"<<std::endl;
 		return;
 	}
-
+#ifndef _NO_CERN_ROOT
 	{
 		//11.075-11.125
 		//11.075-11.30
@@ -982,7 +984,10 @@ void test_time_delay()
 		hist2->Draw("same");
 		legend->Draw("same");
 	}
-
+#else //_NO_CERN_ROOT
+	std::cerr << "test_time_delay: Warning: ROOT is turned off, can't draw histogram of time delay over energy region." << std::endl;
+#endif //_NO_CERN_ROOT
+#ifndef _NO_CERN_ROOT
 	{
 		std::vector<double> Es = {11.093, gSettings.PhysConsts()->En_3o2 - gSettings.PhysConsts()->Width_3o2, gSettings.PhysConsts()->En_3o2, gSettings.PhysConsts()->En_1o2};
 		std::vector<Color_t> colors = {kBlue, kBlack, kRed, kGreen};
@@ -1003,8 +1008,8 @@ void test_time_delay()
 			//unsigned long int N0 = 0, Nn0 = 0;
 			for (int h = 0; h < 2000000; ++h) {
 				double Energy = Es[i];
-				double theta = argon->GenerateUntabScatterAngle(electron, Energy, 0, random_generator_->Uniform());
-				double delay = argon->GenerateUntabTimeDelay(electron, Energy, theta, 0, random_generator_->Uniform());
+				double theta = argon->GenerateScatterAngle(electron, Energy, 0, random_generator_->Uniform());
+				double delay = argon->GenerateTimeDelay(electron, Energy, theta, 0, random_generator_->Uniform());
 				hist1->Fill(delay);
 			}
 			std::ostringstream str1;
@@ -1014,37 +1019,47 @@ void test_time_delay()
 				hist1->Draw();
 			else
 				hist1->Draw("same");
-			std::string fname = prefix + "spin_flip-nonflip_prob_and_dt_"+En.str()+"eV.txt";
-			std::ofstream str;
-			open_output_file(fname, str, std::ios_base::trunc);
-			str<<"//E[eV] = "<<Es[i]<<std::endl;
-			str<<"//theta\tP_sflip\tT_sflip[s]\tT_snonflip[s]"<<std::endl;
-			for (unsigned int th=0, th_end_=1301; th<th_end_; ++th) {
-				double theta = M_PI*th/(th_end_-1);
-				str<<theta<<"\t"<<1-std::max((*argon->time_delay_spin_nonflip_prob_table_)(theta, Es[i]), 0.0)
-				<<"\t"<<(*argon->time_delay_spin_flip_table_)(theta, Es[i])
-				<<"\t"<<(*argon->time_delay_spin_nonflip_table_)(theta, Es[i])<<std::endl;
-			}
-			str.close();
-			std::string name = prefix + "spin_flip-nonflip_prob_and_dt_"+En.str()+"eV.sc";
-			open_output_file(name, str, std::ios_base::trunc);
-			str<<"set ytics nomirror"<<std::endl;
-			str<<"set y2tics"<<std::endl;
-			str<<"set xlabel \"theta [rad.]\""<<std::endl;
-			str<<"set y2label \"Probability\""<<std::endl;
-			str<<"set ylabel \"Time [s]\""<<std::endl;
-			str<<"plot \""<<fname<<"\" u 1:3 axis x1y1 title \"T spin flip "<<En.str()<<" eV\""<<std::endl;
-			str<<"replot \""<<fname<<"\" u 1:4 axis x1y1 title \"T spin nonflip "<<En.str()<<" eV\""<<std::endl;
-			str<<"replot \""<<fname<<"\" u 1:2 axis x1y2 title \"P spin flip "<<En.str()<<" eV\""<<std::endl;
-			str<<"replot \""<<fname<<"\" u 1:($2*$3+(1-$2)*$4) axis x1y1 w lines lc rgb \"#000000\" title \"<T> "<<En.str()<<" eV\""<<std::endl;
-			//str<<"replot \""<<fname<<"\" u 1:(1-$2) title \"P spin nonflip "<<En.str()<<" eV\""<<std::endl;
-			str<<"pause -1"<<std::endl;
-			str.close();
-			INVOKE_GNUPLOT(name);
 		}
 		legend->Draw("same");
 	}
-
+#else //_NO_CERN_ROOT
+	std::cerr << "test_time_delay: Warning: ROOT is turned off, can't draw histogram of time delay at fixed energies." << std::endl;
+#endif //_NO_CERN_ROOT
+	{
+		std::vector<double> Es = { 11.093, gSettings.PhysConsts()->En_3o2 - gSettings.PhysConsts()->Width_3o2, gSettings.PhysConsts()->En_3o2, gSettings.PhysConsts()->En_1o2 };
+		for (std::size_t i = 0; i != Es.size(); ++i) {
+			std::stringstream En;
+			En.precision(6);
+			En << Es[i];
+			std::string fname = prefix + "spin_flip-nonflip_prob_and_dt_" + En.str() + "eV.txt";
+			std::ofstream str;
+			open_output_file(fname, str, std::ios_base::trunc);
+			str << "//E[eV] = " << Es[i] << std::endl;
+			str << "//theta\tP_sflip\tT_sflip[s]\tT_snonflip[s]" << std::endl;
+			for (unsigned int th = 0, th_end_ = 1301; th < th_end_; ++th) {
+				double theta = M_PI * th / (th_end_ - 1);
+				str << theta << "\t" << 1 - std::max((*argon->time_delay_spin_nonflip_prob_table_)(theta, Es[i]), 0.0)
+					<< "\t" << (*argon->time_delay_spin_flip_table_)(theta, Es[i])
+					<< "\t" << (*argon->time_delay_spin_nonflip_table_)(theta, Es[i]) << std::endl;
+			}
+			str.close();
+			std::string name = prefix + "spin_flip-nonflip_prob_and_dt_" + En.str() + "eV.sc";
+			open_output_file(name, str, std::ios_base::trunc);
+			str << "set ytics nomirror" << std::endl;
+			str << "set y2tics" << std::endl;
+			str << "set xlabel \"theta [rad.]\"" << std::endl;
+			str << "set y2label \"Probability\"" << std::endl;
+			str << "set ylabel \"Time [s]\"" << std::endl;
+			str << "plot \"" << fname << "\" u 1:3 axis x1y1 title \"T spin flip " << En.str() << " eV\"" << std::endl;
+			str << "replot \"" << fname << "\" u 1:4 axis x1y1 title \"T spin nonflip " << En.str() << " eV\"" << std::endl;
+			str << "replot \"" << fname << "\" u 1:2 axis x1y2 title \"P spin flip " << En.str() << " eV\"" << std::endl;
+			str << "replot \"" << fname << "\" u 1:($2*$3+(1-$2)*$4) axis x1y1 w lines lc rgb \"#000000\" title \"<T> " << En.str() << " eV\"" << std::endl;
+			//str<<"replot \""<<fname<<"\" u 1:(1-$2) title \"P spin nonflip "<<En.str()<<" eV\""<<std::endl;
+			str << "pause -1" << std::endl;
+			str.close();
+			INVOKE_GNUPLOT(name);
+		}
+	}
 
 }
 
@@ -1286,11 +1301,10 @@ void test_total_cross_all (void)
 
 void test_all (void)
 {
-/*
 	std::cout<<"Testing polynomial fit:"<<std::endl;
 	test_polynomial_fit ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-*/
+
 /*	std::cout<<"Testing function table:"<<std::endl;
 	test_2_dim_table ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;

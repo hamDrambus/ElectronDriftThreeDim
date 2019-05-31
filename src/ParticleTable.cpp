@@ -19,7 +19,7 @@ void ParticleTable::Load(void)
 {
 	electron_ = new ElectronParticle();
 	argon_ = new ArgonParticle;
-	argon_van_der_waals_ = new ArgonVanDerWaalsParticle();
+	argon_van_der_waals_ = new ArgonVanDerWaalsParticle(argon_);
 	list_.push_back(electron_);
 	list_.push_back(argon_);
 	list_.push_back(argon_van_der_waals_);

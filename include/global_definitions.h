@@ -12,12 +12,16 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/shared_ptr.hpp>
 
-#if defined(__WIN32__)
+#if defined(_WIN32)||defined(_WIN64)
 #define NOMINMAX
+#ifndef _NO_CERN_ROOT 
 #include "Windows4Root.h"
+#else //_NO_CERN_ROOT
+#include <Windows.h>
+#endif //_NO_CERN_ROOT
 #include <direct.h>
-#include <kbd.h>
 #else
 #include <dirent.h>
 #include <errno.h>
@@ -25,13 +29,15 @@
 #endif
 #include <math.h>
 #include <ctgmath>
+#ifndef _NO_CERN_ROOT
 #include <Rtypes.h>
+#endif //_NO_CERN_ROOT
 
-#if defined(__WIN32__)
+#if defined(_WIN32)||defined(_WIN64)
 #define INVOKE_GNUPLOT(a) system(("start \"\" \"%GNUPLOT%\\gnuplot.exe\" --persist \"" + a + "\"").c_str())
-#else
+#else //defined(_WIN32)||defined(_WIN64) 
 #define INVOKE_GNUPLOT(a) system(("gnome-terminal -- bash -c \"gnuplot \"" + a +"\"\"").c_str());
-#endif //__WIN32__
+#endif //defined(_WIN32)||defined(_WIN64)
 
 std::string strtoken(std::string &in, std::string break_symbs);
 void open_output_file(std::string name, std::ofstream &str, std::ios_base::openmode _mode);

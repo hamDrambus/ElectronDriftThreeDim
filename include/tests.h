@@ -2,6 +2,8 @@
 #define TESTS_H
 
 #include <chrono>
+#include <boost/random.hpp>
+#ifndef _NO_CERN_ROOT
 #include <TCanvas.h>
 #include <TGraph.h>
 #include <TLegend.h>
@@ -9,6 +11,7 @@
 #include <TPaveText.h>
 #include <TRandom3.h>
 #include <TRandom1.h>
+#endif _NO_CERN_ROOT
 #include "PolynomialFit.h"
 #include "FunctionTable.h"
 #include "ParticleTable.h"
