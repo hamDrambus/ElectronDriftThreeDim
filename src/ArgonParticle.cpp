@@ -1129,6 +1129,7 @@ long double ArAllData::argon_cross_resonance_1o2(long double E) const
 
 ArgonParticle::ArgonParticle(void) : Particle(), ArAllData_(),
 	total_cross_elastic_fname(gSettings.ProgConsts()->tabulated_data_folder + "total_cross_section_elastic.dat"),
+	total_cross_fname(gSettings.ProgConsts()->tabulated_data_folder + "total_cross_section.dat"),
 	theta_table_fname(gSettings.ProgConsts()->tabulated_data_folder + "theta_probabilities.dat"),
 	time_delay_spin_nonflip_prob_fname(gSettings.ProgConsts()->tabulated_data_folder + "time_delay_spin_nonflip_probabilities.dat"),
 	time_delay_spin_flip_fname(gSettings.ProgConsts()->tabulated_data_folder + "time_delay_spin_flip.dat"),
@@ -1175,6 +1176,7 @@ ArgonParticle::ArgonParticle(void) : Particle(), ArAllData_(),
 	time_delay_spin_nonflip_prob_table_.reset(new FunctionTable);
 
 	ensure_file(total_cross_elastic_fname);
+	ensure_file(total_cross_fname);
 	ensure_file(theta_table_fname);
 	ensure_file(time_delay_spin_nonflip_prob_fname);
 	ensure_file(time_delay_spin_flip_fname);
@@ -1197,6 +1199,26 @@ ArgonParticle::ArgonParticle(void) : Particle(), ArAllData_(),
 			std::cout << "Failed to load \"" << total_cross_elastic_fname << "\"" << std::endl;
 			if (generate_total_cross_elastic_table())
 				total_cross_elastic_.write(total_cross_elastic_fname, "E[eV]\tXS elastic [1e-20 m^2]");
+			else
+				is_valid_ = false;
+		}
+	}
+
+	inp.open(total_cross_fname); //Cross section is stored in 1e-20 m^2 in both files and this program
+	if (!inp.is_open()) {
+		std::cout << "Failed to load \"" << total_cross_fname << "\"" << std::endl;
+		if (generate_total_cross_table())
+			total_cross_.write(total_cross_fname, "E[eV]\tXS elastic [1e-20 m^2]");
+		else
+			is_valid_ = false;
+	}
+	else {
+		total_cross_.read(inp);
+		inp.close();
+		if (total_cross_.size() < total_cross_.getNused()) {
+			std::cout << "Failed to load \"" << total_cross_fname << "\"" << std::endl;
+			if (generate_total_cross_table())
+				total_cross_.write(total_cross_fname, "E[eV]\tXS elastic [1e-20 m^2]");
 			else
 				is_valid_ = false;
 		}
@@ -1328,23 +1350,71 @@ void ArgonParticle::read_data (std::ifstream &inp, DataVector &data, long double
 
 bool ArgonParticle::generate_total_cross_elastic_table(void)
 {
-	std::cout << "Calculating total elastic cross section..." << std::endl;
+	std::cout << GetName() << ": Calculating total elastic cross section..." << std::endl;
 	total_cross_elastic_.clear();
 	total_cross_elastic_.setOrder(1); //interpolation with 1st order polynomial using 2 points
 	total_cross_elastic_.setNused(2);
 	if (!ArAllData_.ArExper_.isValid()) {
-		std::cout << "Error: Invalid experimental data" << std::endl;
+		std::cout << GetName() << ": Error: Invalid experimental data" << std::endl;
 		return false;
 	}
-	int err;
 	double E, cross;
-	EnergyScanner EnRange(EnergyScanner::ElasticXS);
-	while (true) {
-		E = EnRange.Next(err);
-		if (0 != err)
-			break;
+	for (long i = 0, i_end_ = XS_En_sweeper_.NumOfIndices(); i != i_end_; ++i) {
+		E = XS_En_sweeper_.Value(i);
 		cross = ArAllData_.argon_cross_elastic(E);
 		total_cross_elastic_.push_back(E, cross);
+	}
+	return true;
+}
+
+bool ArgonParticle::generate_total_cross_table(void)
+{
+	std::cout << GetName() << ": Calculating total cross section..." << std::endl;
+	total_cross_.clear();
+	total_cross_.setOrder(1); //interpolation with 1st order polynomial using 2 points
+	total_cross_.setNused(2);
+	if (!ArAllData_.ArExper_.isValid()) {
+		std::cerr << GetName() << ": Error: Invalid experimental data" << std::endl;
+		return false;
+	}
+	bool use_table = true;
+	bool skip_warning = false;
+	if (total_cross_elastic_.size() < (total_cross_elastic_.getOrder() + 1)) {
+		std::cerr << GetName() << ": Warning: Invalid elastic cross section table" << std::endl;
+		use_table = false;
+	}
+	auto procs = processes_.find(ELECTRON_NAME);
+	if (processes_.end() == procs) {
+		std::cerr << GetName() << "::generate_total_cross_table: Error: unsupported particle \"" << ELECTRON_NAME << "\"" << std::endl;
+		return false;
+	}
+	for (long i = 0, i_end_ = XS_En_sweeper_.NumOfIndices(); i != i_end_; ++i) {
+		double E = XS_En_sweeper_.Value(i);
+		double cross = 0;
+		for (auto proc = procs->second.begin(), proc_end_ = procs->second.end(); proc != proc_end_; ++proc) {
+			if (0 == proc->first) {
+				if (use_table)
+					cross += total_cross_elastic_(E, E);
+				else 
+					cross += ArAllData_.argon_cross_elastic(E);
+				continue;
+			}
+			if (1 == proc->first) {
+				cross += ArAllData_.argon_ResNBrS_XS(E);
+				continue;
+			}
+			short ID = proc->first - 2;
+			const InelasticProcess *p = ArAllData_.ArExper_.FindInelastic(ID);
+			if (NULL != p) {
+				cross += (*p)(E);
+				continue;
+			}
+			if (!skip_warning) {
+				std::cerr << GetName() << "::generate_total_cross_table: Warning: process #" << proc->first << " cross section not found" << std::endl;
+				skip_warning = true;
+			}
+		}
+		total_cross_.push_back(E, cross);
 	}
 	return true;
 }
@@ -1501,6 +1571,22 @@ bool ArgonParticle::generate_ResNBrS_spectrum_table(void)
 	return true;
 }
 
+double ArgonParticle::GetCrossSection(const Particle *target, double E) const
+{
+	if (NULL == target) {
+		std::cerr << GetName() << "::GetCrossSection: Error: NULL target" << std::endl;
+		return 0;
+	}
+	auto procs = processes_.find(target->GetName());
+	if (processes_.end() == procs) {
+		std::cerr << GetName() << "::GetCrossSection: Error: unsupported target particle \"" << target->GetName() << "\"" << std::endl;
+		return 0;
+	}
+	if (target->GetName() == ELECTRON_NAME)
+		return total_cross_(E, E);
+	return 0;
+}
+
 double ArgonParticle::GetCrossSection(const Particle *target, double E, unsigned int process) const
 {
 	if (NULL == target) {
@@ -1577,6 +1663,32 @@ std::vector<const Particle*> ArgonParticle::GetFinalStates(const Particle *targe
 	out.push_back(this);
 	out.push_back(target);
 	return out;
+}
+
+//Faster algorithm than in Particle is used.
+int ArgonParticle::GenerateProcess(const Particle *target, double E, double Rand) const {
+	if (NULL == target) {
+		std::cerr << GetName() << "::GenerateProcess: Error: NULL target" << std::endl;
+		return -1;
+	}
+	auto procs = processes_.find(target->GetName());
+	if (processes_.end() == procs) {
+		std::cerr << GetName() << "::GenerateProcess: Error: unsupported target particle \"" << target->GetName() << "\"" << std::endl;
+		return -1;
+	}
+	std::size_t n_procs = procs->second.size();
+	double CrossSectionTotal = 1.0/GetCrossSection(target, E);
+	double ProbabilitySum = 0;
+	for (std::size_t ind = 0; ind != n_procs; ++ind) {
+		ProbabilitySum += std::max(GetCrossSection(target, E, ind) * CrossSectionTotal, 0.0);
+		if (Rand < ProbabilitySum) {
+			return ind;
+		}
+	}
+	//Because GetCrossSection(target, E) and GetCrossSection(target, E, ind) are calculated
+	//using different algorithms the sum of XS!=XS_total. So there will be some events when ProbabilitySum'll be less than 1.
+	//Elastic scaterring (0 proceess) is chosen in such cases.
+	return 0;
 }
 
 double ArgonParticle::GenerateScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const

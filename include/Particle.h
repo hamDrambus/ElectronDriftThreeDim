@@ -55,11 +55,27 @@ public:
 	ColoredRange GetEnergies (void) const { return XS_En_sweeper_; }
 	virtual bool isValid(void) const { return is_valid_; }
 	
+	virtual double GetCrossSection(const Particle *target, double E) const {//Total cross section. Stored in tables in derived classes, hence much faster than here.
+		if (NULL == target) {
+			std::cerr << GetName() << "::GenerateProcess: Error: NULL target" << std::endl;
+			return 0.0;
+		}
+		auto procs = processes_.find(target->GetName());
+		if (processes_.end() == procs) {
+			std::cerr << GetName() << "::GenerateProcess: Error: unsupported target particle \"" << target->GetName() << "\"" << std::endl;
+			return 0.0;
+		}
+		double output = 0;
+		for (auto proc = procs->second.begin(), proc_end_ = procs->second.end(); proc != proc_end_; ++proc)
+			output += GetCrossSection(target, E, proc_end_->first);
+		return output;
+	}
 	virtual double GetCrossSection(const Particle *target, double E, unsigned int process) const = 0;
 	virtual double GetCrossSection(const Particle *target, double E, double theta, unsigned int process) const = 0;
 	virtual std::vector<const Particle*> GetFinalStates(const Particle *target, double E, double theta, unsigned int process) const = 0;
 
 	//returns negative value in case of error
+	//Algorithm changed in derived classes! It uses the fact that GetCrossSection(Particle, E) is tabulated and faster to calculate than all separate cross sections
 	virtual int GenerateProcess(const Particle *target, double E, double Rand) const {
 		if (NULL == target) {
 			std::cerr << GetName() << "::GenerateProcess: Error: NULL target"<<std::endl;
@@ -74,12 +90,12 @@ public:
 		std::vector<double> CrossSections(n_procs, 0.0), CrossSectionsSum(n_procs, 0.0);
 		//TODO: allocating memory each time is quite expensive. Similar issue for Mixture. Need to create cache
 		//All sizes and particle interations are static (so far), so vectors can be resized for each incident particle
-		for (std::size_t ind = 0, ind_end_ = procs->second.size(); ind!=ind_end_; ++ind) {
+		for (std::size_t ind = 0; ind != n_procs; ++ind) {
 			CrossSections[ind] = GetCrossSection(target, E, ind);
 			CrossSectionsSum[ind] = std::max(CrossSections[ind], 0.0) + ((ind==0) ? 0.0 : CrossSectionsSum[ind - 1]);
 		}
-		for (unsigned int ind = 0, ind_end_ = procs->second.size(); ind!=ind_end_; ++ind) {
-			CrossSectionsSum[ind] /= CrossSectionsSum[ind_end_ - 1];
+		for (unsigned int ind = 0; ind != n_procs; ++ind) {
+			CrossSectionsSum[ind] /= CrossSectionsSum[n_procs - 1];
 			if (Rand < CrossSectionsSum[ind]) {
 				return ind;
 			}

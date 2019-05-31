@@ -123,6 +123,7 @@ public:
 	boost::shared_ptr<FunctionTable> time_delay_spin_nonflip_prob_table_; 	//shared with drived class ArgonVanDerWaalsParticle
 protected:
 	std::string total_cross_elastic_fname; //contains Feshbach resonances
+	std::string total_cross_fname;
 	std::string theta_table_fname;
 	std::string time_delay_spin_nonflip_prob_fname;
 	std::string time_delay_spin_flip_fname;
@@ -130,9 +131,11 @@ protected:
 	std::string total_resonance_NBrS_spectrum_fname;
 
 	DataVector total_cross_elastic_;
+	DataVector total_cross_; //Turns out it is quite expensive to calculate every inelastic process for total XS
 	DataVector total_resonance_NBrS_spectrum_; //Stores probability function, not the spectrum itself
 	void read_data (std::ifstream &inp, DataVector &data, long double y_factor = 1);
 	bool generate_total_cross_elastic_table(void);
+	bool generate_total_cross_table(void);
 	bool generate_theta_table(void);
 	bool generate_time_delay_spin_flip_table(void);
 	bool generate_time_delay_spin_nonflip_table(void);
@@ -163,22 +166,25 @@ public:
 
 	virtual bool isValid(void) const;
 
-	virtual double GetCrossSection(const Particle *target, double E, unsigned int process) const;
-	virtual double GetCrossSection(const Particle *target, double E, double theta, unsigned int process) const;
-	virtual std::vector<const Particle*> GetFinalStates(const Particle *target, double E, double theta, unsigned int process) const;
+	virtual double GetCrossSection(const Particle *target, double E) const override;
+	virtual double GetCrossSection(const Particle *target, double E, unsigned int process) const override;
+	virtual double GetCrossSection(const Particle *target, double E, double theta, unsigned int process) const override;
+	virtual std::vector<const Particle*> GetFinalStates(const Particle *target, double E, double theta, unsigned int process) const override;
 
-	virtual double GenerateScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const;
-	virtual double GenerateEnergyLoss(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
+	//Faster algorithm than in Particle is used.
+	virtual int GenerateProcess(const Particle *target, double E, double Rand) const override;
+	virtual double GenerateScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const override;
+	virtual double GenerateEnergyLoss(const Particle *target, double E, double theta, unsigned int process, double Rand) const override;
 	//For neutral bremsstrahlung or deexcitation
-	virtual double GeneratePhoton(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
-	virtual double GenerateTimeDelay(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
+	virtual double GeneratePhoton(const Particle *target, double E, double theta, unsigned int process, double Rand) const override;
+	virtual double GenerateTimeDelay(const Particle *target, double E, double theta, unsigned int process, double Rand) const override;
 
 	//Untabulated functions:
-	virtual unsigned int GenerateUntabProcess(const Particle *target, double E, double Rand) const;
-	virtual double GenerateUntabScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const;
-	virtual double GenerateUntabEnergyLoss(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
-	virtual double GenerateUntabPhoton(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
-	virtual double GenerateUntabTimeDelay(const Particle *target, double E, double theta, unsigned int process, double Rand) const;
+	virtual unsigned int GenerateUntabProcess(const Particle *target, double E, double Rand) const override;
+	virtual double GenerateUntabScatterAngle(const Particle *target, double E, unsigned int process, double Rand) const override;
+	virtual double GenerateUntabEnergyLoss(const Particle *target, double E, double theta, unsigned int process, double Rand) const override;
+	virtual double GenerateUntabPhoton(const Particle *target, double E, double theta, unsigned int process, double Rand) const override;
+	virtual double GenerateUntabTimeDelay(const Particle *target, double E, double theta, unsigned int process, double Rand) const override;
 };
 
 #endif //ARGON_PARTICLE_H_

@@ -49,10 +49,8 @@ const Particle* Mixture::GetDominatingParticle(const Particle *incident, double 
 	double v_max = 0;
 	if (!use_concentr) {
 		for (std::size_t c = 0; c != c_end_; ++c) {
-			double val = 0;
-			for (unsigned int pr = 0, pr_end_ = components_[c].first->GetProcessSize(incident); pr != pr_end_; ++pr)
-				val += components_[c].first->GetCrossSection(incident, E, pr) * components_[c].second;
-			if (val>v_max) {
+			double val = components_[c].first->GetCrossSection(incident, E) * components_[c].second;
+			if (val > v_max) {
 				v_max = val;
 				c_max = c;
 			}
@@ -179,8 +177,7 @@ double Mixture::GetCrossSection(const Particle *incident, double E) const
 	}
 	double out = 0;
 	for (auto c = components_.begin(), c_end_ = components_.end(); c != c_end_; ++c)
-		for (unsigned int pr = 0, pr_end_ = c->first->GetProcessSize(incident); pr != pr_end_; ++pr)
-			out += c->first->GetCrossSection(incident, E, pr) * c->second;
+		out += c->first->GetCrossSection(incident, E) * c->second;
 	return out;
 }
 
@@ -188,7 +185,7 @@ long double Mixture::GetXSIntegral(const Particle *incident, long double En_from
 {
 	if (NULL == incident)
 		return 0;
-	if (incident->GetName()=="electron")
+	if (incident->GetName() == ELECTRON_NAME)
 		return (*integral_table_)(En_to, En_y) - (*integral_table_)(En_from, En_y);
 	else
 		return 0; //TODO: Implement general cases
@@ -198,7 +195,7 @@ long double Mixture::GetEnergyFromXSIntegral(const Particle *incident, long doub
 {
 	if (NULL == incident)
 		return DBL_MAX;
-	if (incident->GetName()=="electron")
+	if (incident->GetName() == ELECTRON_NAME)
 		return integral_table_->find_E(En_y, integral_value);
 	else
 		return DBL_MAX; //TODO: Implement general cases
@@ -212,11 +209,10 @@ const Particle* Mixture::GenerateScatteringParticle(const Particle *incident, do
 	}
 	std::size_t c_end_= components_.size();
 	std::vector<double> CrossSections(c_end_, 0.0), CrossSectionsSum(c_end_, 0.0);
-	//TODO: allocating memory each time is quite expensive. Similar issue for Particle. Need to create cache
-	//All sizes and particle interations are static (so far), so vectors can be resized for each incident particle
+	//TODO: In case when there is a lot of components it is better to store CrossSectionsSum(E) and compare random
+	//variable with component cross section 1 by 1. This situation is analogous to Particle->GenerateProcess.
 	for (std::size_t c = 0; c != c_end_; ++c) {
-		for (unsigned int pr = 0, pr_end_ = components_[c].first->GetProcessSize(incident); pr != pr_end_; ++pr)
-			CrossSections[c] += components_[c].first->GetCrossSection(incident, E, pr) * components_[c].second;
+		CrossSections[c] = components_[c].first->GetCrossSection(incident, E) * components_[c].second;
 		CrossSectionsSum[c] = std::max(CrossSections[c], 0.0) + ((c==0) ? 0.0 : CrossSectionsSum[c - 1]);
 	}
 	for (std::size_t c = 0; c != c_end_; ++c) {
@@ -237,7 +233,7 @@ long double Mixture::GetUntabXSIntegral(const Particle *incident, long double En
 {
 	if (NULL == incident)
 		return 0;
-	if (incident->GetName()=="electron") {
+	if (incident->GetName() == ELECTRON_NAME) {
 		double E = En_from, E_prev = En_from;
 		long double Int = 0;
 		if ((En_from-En_y)/En_from<1e-6) {//irregularity case

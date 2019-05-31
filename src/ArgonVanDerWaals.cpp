@@ -18,6 +18,26 @@ ArgonVanDerWaalsParticle::ArgonVanDerWaalsParticle(ArgonParticle* argon): ArgonP
 
 ArgonVanDerWaalsParticle::~ArgonVanDerWaalsParticle() {};
 
+double ArgonVanDerWaalsParticle::GetCrossSection(const Particle *target, double E) const
+{
+	if (NULL == target) {
+		std::cerr << GetName() << "::GetCrossSection: Error: NULL target" << std::endl;
+		return 0;
+	}
+	auto procs = processes_.find(target->GetName());
+	if (processes_.end() == procs) {
+		std::cerr << GetName() << "::GetCrossSection: Error: unsupported target particle \"" << target->GetName() << "\"" << std::endl;
+		return 0;
+	}
+	if (target->GetName() == ELECTRON_NAME) {
+		double output = 2 * ArgonParticle::GetCrossSection(target, E);
+		if (E > gSettings.PhysConsts()->Dissoc_attachment_En_thresh)
+			output += gSettings.PhysConsts()->Dissoc_attachment_XS;
+		return output;
+	}
+	return 0;
+}
+
 double ArgonVanDerWaalsParticle::GetCrossSection(const Particle *target, double E, unsigned int process) const
 {
 	if (NULL == target) {
