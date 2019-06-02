@@ -1,7 +1,21 @@
  Profiling (and building) is done with Qt Creator instead of Eclipse.
-30.05.2019: Starting Point:
+30.05.2019: Starting Point (not free CPU):
 	t particle generating =	386.077 s
 	t particle loading =	3.89506 s
 	t mixture generating (integral table) =	2555.55 s
 	t mixture loading =		12.4232 s
 	t drift (5 e on 1e-3 m) = 158.421 s
+31.05.2019 Windows (02 optimization, no root)
+	t particle generating =	~4 h
+	t particle loading =	 s
+	t mixture generating (integral table) =	-- too slow. About 1800/23000 per ~2 hours
+	t mixture loading =		 s
+	t drift (5 e on 1e-3 m) =  s
+Optimized verison 1:
+	Added table of argon total XS and reworked subsequent algorithms.
+01.06.2019 Windows (02 optimization, no root)
+	t particle generating =	~18868 s
+	t particle loading =	31 s
+	t mixture generating (integral table) =	~8 hours
+	t mixture loading =		102 s
+	t drift (5 e on 1e-3 m) = 10337 s

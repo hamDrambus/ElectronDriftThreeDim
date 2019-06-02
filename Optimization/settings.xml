@@ -52,7 +52,7 @@
     </Argon>
   </PhysicalConstants>
   <ProgramConstants>
-    <is_test_version>true</is_test_version> <!--OPT for running tests before simulation. TODO: test modules and mb even submodules-->
+    <is_test_version>false</is_test_version> <!--OPT for running tests before simulation. TODO: test modules and mb even submodules-->
     <temperature>87</temperature> <!--Kelvins-->
     <pressure>1.05e5</pressure> <!--Pascals-->
     <thread_number>1</thread_number>
