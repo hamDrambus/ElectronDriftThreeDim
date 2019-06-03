@@ -5,3 +5,4 @@
 	t mixture generating (integral table) =	2555.55 s
 	t mixture loading =		12.4232 s
 	t drift (5 e on 1e-3 m) = 158.421 s
+30.05.2019: Starting Point:
