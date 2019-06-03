@@ -1,6 +1,7 @@
-rm data_derived_dev/cross_integrals.dat
-version=v14.5
-Debug/ThreeDimSimulation "Output/${version}/settings_VN.xml"
+Release/ThreeDimSimulation "Optimization/settings.xml"
+#rm data_derived_dev/cross_integrals.dat
+#version=v14.5
+#Debug/ThreeDimSimulation "Output/${version}/settings_VN.xml"
 #rm data_derived_dev1/cross_integrals.dat
 #version=v14.6
 #Debug/ThreeDimSimulation "Output/${version}/settings_VN.xml"

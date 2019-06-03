@@ -19,3 +19,4 @@ Optimized verison 1:
 	t mixture generating (integral table) =	~8 hours
 	t mixture loading =		102 s
 	t drift (5 e on 1e-3 m) = 10337 s
+

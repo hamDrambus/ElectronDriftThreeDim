@@ -220,7 +220,7 @@ bool Manager::setInitialSeed(unsigned long int seed)
 	if (NULL != random_generator_) {
 		switch (gSettings.ProgConsts()->random_generator) {
 		case (ProgramConstants::GeneratorClass::TRand1): {
-			unsigned long int seedlist[2] = { *initial_seed_,0 }; //looked into TRandom1.cxx source code.
+			UInt_t seedlist[2] = { *initial_seed_,0 }; //looked into TRandom1.cxx source code.
 			//Simple SetSeed ===SetSeed2 set TRandom1 to fixed state, but this state is not defined by GetSeed().
 			//in short GetSeed()===F(SetSeed()) which is defined, but its impossible to reproduce TRandom1 using
 			((TRandom1 *)random_generator_)->SetSeeds(seedlist);
