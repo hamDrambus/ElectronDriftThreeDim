@@ -216,7 +216,7 @@ void Manager::setParameters(double T /*in K*/, double Pressure /*in SI*/, double
 bool Manager::setInitialSeed(unsigned long int seed)
 {
 	initial_seed_ = seed;
-#ifndef _NO_CERN_ROOT
+	#ifndef _NO_CERN_ROOT
 	if (NULL != random_generator_) {
 		switch (gSettings.ProgConsts()->random_generator) {
 		case (ProgramConstants::GeneratorClass::TRand1): {
@@ -225,15 +225,15 @@ bool Manager::setInitialSeed(unsigned long int seed)
 			//in short GetSeed()===F(SetSeed()) which is defined, but its impossible to reproduce TRandom1 using
 			((TRandom1 *)random_generator_)->SetSeeds(seedlist);
 			//->SetSeed2(*initial_seed_);
-			break;
+			return true;
 		}
 		case (ProgramConstants::GeneratorClass::TRand2): {
 			random_generator_->SetSeed(*initial_seed_);
-			break;
+			return true;
 		}
 		case (ProgramConstants::GeneratorClass::TRand3): {
 			random_generator_->SetSeed(*initial_seed_);
-			break;
+			return true;
 		}
 		}
 	}
