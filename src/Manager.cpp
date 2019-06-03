@@ -216,7 +216,7 @@ void Manager::setParameters(double T /*in K*/, double Pressure /*in SI*/, double
 bool Manager::setInitialSeed(unsigned long int seed)
 {
 	initial_seed_ = seed;
-#ifndef _NO_CERN_ROOT
+	#ifndef _NO_CERN_ROOT
 	if (NULL != random_generator_) {
 		switch (gSettings.ProgConsts()->random_generator) {
 		case (ProgramConstants::GeneratorClass::TRand1): {
@@ -225,29 +225,30 @@ bool Manager::setInitialSeed(unsigned long int seed)
 			//in short GetSeed()===F(SetSeed()) which is defined, but its impossible to reproduce TRandom1 using
 			((TRandom1 *)random_generator_)->SetSeeds(seedlist);
 			//->SetSeed2(*initial_seed_);
-			break;
+			return true;
 		}
 		case (ProgramConstants::GeneratorClass::TRand2): {
 			random_generator_->SetSeed(*initial_seed_);
-			break;
+			return true;
 		}
 		case (ProgramConstants::GeneratorClass::TRand3): {
 			random_generator_->SetSeed(*initial_seed_);
-			break;
-		}
-		default: {
-			initial_seed_ = boost::none;
-			return false;
+			return true;
 		}
 		}
+	}
+	if (NULL != boost_random_generator && ProgramConstants::GeneratorClass::TRand1 == gSettings.ProgConsts()->random_generator) {
+		boost_random_generator->seed(*initial_seed_);
+		return true;
+	}
+#else //_NO_CERN_ROOT
+	if (NULL != boost_random_generator) {
+		boost_random_generator->seed(*initial_seed_);
+		return true;
 	}
 #endif //_NO_CERN_ROOT
-	if (NULL == boost_random_generator) {
-		initial_seed_ = boost::none;
-		return false;
-	}
-	boost_random_generator->seed(*initial_seed_);
-	return true;
+	initial_seed_ = boost::none;
+	return false;
 }
 
 boost::optional<unsigned long int> Manager::getInitialSeed(void) const
