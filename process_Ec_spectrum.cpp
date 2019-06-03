@@ -7,13 +7,13 @@
 	TGraph* graph = new TGraph();
 	histE_0->SetStats(false);
 	//gauss peak
-	double En_artifical_peak = 11.050;
-	double sigma_artifical_peak = 0.1;
-	double rel_area_artifical_peak = 0.20;	
+	double En_artifical_peak = 11.101;
+	double sigma_artifical_peak = 0.005;
+	double rel_area_artifical_peak = 0.10;	
 	std::vector<double> Es, Emods, Vs, Vmods;
 	std::string fname_0("Output/v12.1/eData_7.0Td");
 	std::string out_fname0 ("Output/v12.1/Ec_forms/7.0Td.dat"); //Make sure this folder exists before launching this script!
-	std::string out_fname0_1 ("Output/v12.1/Ec_forms/7.0Td_mod_7.dat");
+	std::string out_fname0_1 ("Output/v12.1/Ec_forms/7.0Td_mod_2.dat");
 	//mod_1: En = 11.091, Sigma=0.005, rel_area = 0.10
 	//mod_2: En = 11.101, Sigma=0.005, rel_area = 0.10
 	//mod_3: En = 11.081, Sigma=0.005, rel_area = 0.10
@@ -124,7 +124,7 @@
 	TCanvas *c_ = new TCanvas ("Ec spectra 3D", "Ec spectra 3D", DEF_W, DEF_H);
 	c_->SetGrid();
 	c_->SetTicks();
-	//gPad->SetLogy();//Log Y
+	gPad->SetLogy();//Log Y
 	TH2F* frame = new TH2F( "frame", "Collision E spectra 3D", 500, EN_MIN_, EN_MAX_, 500, 0, max_val);
 	frame->GetXaxis()->SetTitle("Ee [eV]");
 	frame->GetYaxis()->SetTitle("");

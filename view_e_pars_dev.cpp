@@ -22,7 +22,7 @@ void view_e_pars_dev(void) {
   TH1D* hist_Tdelay = new TH1D ("Time delay [s]","Time delay [s]",600, 0, 1e-5);
   TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
   TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
-  double Dtime_left = 7.0e-6, Dtime_right = 3.5e-5, lim = 4.50e-7;
+  double Dtime_left = 3.0e-7, Dtime_right = 6e-7, lim = 4.50e-7;
   TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",160, Dtime_left, Dtime_right);
   TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 15);
   TH1D* hist_theta = new TH1D ("Scatter angle near 10 eV","Scatter angle near 10 eV",300, 0, 3.1416);
@@ -36,7 +36,7 @@ void view_e_pars_dev(void) {
   double E_at_time = 1e-11;
   double dt = 6e-12;
   double DRIFT_DISTANCE = 3e-3;
-  std::string fname1("Output/v14.5/eData_7.0Td_VN.root");
+  std::string fname1("Output/v14.6/eData_7.0Td_VN.root");
   double En_start;
   double En_collision;
   double En_finish;
