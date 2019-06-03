@@ -235,19 +235,20 @@ bool Manager::setInitialSeed(unsigned long int seed)
 			random_generator_->SetSeed(*initial_seed_);
 			break;
 		}
-		default: {
-			initial_seed_ = boost::none;
-			return false;
 		}
-		}
+	}
+	if (NULL != boost_random_generator && ProgramConstants::GeneratorClass::TRand1 == gSettings.ProgConsts()->random_generator) {
+		boost_random_generator->seed(*initial_seed_);
+		return true;
+	}
+#else //_NO_CERN_ROOT
+	if (NULL != boost_random_generator) {
+		boost_random_generator->seed(*initial_seed_);
+		return true;
 	}
 #endif //_NO_CERN_ROOT
-	if (NULL == boost_random_generator) {
-		initial_seed_ = boost::none;
-		return false;
-	}
-	boost_random_generator->seed(*initial_seed_);
-	return true;
+	initial_seed_ = boost::none;
+	return false;
 }
 
 boost::optional<unsigned long int> Manager::getInitialSeed(void) const

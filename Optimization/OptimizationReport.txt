@@ -11,7 +11,15 @@
 	t mixture generating (integral table) =	-- too slow. About 1800/23000 per ~2 hours
 	t mixture loading =		 s
 	t drift (5 e on 1e-3 m) =  s
+03.06.2019: Not optimized program - Release build in eclipse (gcc):
+	t particle generating =	7419.2 s
+	t particle loading =	2.43855 s
+	t mixture generating (integral table) =	10344.3 s
+	t mixture loading =		7.86 s
+	t drift (5 e on 1e-3 m) =  s
+=============================================================
 Optimized verison 1:
+=============================================================
 	Added table of argon total XS and reworked subsequent algorithms.
 01.06.2019 Windows (02 optimization, no root)
 	t particle generating =	~18868 s
