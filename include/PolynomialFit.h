@@ -12,92 +12,207 @@
 //TVectorD parameters are [0]+[1]*x+[2]*x^2+...
 class PolynomialFit {
 protected:
-	int _order;
+	std::size_t _order;
 public:
-	PolynomialFit(int order);
-	virtual ~PolynomialFit();
-	virtual void setOrder(int n); //TODO: actually is is a bad practice to call virtual method from the constructor
-	//but it is ok here, since derivative class only limits setOrder() possible values to {2}
-
-	int getOrder(void) const;
-
-	//in_x0 - in what poInt_t set zero x (In the SG filter it is convenient to set x_in
-	//to the poInt_t in which value is calculated
-	virtual std::vector<double> operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in, boost::optional<double> &in_x0) const;
+	PolynomialFit(std::size_t order);
+	~PolynomialFit();
+	void setOrder(std::size_t n) {
+		_order = n;
+	}
+	std::size_t getOrder(void) const {
+		return _order;
+	}
+	
+	//in_x0 - relative to what point carry out fit. Automatic value is set if boost::none is passed.
+	std::vector<double> operator ()(const std::vector<std::pair<double, double>> &vals_in, boost::optional<double> &in_x0) const;
 	//Fit only part of a vector. offset+N_points-1 must in the range of the vector
-	virtual std::vector<double> operator ()(const std::vector<double> &xs_in, const std::vector<double> &ys_in,
-		int offset, int N_points, boost::optional<double> &in_x0) const;
+	std::vector<double> operator ()(const std::vector<std::pair<double, double>> &vals_in, int offset, int N_points, boost::optional<double> &in_x0) const;
 };
 
 //Wraps PolynomialFit: stores raw data, N points used in every fit and last region (cache_n_from, cache_n_to) in which fit/interpolation took place.
 //The latter is required for optimization, because polynomial coefficients are not updated unless necessary (x moved from previous region)
-class DataVector { //TODO: cache is useless in practice, but affects multithreading, there is need to store separate copies of DataVector for each thread.
-	//TODO: either remove altogether, or event better determine automatically when its usage is correct (make this optional as well)
+class DataVector {
+	//TODO: add thread-local cache for getX_indices and getY_indices
 protected:
-	std::vector<double> xs;
-	std::vector<double> ys;
+	std::vector<std::pair<double, double>> xys;
 	PolynomialFit fitter;
-	int N_used;
+	std::size_t N_used;
 
-	bool use_left, use_right, is_set_left, is_set_right;
-	double left_value, right_value;
+	bool use_left, use_right;
+	boost::optional<double> left_value, right_value;
 public:
-	DataVector(int fit_order = 1, int N_used = 2);
-	DataVector(std::vector < double> &xx, std::vector<double> &yy, int fit_order, int N_used);
+	DataVector(std::size_t fit_order = 1, std::size_t N_used = 2);
+	DataVector(std::vector<double> &xx, std::vector<double> &yy, std::size_t fit_order, std::size_t N_used);
 	virtual ~DataVector();
 
-	void initialize(std::vector < double> &xx, std::vector<double> &yy,  int fit_order, int N_used);
-	void setOrder(int ord);
-	int getOrder(void) const;
-	void setNused(int ord);
-	int getNused(void) const;
+	void initialize(std::vector<double> &xx, std::vector<double> &yy, std::size_t fit_order, std::size_t N_used);
 
+	void setOrder(std::size_t ord) {
+		fitter.setOrder(ord);
+	}
+	std::size_t getOrder(void) const {
+		return fitter.getOrder();
+	}
+	void setNused(std::size_t N) {
+		N_used = std::max((std::size_t)1, N);
+	}
+	std::size_t getNused(void) const {
+		return N_used;
+	}
 	//precedence goes to use_left-/right-most methods.
-	void use_leftmost(bool use);
-	void use_rightmost(bool use);
-	void set_leftmost(double val);
-	void unset_leftmost(void);
-	void set_rightmost(double val);
-	void unset_rightmost(void);
-	void set_out_value(double val); //out of range value
-	void unset_out_value();
+	void use_leftmost(bool use) {
+		use_left = use;
+	}
+	void use_rightmost(bool use) {
+		use_right = use;
+	}
+	void set_leftmost(double val) {
+		left_value = val;
+	}
+	void unset_leftmost(void) {
+		left_value = boost::none;
+	}
+	void set_rightmost(double val) {
+		right_value = val;
+	}
+	void unset_rightmost(void) {
+		right_value = boost::none;
+	}
+	void set_out_value(double val) {
+		set_leftmost(val);
+		set_rightmost(val);
+	}
+	void unset_out_value(void) {
+		unset_leftmost();
+		unset_rightmost();
+	}
+	void erase(std::size_t n) {
+		xys.erase(xys.begin() + n);
+	}
+	void erase() {
+		xys.clear();
+	}
+	void clear(void) {
+		xys.clear();
+	}
+	std::size_t size(void) const {
+		return xys.size();
+	}
+	double getX(std::size_t n) const {
+		return xys[n].first;
+	}
+	double getY(std::size_t n) const {
+		return xys[n].second;
+	}
+	std::pair<double, double> getXY(std::size_t n) const {
+		return xys[n];
+	}
+	std::pair<double, double>& operator[](std::size_t ind) {
+		return xys[ind];
+	}
+	void resize(std::size_t sz) {
+		xys.resize(sz);
+	}
+	bool isValid(void) const {
+		return (N_used > fitter.getOrder()) && N_used >= size();
+	}
 
-	double operator()(double point, boost::optional<double> x0 = boost::none) const; //x0 = point is recommended to use. At least x0 must be close to point, or there will be large errors otherwise
-	void push (double x, double y);
+	double operator()(double X_point, boost::optional<double> x0 = boost::none) const; //x0 = point is recommended to use. At least x0 must be close to point, or there will be large errors otherwise
+	void insert(double x, double y);
 	void push_back (double x, double y);
-	void erase (std::size_t n);
-	void clear (void);
-	std::size_t size (void) const;
-	double getX(std::size_t n) const;
-	double getY(std::size_t n) const;
 
 	//save/load full state except cache from file
-	virtual void read(std::ifstream& str);
+	void read(std::ifstream& str);
 	void write(std::string fname, std::string comment = "") const;
-	void write(std::ofstream& str, std::string comment="") const;
+	void write(std::ofstream& str, std::string comment = "") const;
 protected:
-	void get_indices(double point, int &n_min, int &n_max) const; //[n_min, n_max] are used, not [n_min,n_max). N_used==n_max-n_min+1>=order+1
-	double calculate(double x, double x0, const std::vector<double>& coefs) const;
+	//Warning! These functions have defined behaviour only when X/Y values are sorted in the ascending order.
+	//DataVector's X values are supposed to be always sorted, but there is no guarantee about Ys;
+	boost::optional<std::pair<std::size_t, std::size_t>> getX_indices(double X_point) const; //[n_min, n_max] are used, not [n_min, n_max).N_used == n_max - n_min + 1 >= order + 1
+	boost::optional<std::pair<std::size_t, std::size_t>> getY_indices(double Y_point) const; //[n_min, n_max] are used, not [n_min, n_max).N_used == n_max - n_min + 1 >= order + 1
+	//add X_from_Y(double) and Y_from_X(double) ?
+	double polynomial_value(double x, double x0, const std::vector<double>& coefs) const;
+public:
+	friend class FunctionTable;
+};
+
+struct pdf_data {
+	double x;
+	double pdf;//===y
+	double cdf;//===Int(-inf, x){y(x)dx}
 };
 
 //TODO: create common parent for PDF_routine and DataVector
 //does not support indefinite domain.
 //!TODO: use boost or some libraries like normal ppl.
-class PDF_routine : public DataVector { //Probability Density Function routine - load not normalized distribution from file,
+class PDF_routine { //Probability Density Function routine - load not normalized distribution from file,
 	// construct cumulative DF and use it to generate values.
-	//TODO: calling of set/getOrder set/getNused is forbidden. PDF is fixed for order =1, but in can be generalized at the cost of performance.
+	//PDF's order is fixed to 1 and Nused to 2 (linear interpolation).
 	//TODO: use 3rd party code? CERN's ROOT or GSL has relevant methods.
 protected:
-	bool pdf_to_cdf(void);
+	std::vector<pdf_data> vals;
+	bool cdf_ready;
+	void normalize_cdf(void);
 public:
 	PDF_routine();
-	PDF_routine(std::vector < double> &pdf_xx, std::vector<double> &pdf_yy);
-	virtual ~PDF_routine();
-	virtual void read(std::ifstream& str);
-	virtual bool read(std::string& fname);
-	//std::vector<double> cdf_xs; == DataVector::xs
-	std::vector<double> cdf_ys;
-	double generate(double Rand) const; //has no internal random engine
+	PDF_routine(std::vector<double> &pdf_xx, std::vector<double> &pdf_yy);
+	~PDF_routine();
+	void read(std::ifstream& str);
+	bool read(std::string& fname);
+	void write(std::string fname, std::string comment = "") const;
+	void write(std::ofstream& str, std::string comment = "") const;
+	double operator()(double Rand) const; //generates random number according to pdf. Has no internal random engine
+	void pdf_to_cdf(void);
+	//void initialize(std::vector<double> &xx, std::vector<double> &yy);
+
+	void erase(std::size_t n, bool recalculate_cdf = true) {
+		vals.erase(vals.begin() + n);
+		cdf_ready = false;
+		if (recalculate_cdf)
+			pdf_to_cdf();
+	}
+	void erase() {
+		cdf_ready = false;
+		vals.clear();
+	}
+	void clear(void) {
+		cdf_ready = false;
+		vals.clear();
+	}
+	std::size_t size(void) const {
+		return vals.size();
+	}
+	double getX(std::size_t n) const {
+		return vals[n].x;
+	}
+	double getPDF(std::size_t n) const {
+		return vals[n].pdf;
+	}
+	double getCDF(std::size_t n) const {
+		return vals[n].cdf;
+	}
+	pdf_data get(std::size_t n) const {
+		return vals[n];
+	}
+	pdf_data& operator[](std::size_t ind) {
+		cdf_ready = false;
+		return vals[ind];
+	}
+	void resize(std::size_t sz) {
+		cdf_ready = false;
+		vals.resize(sz);
+	}
+	bool isValid(void) const {
+		return (2 >= size()) && cdf_ready;
+	}
+
+	void push(double x, double y); //Preserves sorting, recalculates pdf, quite expensive when insering not to the end
+	void push_back(double x, double y, bool recalculate_cdf = true); //Faster version, not checking whether sorting is preserved.
+	//void set_back(double x, double y, std::size_t ind);
+protected:
+	//Warning! These functions have defined behaviour only when X/Y values are sorted in the ascending order.
+	boost::optional<std::pair<std::size_t, std::size_t>> getX_indices(double X_point) const; //[n_min, n_max] are used, not [n_min, n_max).N_used == n_max - n_min + 1 >= order + 1
+	boost::optional<std::pair<std::size_t, std::size_t>> getY_indices(double Y_point) const; //[n_min, n_max] are used, not [n_min, n_max).N_used == n_max - n_min + 1 >= order + 1
 };
 
 #endif

@@ -15,7 +15,7 @@ Optimized verison 1:
 	Added table of argon total XS and reworked subsequent algorithms.
 01.06.2019 Windows (02 optimization, no root)
 	t particle generating =	~18868 s
-	t particle loading =	31 s
+	t particle loading =	31 s; 33.49 s
 	t mixture generating (integral table) =	~8 hours
-	t mixture loading =		102 s
-	t drift (5 e on 1e-3 m) = 10337 s
+	t mixture loading =		102 s; 103.3 s
+	t drift (5 e on 1e-3 m) = 10337 s; 10157 s

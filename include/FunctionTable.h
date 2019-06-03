@@ -14,6 +14,12 @@
 #include "global_definitions.h"
 #include "PolynomialFit.h"
 
+struct ftable_point {
+	double X;
+	double Y;
+	double VAL;
+};
+
 //find_E_indexes_by_value works only for monotone rising function!
 //F(E1,Ey)>F(E2,Ey) if E1>E2
 //Ey:[0, Emax = 16eV]
@@ -21,25 +27,45 @@
 //F(Ey,Ey) = 0; - not necessary condition
 class FunctionTable {
 protected:
-	std::deque<std::vector<double> > _Es;
-	std::deque<std::vector<double> > _ys;
-	std::deque<double> _Eys;
-	std::pair<long int, long int> find_Ey_indexes (double Ey) const;
-	std::pair<long int, long int> find_E_indexes (double E, std::size_t Ey_index) const;
-	std::pair<long int, long int> find_E_indexes_by_value (double val, std::size_t Ey_index) const;
+	std::deque<DataVector> ys_; //DataVector is supposed to be sorted by its xs (y for FunctionTable). Search of Y (getY()) by value works only when DataVector's ys are monotonically increasing.
+	std::deque<double> xs_; //data is supposed to be sorted by xs;
+	boost::optional<std::pair<std::size_t, std::size_t>> getX_indices(double X) const;
+	//std::pair<long int, long int> find_E_indexes (double E, std::size_t Ey_index) const;
+	//std::pair<long int, long int> find_E_indexes_by_value (double val, std::size_t Ey_index) const;
 public:
 	FunctionTable(void);
-	virtual ~FunctionTable();
-	virtual double operator ()(double E, double Ey) const;
-	double find_E (double Ey, double val) const;
-	void push (double E, double Ey, double val);
-	void clear (void);
+	~FunctionTable();
 
-	void read (std::ifstream& str);
-	void write(std::string fname);
-	void write (std::ofstream& str);
-	void plot_E_Ey (void);
-	bool is_empty(void) const;
+	void resize(std::size_t n) {
+		xs_.resize(n);
+		ys_.resize(n);
+	}
+	void clear(void) {
+		xs_.clear();
+		ys_.clear();
+	}
+	std::size_t size(void) const {
+		return xs_.size();
+	}
+	DataVector& operator[](std::size_t X_index) {
+		return ys_[X_index];
+	}
+	const DataVector& getY_data(std::size_t X_index) const {
+		return ys_[X_index];
+	}
+
+	void push (double X, double Y, double val);
+
+	double operator()(double X, double Y) const;
+	double getY(double X, double val) const;
+
+	void read(std::ifstream& str);
+	void write(std::string fname) const;
+	void write (std::ofstream& str) const;
+	void plot_E_Ey (void) const;
+	bool is_empty(void) const {
+		return xs_.empty();
+	}
 };
 
 #endif

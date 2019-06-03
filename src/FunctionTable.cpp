@@ -6,472 +6,268 @@ FunctionTable::FunctionTable(void)
 FunctionTable::~FunctionTable()
 {}
 
-std::pair<long int, long int> FunctionTable::find_Ey_indexes (double Ey) const
+boost::optional<std::pair<std::size_t, std::size_t>> FunctionTable::getX_indices(double X) const
 {
-	std::pair<long int, long int> out(-1,-1);
-	if (_Eys.empty()) {
+	boost::optional<std::pair<std::size_t, std::size_t>> out;
+	if (xs_.empty()) {
 		return out;
-	} else {
-		if (Ey >= _Eys.back()) {
-			out.first = _Eys.size()-1;
-			out.second = out.first;
-			return out;
-		}
-		if (Ey <= _Eys.front()) {
-			out.first = 0;
-			out.second = 0;
-			return out;
-		}
-		std::size_t left = 0;
-		std::size_t right = std::max(left, _Eys.size() - 2);
-		std::size_t Ey_index = (left+right)/2;
-		while (true) {
-			if ((Ey > _Eys[Ey_index]) && (Ey <= _Eys[Ey_index + 1]))
-				break;
-			if (Ey <= _Eys[Ey_index]) {
-				right = Ey_index - 1;
-				Ey_index = (left + right) / 2;
-			} else {
-				left = Ey_index + 1;
-				Ey_index = (left + right) / 2;
-			}
-		}
-		//Ey_index is such, that Ey>_Eys[Ey_index] and Ey<=_Eys[Ey_index+1]
-		if (Ey==_Eys[Ey_index+1]) {
-			out.first = Ey_index + 1;
-			out.second = out.first;
-		} else {
-			out.first = Ey_index;
-			out.second = Ey_index + 1;
-		}
 	}
+	std::size_t sz = xs_.size();
+	if (X <= xs_[0]) {
+		out = std::pair<std::size_t, std::size_t>(0, 0);
+		return out;
+	}
+	if (X >= xs_[sz-1]) {
+		out = std::pair<std::size_t, std::size_t>(sz - 1, sz - 1);
+		return out;
+	}
+	//find first x which is not less that X_point. That is index bounding X_point: xs[first] <= X < xs[first + 1]
+	//See std::lower_bound
+	std::size_t count = sz;
+	std::size_t first = 0;
+	while (count > 0) {
+		std::size_t step = count / 2;
+		std::size_t ind = step;
+		if (xs_[ind] < X) {
+			first = ++ind;
+			count -= step + 1;
+		} else
+			count = step;
+	}
+	if (X == xs_[first] || (sz - 1) == first) {
+		out = std::pair<std::size_t, std::size_t>(first, first);
+		return out;
+	}
+	out = std::pair<std::size_t, std::size_t>(first, first + 1);
 	return out;
 }
 
-std::pair<long int, long int> FunctionTable::find_E_indexes (double E, std::size_t Ey_index) const
+double FunctionTable::operator ()(double X, double Y) const
 {
-	std::pair<long int, long int> out(-1,-1);
-	if (_Es[Ey_index].empty()) {
-		return out;
-	} else {
-		if (E >= _Es[Ey_index].back()) {
-			out.first = _Es[Ey_index].size()-1;
-			out.second = out.first;
-			return out;
-		}
-		if (E <= _Es[Ey_index].front()) {
-			out.first = 0;
-			out.second = 0;
-			return out;
-		}
-		std::size_t left = 0;
-		std::size_t right = std::max(left, _Es[Ey_index].size() - 2);
-		std::size_t E_index = (left+right)/2;
-		while (true) {
-			if ((E > _Es[Ey_index][E_index]) && (E <= _Es[Ey_index][E_index + 1]))
-				break;
-			if (E <= _Es[Ey_index][E_index]) {
-				right = E_index - 1;
-				E_index = (left + right) / 2;
-			} else {
-				left = E_index + 1;
-				E_index = (left + right) / 2;
-			}
-		}
-		//Ey_index is such, that Ey>_Eys[Ey_index] and Ey<=_Eys[Ey_index+1]
-		if (E==_Eys[E_index+1]) {
-			out.first = E_index + 1;
-			out.second = out.first;
-		} else {
-			out.first = E_index;
-			out.second = E_index + 1;
-		}
-	}
-	return out;
-}
-
-std::pair<long int, long int> FunctionTable::find_E_indexes_by_value (double val, std::size_t Ey_index) const
-{
-	std::pair<long int, long int> out(-1,-1);
-	if (_Es[Ey_index].empty()) {
-		return out;
-	} else {
-		if (val >= _ys[Ey_index].back()) {
-			out.first = _ys[Ey_index].size()-1;
-			out.second = out.first;
-			return out;
-		}
-		if (val < _ys[Ey_index].front()) {
-			out.first = 0;
-			out.second = 0;
-			return out;
-		}
-		if (val==_ys[Ey_index].front()) {
-			out.first = 0;
-			out.second = _ys[Ey_index].size()>1 ? 1 : 0;
-			return out;
-		}
-		std::size_t left = 0;
-		std::size_t right = std::max(left, _ys[Ey_index].size() - 2);
-		std::size_t E_index = (left+right)/2;
-		while (true) {
-			if ((val > _ys[Ey_index][E_index]) && (val <= _ys[Ey_index][E_index + 1]))
-				break;
-			if (val <= _ys[Ey_index][E_index]) {
-				right = E_index - 1;
-				E_index = (left + right) / 2;
-			} else {
-				left = E_index + 1;
-				E_index = (left + right) / 2;
-			}
-		}
-		//Ey_index is such, that Ey>_Eys[Ey_index] and Ey<=_Eys[Ey_index+1]
-		out.first = E_index;
-		out.second = E_index + 1;
-	}
-	return out;
-}
-
-double FunctionTable::operator ()(double E, double Ey) const
-{
-	std::pair<long int, long int> Ey_indexes = find_Ey_indexes(Ey);
-	if (-1==Ey_indexes.first)
+	boost::optional<std::pair<std::size_t, std::size_t>> X_inds = getX_indices(X);
+	if (!X_inds)
 		return 0;
-	if (Ey_indexes.first==Ey_indexes.second) {
-		std::pair<long int, long int> E_inds = find_E_indexes(E, Ey_indexes.first);
-		if (-1==E_inds.first)
+	if (X_inds->first == X_inds->second) {
+		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds = ys_[X_inds->first].getX_indices(Y);
+		if (!Y_inds)
 			return 0;
-		if (E_inds.first==E_inds.second) {
-			return _ys[Ey_indexes.first][E_inds.first];
+		if (Y_inds->first == Y_inds->second) {
+			return ys_[X_inds->first].getY(Y_inds->first);
 		} else {
-			double y0 = _ys[Ey_indexes.first][E_inds.first], y1 = _ys[Ey_indexes.first][E_inds.second];
-			double E0 = _Es[Ey_indexes.first][E_inds.first], E1 = _Es[Ey_indexes.first][E_inds.second];
-			return y0 + (y1-y0)*(E-E0)/(E1-E0);
+			double z0 = ys_[X_inds->first].getY(Y_inds->first), z1 = ys_[X_inds->first].getY(Y_inds->second);
+			double y0 = ys_[X_inds->first].getX(Y_inds->first), y1 = ys_[X_inds->first].getX(Y_inds->second);
+			return z0 + (z1 - z0) * (Y - y0) / (y1 - y0);
 		}
 	} else {
-		std::pair<long int, long int> E_inds_left = find_E_indexes(E, Ey_indexes.first);
-		std::pair<long int, long int> E_inds_right = find_E_indexes(E, Ey_indexes.second);
-		if ((-1==E_inds_right.first)&&(-1==E_inds_left.first))
+		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds_left = ys_[X_inds->first].getX_indices(Y);
+		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds_right = ys_[X_inds->second].getX_indices(Y);
+		if ((!Y_inds_right)&&(!Y_inds_left))
 			return 0;
-		if (-1==E_inds_right.first) {
-			if (E_inds_left.first==E_inds_left.second) {
-				return _ys[Ey_indexes.first][E_inds_left.first];
+		if (!Y_inds_right) {
+			if (Y_inds_left->first == Y_inds_left->second) {
+				return ys_[X_inds->first].getY(Y_inds_left->first);
 			} else {
-				double y0 = _ys[Ey_indexes.first][E_inds_left.first], y1 = _ys[Ey_indexes.first][E_inds_left.second];
-				double E0 = _Es[Ey_indexes.first][E_inds_left.first], E1 = _Es[Ey_indexes.first][E_inds_left.second];
-				return y0 + (y1-y0)*(E-E0)/(E1-E0);
+				double z0 = ys_[X_inds->first].getY(Y_inds_left->first), z1 = ys_[X_inds->first].getY(Y_inds_left->second);
+				double y0 = ys_[X_inds->first].getX(Y_inds_left->first), y1 = ys_[X_inds->first].getX(Y_inds_left->second);
+				return z0 + (z1 - z0) * (Y - y0) / (y1 - y0);
 			}
 		}
-		if (-1==E_inds_left.first) {
-			if (E_inds_right.first==E_inds_right.second) {
-				return _ys[Ey_indexes.second][E_inds_right.first];
+		if (!Y_inds_left) {
+			if (Y_inds_right->first == Y_inds_right->second) {
+				return ys_[X_inds->first].getY(Y_inds_right->first);
 			} else {
-				double y0 = _ys[Ey_indexes.second][E_inds_right.first], y1 = _ys[Ey_indexes.second][E_inds_right.second];
-				double E0 = _Es[Ey_indexes.second][E_inds_right.first], E1 = _Es[Ey_indexes.second][E_inds_right.second];
-				return y0 + (y1-y0)*(E-E0)/(E1-E0);
+				double z0 = ys_[X_inds->first].getY(Y_inds_right->first), z1 = ys_[X_inds->first].getY(Y_inds_right->second);
+				double y0 = ys_[X_inds->first].getX(Y_inds_right->first), y1 = ys_[X_inds->first].getX(Y_inds_right->second);
+				return z0 + (z1 - z0) * (Y - y0) / (y1 - y0);
 			}
 		}
-		if ((E_inds_left.first==E_inds_left.second)&&(E_inds_right.first==E_inds_right.second)) {
-			double y0 = _ys[Ey_indexes.first][E_inds_left.first], y1 = _ys[Ey_indexes.second][E_inds_right.first];
-			double E0 = _Eys[Ey_indexes.first], E1 = _Eys[Ey_indexes.second];
-			return y0 + (y1-y0)*(Ey-E0)/(E1-E0);
+		if ((Y_inds_left->first == Y_inds_left->second)&&(Y_inds_right->first == Y_inds_right->second)) {
+			double z0 = ys_[X_inds->first].getY(Y_inds_left->first), z1 = ys_[X_inds->second].getY(Y_inds_right->first);
+			double x0 = xs_[X_inds->first], x1 = xs_[X_inds->second];
+			return z0 + (z1 - z0) * (X-x0) / (x1-x0);
 		}
-		if (E_inds_left.first==E_inds_left.second) {//three point linear interpolation
-			double y0_0 = _ys[Ey_indexes.first][E_inds_left.first], y1_0 = _ys[Ey_indexes.second][E_inds_right.first], y1_1 = _ys[Ey_indexes.second][E_inds_right.second];
-			double E0_0 = _Es[Ey_indexes.first][E_inds_left.first], E1_0 = _Es[Ey_indexes.second][E_inds_right.first], E1_1 = _Es[Ey_indexes.second][E_inds_right.second];
-			double Ey0 = _Eys[Ey_indexes.first], Ey1 = _Eys[Ey_indexes.second];
-			//first interpolate along Ey axis, then E axis
-			double E0 = E0_0 + (Ey-Ey0)*(E1_0-E0_0)/(Ey1-Ey0);
-			double E1 = E0_0 + (Ey-Ey0)*(E1_1-E0_0)/(Ey1-Ey0);
-			double y0 = y0_0 + (Ey-Ey0)*(y1_0-y0_0)/(Ey1-Ey0);
-			double y1 = y0_0 + (Ey-Ey0)*(y1_1-y0_0)/(Ey1-Ey0);
-			return y0 + (y1-y0)*(E-E0)/(E1-E0);
+		if (Y_inds_left->first == Y_inds_left->second) {//three point linear interpolation
+			double z0_0 = ys_[X_inds->first].getY(Y_inds_left->first), z1_0 = ys_[X_inds->second].getY(Y_inds_right->first), z1_1 = ys_[X_inds->second].getY(Y_inds_right->second);
+			double y0_0 = ys_[X_inds->first].getX(Y_inds_left->first), y1_0 = ys_[X_inds->second].getX(Y_inds_right->first), y1_1 = ys_[X_inds->second].getX(Y_inds_right->second);
+			double x0 = xs_[X_inds->first], x1 = xs_[X_inds->second];
+			//first interpolate along X axis, then Y axis
+			double y0 = y0_0 + (X-x0)*(y1_0-y0_0)/(x1-x0);
+			double y1 = y0_0 + (X-x0)*(y1_1-y0_0)/(x1-x0);
+			double z0 = z0_0 + (X-x0)*(z1_0-z0_0)/(x1-x0);
+			double z1 = z0_0 + (X-x0)*(z1_1-z0_0)/(x1-x0);
+			return z0 + (z1-z0)*(Y-y0)/(y1-y0);
 		}
-		if (E_inds_right.first==E_inds_right.second) {//three point linear interpolation
-			double y0_0 = _ys[Ey_indexes.first][E_inds_left.first], y1_0 = _ys[Ey_indexes.second][E_inds_right.first], y0_1 = _ys[Ey_indexes.first][E_inds_left.second];
-			double E0_0 = _Es[Ey_indexes.first][E_inds_left.first], E1_0 = _Es[Ey_indexes.second][E_inds_right.first], E0_1 = _Es[Ey_indexes.first][E_inds_left.second];
-			double Ey0 = _Eys[Ey_indexes.first], Ey1 = _Eys[Ey_indexes.second];
-			//first interpolate along Ey axis, then E axis
-			double E0 = E0_0 + (Ey-Ey0)*(E1_0-E0_0)/(Ey1-Ey0);
-			double E1 = E0_1 + (Ey-Ey0)*(E1_0-E0_1)/(Ey1-Ey0);
-			double y0 = y0_0 + (Ey-Ey0)*(y1_0-y0_0)/(Ey1-Ey0);
-			double y1 = y0_1 + (Ey-Ey0)*(y1_0-y0_1)/(Ey1-Ey0);
-			return y0 + (y1-y0)*(E-E0)/(E1-E0);
+		if (Y_inds_right->first == Y_inds_right->second) {//three point linear interpolation
+			double z0_0 = ys_[X_inds->first].getY(Y_inds_left->first), z1_0 = ys_[X_inds->second].getY(Y_inds_right->first), z0_1 = ys_[X_inds->first].getY(Y_inds_left->second);
+			double y0_0 = ys_[X_inds->first].getX(Y_inds_left->first), y1_0 = ys_[X_inds->second].getX(Y_inds_right->first), y0_1 = ys_[X_inds->first].getX(Y_inds_left->second);
+			double x0 = xs_[X_inds->first], x1 = xs_[X_inds->second];
+			//first interpolate along X axis, then Y axis
+			double y0 = y0_0 + (X-x0)*(y1_0-y0_0)/(x1-x0);
+			double y1 = y0_1 + (X-x0)*(y1_0-y0_1)/(x1-x0);
+			double z0 = z0_0 + (X-x0)*(z1_0-z0_0)/(x1-x0);
+			double z1 = z0_1 + (X-x0)*(z1_0-z0_1)/(x1-x0);
+			return z0 + (z1-z0)*(Y-y0)/(y1-y0);
 		}
 		//4 point linear interpolation
-		double y0_0 = _ys[Ey_indexes.first][E_inds_left.first], y0_1 = _ys[Ey_indexes.first][E_inds_left.second],
-				y1_0 = _ys[Ey_indexes.second][E_inds_right.first], y1_1 = _ys[Ey_indexes.second][E_inds_right.second];
-		double E0_0 = _Es[Ey_indexes.first][E_inds_left.first], E0_1 = _Es[Ey_indexes.first][E_inds_left.second],
-				E1_0 = _Es[Ey_indexes.second][E_inds_right.first], E1_1 = _Es[Ey_indexes.second][E_inds_right.second];
-		double Ey0 = _Eys[Ey_indexes.first], Ey1 = _Eys[Ey_indexes.second];
-		//first interpolate along Ey axis, then E axis
-		double E0 = E0_0 + (Ey-Ey0)*(E1_0-E0_0)/(Ey1-Ey0);
-		double E1 = E0_1 + (Ey-Ey0)*(E1_1-E0_1)/(Ey1-Ey0);
-		double y0 = y0_0 + (Ey-Ey0)*(y1_0-y0_0)/(Ey1-Ey0);
-		double y1 = y0_1 + (Ey-Ey0)*(y1_1-y0_1)/(Ey1-Ey0);
-		return y0 + (y1-y0)*(E-E0)/(E1-E0);
+		double z0_0 = ys_[X_inds->first].getY(Y_inds_left->first), z0_1 = ys_[X_inds->first].getY(Y_inds_left->second),
+				z1_0 = ys_[X_inds->second].getY(Y_inds_right->first), z1_1 = ys_[X_inds->second].getY(Y_inds_right->second);
+		double y0_0 = ys_[X_inds->first].getX(Y_inds_left->first), y0_1 = ys_[X_inds->first].getX(Y_inds_left->second),
+				y1_0 = ys_[X_inds->second].getX(Y_inds_right->first), y1_1 = ys_[X_inds->second].getX(Y_inds_right->second);
+		double x0 = xs_[X_inds->first], x1 = xs_[X_inds->second];
+		//first interpolate along X axis, then Y axis
+		double y0 = y0_0 + (X-x0)*(y1_0-y0_0)/(x1-x0);
+		double y1 = y0_1 + (X-x0)*(y1_1-y0_1)/(x1-x0);
+		double z0 = z0_0 + (X-x0)*(z1_0-z0_0)/(x1-x0);
+		double z1 = z0_1 + (X-x0)*(z1_1-z0_1)/(x1-x0);
+		return z0 + (z1-z0)*(Y-y0)/(y1-y0);
 	}
 	return 0;
 }
 
-double FunctionTable::find_E (double Ey, double val) const
+double FunctionTable::getY(double X, double val) const
 {
-	std::pair<long int, long int> Ey_indexes = find_Ey_indexes(Ey);
-	double out = 0;
-	if (-1==Ey_indexes.first)
+	boost::optional<std::pair<std::size_t, std::size_t>> X_inds = getX_indices(X);
+	if (!X_inds)
 		return -1;
-	if (Ey_indexes.first==Ey_indexes.second) {
-		std::pair<long int, long int> E_inds = find_E_indexes_by_value(val, Ey_indexes.first);
-		if (-1==E_inds.first) {
+	if (X_inds->first == X_inds->second) {
+		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds = ys_[X_inds->first].getY_indices(val);
+		if (!Y_inds)
 			return -1;
-		}
-		if (E_inds.first==E_inds.second) {
-			return _Es[Ey_indexes.first][E_inds.first];
+		if (Y_inds->first == Y_inds->second) {
+			return ys_[X_inds->first].getX(Y_inds->first);
 		} else {
-			double y0 = _ys[Ey_indexes.first][E_inds.first], y1 = _ys[Ey_indexes.first][E_inds.second];
-			double E0 = _Es[Ey_indexes.first][E_inds.first], E1 = _Es[Ey_indexes.first][E_inds.second];
-			out = E0 + (E1-E0)*(val-y0)/(y1-y0);
-			if (isnan(out)){
-				out = E0;
-			}
-			return out;
+			double z0 = ys_[X_inds->first].getY(Y_inds->first), z1 = ys_[X_inds->first].getY(Y_inds->second);
+			double y0 = ys_[X_inds->first].getX(Y_inds->first), y1 = ys_[X_inds->first].getX(Y_inds->second);
+			return y0 + (y1 - y0) * (val - z0) / (z1 - z0);
 		}
 	} else {
-		std::pair<long int, long int> E_inds_left = find_E_indexes_by_value(val, Ey_indexes.first);
-		std::pair<long int, long int> E_inds_right = find_E_indexes_by_value(val, Ey_indexes.second);
-		if ((-1==E_inds_right.first)&&(-1==E_inds_left.first))
-			return -1;
-		if (-1==E_inds_right.first) {
-			if (E_inds_left.first==E_inds_left.second) {
-				return _Es[Ey_indexes.first][E_inds_left.first];
+		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds_left = ys_[X_inds->first].getY_indices(val);
+		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds_right = ys_[X_inds->second].getY_indices(val);
+		if ((!Y_inds_right) && (!Y_inds_left))
+			return 0;
+		if (!Y_inds_right) {
+			if (Y_inds_left->first == Y_inds_left->second) {
+				return ys_[X_inds->first].getX(Y_inds_left->first);
 			} else {
-				double y0 = _ys[Ey_indexes.first][E_inds_left.first], y1 = _ys[Ey_indexes.first][E_inds_left.second];
-				double E0 = _Es[Ey_indexes.first][E_inds_left.first], E1 = _Es[Ey_indexes.first][E_inds_left.second];
-				out = E0 + (E1-E0)*(val-y0)/(y1-y0);
-				if (isnan(out)){
-					out = E0;
-				}
-				return out;
+				double z0 = ys_[X_inds->first].getY(Y_inds_left->first), z1 = ys_[X_inds->first].getY(Y_inds_left->second);
+				double y0 = ys_[X_inds->first].getX(Y_inds_left->first), y1 = ys_[X_inds->first].getX(Y_inds_left->second);
+				return y0 + (y1 - y0) * (val - z0) / (z1 - z0);
 			}
 		}
-		if (-1==E_inds_left.first) {
-			if (E_inds_right.first==E_inds_right.second) {
-				return _ys[Ey_indexes.second][E_inds_right.first];
+		if (!Y_inds_left) {
+			if (Y_inds_right->first == Y_inds_right->second) {
+				return ys_[X_inds->first].getX(Y_inds_right->first);
 			} else {
-				double y0 = _ys[Ey_indexes.second][E_inds_right.first], y1 = _ys[Ey_indexes.second][E_inds_right.second];
-				double E0 = _Es[Ey_indexes.second][E_inds_right.first], E1 = _Es[Ey_indexes.second][E_inds_right.second];
-				out = E0 + (E1-E0)*(val-y0)/(y1-y0);
-				if (isnan(out)) {
-					out = E0;
-				}
-				return out;
+				double z0 = ys_[X_inds->first].getY(Y_inds_right->first), z1 = ys_[X_inds->first].getY(Y_inds_right->second);
+				double y0 = ys_[X_inds->first].getX(Y_inds_right->first), y1 = ys_[X_inds->first].getX(Y_inds_right->second);
+				return y0 + (y1 - y0) * (val - z0) / (z1 - z0);
 			}
 		}
-		if ((E_inds_left.first==E_inds_left.second)&&(E_inds_right.first==E_inds_right.second)) {
-			double E0 = _Es[Ey_indexes.first][E_inds_left.first], E1 = _Es[Ey_indexes.second][E_inds_right.first];
-			double Ey0 = _Eys[Ey_indexes.first], Ey1 = _Eys[Ey_indexes.second];
-			out =  E0 + (E1-E0)*(Ey-Ey0)/(Ey1-Ey0);
-			if (isnan(out)) {
-				out = E0;
-			}
-			return out;
+		if ((Y_inds_left->first == Y_inds_left->second) && (Y_inds_right->first == Y_inds_right->second)) {
+			double y0 = ys_[X_inds->first].getX(Y_inds_left->first), y1 = ys_[X_inds->second].getX(Y_inds_right->first);
+			double x0 = xs_[X_inds->first], x1 = xs_[X_inds->second];
+			return y0 + (y1 - y0) * (X - x0) / (x1 - x0);
 		}
-		if (E_inds_left.first==E_inds_left.second) {//three point linear interpolation
-			double y0_0 = _ys[Ey_indexes.first][E_inds_left.first], y1_0 = _ys[Ey_indexes.second][E_inds_right.first], y1_1 = _ys[Ey_indexes.second][E_inds_right.second];
-			double E0_0 = _Es[Ey_indexes.first][E_inds_left.first], E1_0 = _Es[Ey_indexes.second][E_inds_right.first], E1_1 = _Es[Ey_indexes.second][E_inds_right.second];
-			double Ey0 = _Eys[Ey_indexes.first], Ey1 = _Eys[Ey_indexes.second];
-			//first interpolate along Ey axis, then E axis
-			double E0 = E0_0 + (Ey-Ey0)*(E1_0-E0_0)/(Ey1-Ey0);
-			double E1 = E0_0 + (Ey-Ey0)*(E1_1-E0_0)/(Ey1-Ey0);
-			double y0 = y0_0 + (Ey-Ey0)*(y1_0-y0_0)/(Ey1-Ey0);
-			double y1 = y0_0 + (Ey-Ey0)*(y1_1-y0_0)/(Ey1-Ey0);
-			out = E0 + (E1-E0)*(val-y0)/(y1-y0);
-			if (isnan(out)) {
-				out = E0;
-			}
-			return out;
+		if (Y_inds_left->first == Y_inds_left->second) {//three point linear interpolation
+			double z0_0 = ys_[X_inds->first].getY(Y_inds_left->first), z1_0 = ys_[X_inds->second].getY(Y_inds_right->first), z1_1 = ys_[X_inds->second].getY(Y_inds_right->second);
+			double y0_0 = ys_[X_inds->first].getX(Y_inds_left->first), y1_0 = ys_[X_inds->second].getX(Y_inds_right->first), y1_1 = ys_[X_inds->second].getX(Y_inds_right->second);
+			double x0 = xs_[X_inds->first], x1 = xs_[X_inds->second];
+			//first interpolate along X axis, then Y axis
+			double y0 = y0_0 + (X - x0)*(y1_0 - y0_0) / (x1 - x0);
+			double y1 = y0_0 + (X - x0)*(y1_1 - y0_0) / (x1 - x0);
+			double z0 = z0_0 + (X - x0)*(z1_0 - z0_0) / (x1 - x0);
+			double z1 = z0_0 + (X - x0)*(z1_1 - z0_0) / (x1 - x0);
+			return y0 + (y1 - y0)*(val - z0) / (z1 - z0);
 		}
-		if (E_inds_right.first==E_inds_right.second) {//three point linear interpolation
-			double y0_0 = _ys[Ey_indexes.first][E_inds_left.first], y1_0 = _ys[Ey_indexes.second][E_inds_right.first], y0_1 = _ys[Ey_indexes.first][E_inds_left.second];
-			double E0_0 = _Es[Ey_indexes.first][E_inds_left.first], E1_0 = _Es[Ey_indexes.second][E_inds_right.first], E0_1 = _Es[Ey_indexes.first][E_inds_left.second];
-			double Ey0 = _Eys[Ey_indexes.first], Ey1 = _Eys[Ey_indexes.second];
-			//first interpolate along Ey axis, then E axis
-			double E0 = E0_0 + (Ey-Ey0)*(E1_0-E0_0)/(Ey1-Ey0);
-			double E1 = E0_1 + (Ey-Ey0)*(E1_0-E0_1)/(Ey1-Ey0);
-			double y0 = y0_0 + (Ey-Ey0)*(y1_0-y0_0)/(Ey1-Ey0);
-			double y1 = y0_1 + (Ey-Ey0)*(y1_0-y0_1)/(Ey1-Ey0);
-			out = E0 + (E1-E0)*(val-y0)/(y1-y0);
-			if (isnan(out)) {
-				out = E0;
-			}
-			return out;
+		if (Y_inds_right->first == Y_inds_right->second) {//three point linear interpolation
+			double z0_0 = ys_[X_inds->first].getY(Y_inds_left->first), z1_0 = ys_[X_inds->second].getY(Y_inds_right->first), z0_1 = ys_[X_inds->first].getY(Y_inds_left->second);
+			double y0_0 = ys_[X_inds->first].getX(Y_inds_left->first), y1_0 = ys_[X_inds->second].getX(Y_inds_right->first), y0_1 = ys_[X_inds->first].getX(Y_inds_left->second);
+			double x0 = xs_[X_inds->first], x1 = xs_[X_inds->second];
+			//first interpolate along X axis, then Y axis
+			double y0 = y0_0 + (X - x0)*(y1_0 - y0_0) / (x1 - x0);
+			double y1 = y0_1 + (X - x0)*(y1_0 - y0_1) / (x1 - x0);
+			double z0 = z0_0 + (X - x0)*(z1_0 - z0_0) / (x1 - x0);
+			double z1 = z0_1 + (X - x0)*(z1_0 - z0_1) / (x1 - x0);
+			return y0 + (y1 - y0)*(val - z0) / (z1 - z0);
 		}
 		//4 point linear interpolation
-		double y0_0 = _ys[Ey_indexes.first][E_inds_left.first], y0_1 = _ys[Ey_indexes.first][E_inds_left.second],
-				y1_0 = _ys[Ey_indexes.second][E_inds_right.first], y1_1 = _ys[Ey_indexes.second][E_inds_right.second];
-		double E0_0 = _Es[Ey_indexes.first][E_inds_left.first], E0_1 = _Es[Ey_indexes.first][E_inds_left.second],
-				E1_0 = _Es[Ey_indexes.second][E_inds_right.first], E1_1 = _Es[Ey_indexes.second][E_inds_right.second];
-		double Ey0 = _Eys[Ey_indexes.first], Ey1 = _Eys[Ey_indexes.second];
-		//first interpolate along Ey axis, then E axis
-		double E0 = E0_0 + (Ey-Ey0)*(E1_0-E0_0)/(Ey1-Ey0);
-		double E1 = E0_1 + (Ey-Ey0)*(E1_1-E0_1)/(Ey1-Ey0);
-		double y0 = y0_0 + (Ey-Ey0)*(y1_0-y0_0)/(Ey1-Ey0);
-		double y1 = y0_1 + (Ey-Ey0)*(y1_1-y0_1)/(Ey1-Ey0);
-		out = E0 + (E1-E0)*(val-y0)/(y1-y0);
-		if (isnan(out)) {
-			out = E0;
-		}
-		return out;
+		double z0_0 = ys_[X_inds->first].getY(Y_inds_left->first), z0_1 = ys_[X_inds->first].getY(Y_inds_left->second),
+			z1_0 = ys_[X_inds->second].getY(Y_inds_right->first), z1_1 = ys_[X_inds->second].getY(Y_inds_right->second);
+		double y0_0 = ys_[X_inds->first].getX(Y_inds_left->first), y0_1 = ys_[X_inds->first].getX(Y_inds_left->second),
+			y1_0 = ys_[X_inds->second].getX(Y_inds_right->first), y1_1 = ys_[X_inds->second].getX(Y_inds_right->second);
+		double x0 = xs_[X_inds->first], x1 = xs_[X_inds->second];
+		//first interpolate along X axis, then Y axis
+		double y0 = y0_0 + (X - x0)*(y1_0 - y0_0) / (x1 - x0);
+		double y1 = y0_1 + (X - x0)*(y1_1 - y0_1) / (x1 - x0);
+		double z0 = z0_0 + (X - x0)*(z1_0 - z0_0) / (x1 - x0);
+		double z1 = z0_1 + (X - x0)*(z1_1 - z0_1) / (x1 - x0);
+		return y0 + (y1 - y0)*(val - z0) / (z1 - z0);
 	}
+	return -1;
 }
 
-void FunctionTable::push (double E, double Ey, double val)
+void FunctionTable::push (double X, double Y, double val)
 {
-	std::size_t Ey_index = 0;
-	if (_Eys.empty()) {
-		_Eys.push_back(Ey);
-		_Es.push_back(std::vector<double>());
-		_ys.push_back(std::vector<double>());
+	std::size_t X_index = 0;
+	if (xs_.empty()) {
+		xs_.push_back(X);
+		ys_.push_back(DataVector(1, 2));
 	} else {
-		if (Ey > _Eys.back()) {
-			_Eys.push_back(Ey);
-			_Es.push_back(std::vector<double>());
-			_ys.push_back(std::vector<double>());
-			Ey_index = _Eys.size()-1;
+		if (X > xs_.back()) {
+			xs_.push_back(X);
+			ys_.push_back(DataVector(1, 2));
+			X_index = xs_.size()-1;
 			goto second;
 		}
-		if (Ey==_Eys.back()) {
-			Ey_index = _Eys.size()-1;
+		if (X < xs_.front()) {
+			X_index = 0;
+			xs_.insert(xs_.begin(), X);
+			ys_.insert(ys_.begin(), DataVector(1, 2));
 			goto second;
 		}
-		if (Ey < _Eys.front()) {
-			Ey_index = 0;
-			_Eys.insert(_Eys.begin(), Ey);
-			_Es.insert(_Es.begin(), std::vector<double>());
-			_ys.insert(_ys.begin(), std::vector<double>());
+		boost::optional<std::pair<std::size_t, std::size_t>> x_inds = getX_indices(X);
+		if (x_inds->first == x_inds->second) {
+			X_index = x_inds->first;
 			goto second;
 		}
-		if (Ey==_Eys.front()) {
-			Ey_index =0;
-			goto second;
-		}
-		std::size_t left = 0;
-		std::size_t right = std::max(left, _Eys.size() - 2);
-		Ey_index = (left+right)/2;
-		while (true) {
-			if ((Ey > _Eys[Ey_index]) && (Ey <= _Eys[Ey_index + 1]))
-				break;
-			if (Ey <= _Eys[Ey_index]) {
-				right = Ey_index - 1;
-				Ey_index = (left + right) / 2;
-			} else {
-				left = Ey_index + 1;
-				Ey_index = (left + right) / 2;
-			}
-		}
-		//Ey_index is such, that Ey>_Eys[Ey_index] and Ey<=_Eys[Ey_index+1]
-		++Ey_index;
-		if (Ey==_Eys[Ey_index]) {
-			goto second;
-		} else {
-			_Eys.insert(_Eys.begin()+Ey_index,Ey);
-			_Es.insert(_Es.begin()+Ey_index, std::vector<double>());
-			_ys.insert(_ys.begin()+Ey_index, std::vector<double>());
-			goto second;
-		}
+		xs_.insert(xs_.begin() + x_inds->second, X);
+		ys_.insert(ys_.begin() + x_inds->second, DataVector(1, 2));
+		X_index = x_inds->second;
 	}
-	second:;
-	std::size_t E_index = 0;
-	if (_Es[Ey_index].empty()) {
-		_Es[Ey_index].push_back(E);
-		_ys[Ey_index].push_back(val);
-	} else {
-		if (E > _Es[Ey_index].back()) {
-			_Es[Ey_index].push_back(E);
-			_ys[Ey_index].push_back(val);
-			return;
-		}
-		if (E==_Es[Ey_index].back()) {
-			E_index =_Es[Ey_index].size()-1;
-			_ys[Ey_index][E_index] = val;
-			return;
-		}
-		if (E < _Es[Ey_index].front()) {
-			E_index = 0;
-			_Es[Ey_index].insert(_Es[Ey_index].begin(), E);
-			_ys[Ey_index].insert(_ys[Ey_index].begin(), val);
-			return;
-		}
-		if (E==_Es[Ey_index].front()) {
-			E_index =0;
-			_ys[Ey_index][E_index] = val;
-			return;
-		}
-		std::size_t left = 0;
-		std::size_t right = std::max(left, _Es[Ey_index].size() - 2);
-		E_index = (left+right)/2;
-		while (true) {
-			if ((E > _Es[Ey_index][E_index]) && (E <= _Es[Ey_index][E_index + 1]))
-				break;
-			if (E <= _Es[Ey_index][E_index]) {
-				right = E_index - 1;
-				E_index = (left + right) / 2;
-			} else {
-				left = E_index + 1;
-				E_index = (left + right) / 2;
-			}
-		}
-		//E_index is such, that E>_Es[Ey_index][E_index] and E<=_Es[Ey_index][E_index+1]
-		++E_index;
-		if (E==_Es[Ey_index][E_index]) {
-			_ys[Ey_index][E_index] = val;
-		} else {
-			_Es[Ey_index].insert(_Es[Ey_index].begin()+E_index, E);
-			_ys[Ey_index].insert(_ys[Ey_index].begin()+E_index, val);
-		}
-	}
-}
-
-void FunctionTable::clear (void)
-{
-	_Es.clear();
-	_ys.clear();
-	_Eys.clear();
+second:
+	ys_[X_index].insert(Y, val);//not a push_back, insert/replaces value preserving order
 }
 
 void FunctionTable::read (std::ifstream& str)
 {
 	clear();
-	double val;
+	double val, val2;
 	size_t size, size_E;
 	std::size_t counter, counter_E;
 	bool valid = true;
 	while (!str.eof()) {
 		str.read((char*)&size,sizeof(std::size_t));
-		_Eys.resize(size);
-		_Es.resize(size);
-		_ys.resize(size);
+		ys_.resize(size, DataVector(1, 2));
+		xs_.resize(size);
 		counter = 0;
 		while (!str.eof() && counter != size) {
 			str.read((char*)&val, sizeof(double));
-			_Eys[counter] = val;
+			xs_[counter] = val;
 			if (str.eof()) {
 				valid = false;
 				break;
 			}
 			str.read((char*)&size_E, sizeof(std::size_t));
-			_Es[counter].resize(size_E);
-			_ys[counter].resize(size_E);
+			ys_[counter].resize(size_E);
 			counter_E = 0;
 			while (!str.eof() && counter_E != size_E) {
 				str.read((char*)&val,sizeof(double));
-				_Es[counter][counter_E] = val;
 				if (str.eof()) {
 					valid = false;
 					break;
 				}
-				str.read((char*)&val,sizeof(double));
-				_ys[counter][counter_E] = val;
+				str.read((char*)&val2,sizeof(double));
+				ys_[counter][counter_E] = std::pair<double, double>(val, val2);
 				++counter_E;
 			}
 			++counter;
@@ -484,7 +280,7 @@ void FunctionTable::read (std::ifstream& str)
 	}
 }
 
-void FunctionTable::write(std::string fname)
+void FunctionTable::write(std::string fname) const
 {
 	std::ofstream str;
 	str.open(fname, std::ios_base::trunc | std::ios_base::binary);
@@ -492,27 +288,23 @@ void FunctionTable::write(std::string fname)
 	str.close();
 }
 
-void FunctionTable::write (std::ofstream& str)
+void FunctionTable::write (std::ofstream& str) const
 {
-	std::size_t real_size= _Eys.size();
+	std::size_t real_size= xs_.size();
 	str.write((char*)&real_size, sizeof(std::size_t));
 	for (std::size_t Ey_ind = 0, Ey_ind_end_= real_size; Ey_ind != Ey_ind_end_; ++Ey_ind) {
-		str.write((char*)&_Eys[Ey_ind], sizeof(double));
-		std::size_t size= _Es[Ey_ind].size();
+		str.write((char*)&xs_[Ey_ind], sizeof(double));
+		std::size_t size = ys_[Ey_ind].size();
 		str.write((char*)&size, sizeof(std::size_t));
 		for (std::size_t E = 0, E_end_= size; E != E_end_; ++E) {
-			str.write((char*)&_Es[Ey_ind][E], sizeof(double));
-			str.write((char*)&_ys[Ey_ind][E], sizeof(double));
+			std::pair<double, double> yz = ys_[Ey_ind].getXY(E);
+			str.write((char*)&yz.first, sizeof(double));
+			str.write((char*)&yz.second, sizeof(double));
 		}
 	}
 }
 
-bool FunctionTable::is_empty(void) const
-{
-	return _Eys.empty();
-}
-
-void FunctionTable::plot_E_Ey (void)
+void FunctionTable::plot_E_Ey (void) const
 {
 #ifndef _NO_CERN_ROOT
 	TCanvas *c1 = new TCanvas("E_Ey", "E_Ey", 900, 700);
