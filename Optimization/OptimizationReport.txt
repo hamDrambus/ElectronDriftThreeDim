@@ -21,7 +21,7 @@
 Optimized verison 1:
 =============================================================
 	Added table of argon total XS and reworked subsequent algorithms.
-01.06.2019 Windows (02 optimization, no root)
+01.06.2019 Windows (02 optimization, no ROOT)
 	t particle generating =	~18868 s
 	t particle loading =	31 s; 33.49 s
 	t mixture generating (integral table) =	~8 hours

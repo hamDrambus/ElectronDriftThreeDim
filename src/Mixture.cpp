@@ -163,7 +163,7 @@ bool Mixture::generate_integral_table(void)
 				Int+=GetCrossSection(electron, E)*sqrt(E/(E-Ey))*(E-E_prev);
 			}
 			E_prev = E;
-			integral_table_->push(E, Ey, Int);
+			integral_table_->push(Ey, E, Int);
 		}
 	}
 	return true;
@@ -186,7 +186,7 @@ long double Mixture::GetXSIntegral(const Particle *incident, long double En_from
 	if (NULL == incident)
 		return 0;
 	if (incident->GetName() == ELECTRON_NAME)
-		return (*integral_table_)(En_to, En_y) - (*integral_table_)(En_from, En_y);
+		return (*integral_table_)(En_y, En_to) - (*integral_table_)(En_y, En_from);
 	else
 		return 0; //TODO: Implement general cases
 }
@@ -196,7 +196,7 @@ long double Mixture::GetEnergyFromXSIntegral(const Particle *incident, long doub
 	if (NULL == incident)
 		return DBL_MAX;
 	if (incident->GetName() == ELECTRON_NAME)
-		return integral_table_->find_E(En_y, integral_value);
+		return integral_table_->getY(En_y, integral_value);
 	else
 		return DBL_MAX; //TODO: Implement general cases
 }

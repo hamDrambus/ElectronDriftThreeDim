@@ -143,20 +143,18 @@ protected:
 	bool generate_ResNBrS_spectrum_table(void);
 public:
 
-	void setOrder(int order)
-	{
+	void setOrder(std::size_t order) {
 		total_cross_elastic_.setOrder(order);
+		total_cross_.setOrder(order);
 	}
-	void setNused(int N)
-	{
+	void setNused(std::size_t N) {
 		total_cross_elastic_.setNused(N);
+		total_cross_.setNused(N);
 	}
-	int getOrder(void)
-	{
+	std::size_t getOrder(void) {
 		return total_cross_elastic_.getOrder();
 	}
-	int getNused(void)
-	{
+	std::size_t getNused(void) {
 		return total_cross_elastic_.getNused();
 	}
 

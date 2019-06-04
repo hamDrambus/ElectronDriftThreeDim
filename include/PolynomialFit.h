@@ -115,7 +115,7 @@ public:
 		xys.resize(sz);
 	}
 	bool isValid(void) const {
-		return (N_used > fitter.getOrder()) && N_used >= size();
+		return (N_used > fitter.getOrder()) && N_used <= size();
 	}
 
 	double operator()(double X_point, boost::optional<double> x0 = boost::none) const; //x0 = point is recommended to use. At least x0 must be close to point, or there will be large errors otherwise

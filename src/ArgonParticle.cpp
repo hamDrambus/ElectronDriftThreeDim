@@ -197,7 +197,7 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 		if (word.empty())
 			break;
 		double XS = std::stod(word); //Cross section is stored in 1e-20 m^2 in both files and this program.
-		total_elastic_cross.push(k, XS);
+		total_elastic_cross.insert(k, XS);
 	}
 	inp.close();
 	for (int l = 0; l < MAX_L; ++l) {
@@ -272,13 +272,13 @@ ArExperimental::ArExperimental(void): total_elastic_cross(3, 5) /*fit by 3rd ord
 		for (int l=0; l<MAX_L; ++l) {
 			if (is_d[l]) {
 				if (0==l)
-					phase_shifts_neg_[l].push(k, vals[l]);
-				phase_shifts_pos_[l].push(k, vals[l]);
+					phase_shifts_neg_[l].insert(k, vals[l]);
+				phase_shifts_pos_[l].insert(k, vals[l]);
 			}
 		}
 		for (int l=0; l<(MAX_L-1); ++l) {
 			if (is_d_1[l])
-				phase_shifts_neg_[l+1].push(k, vals_1[l]);
+				phase_shifts_neg_[l+1].insert(k, vals_1[l]);
 		}
 	}
 	inp.close();
@@ -1427,30 +1427,32 @@ bool ArgonParticle::generate_theta_table(void)
 		return false;
 	}
 	//TODO: use EnergyScanner
-	ColoredRange energy_Y_range = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0, gSettings.PhysConsts()->XS_el_En_maximum, 1e-3) +
+	ColoredRange energy_range = ColoredInterval (0, 0.01, 1e-4) + ColoredInterval (0, gSettings.PhysConsts()->XS_el_En_maximum, 1e-3) +
 				ColoredInterval (En_1o2_ - 100*Width_1o2_, En_1o2_ + 100*Width_1o2_, Width_1o2_/10) +	//coarse area
 				ColoredInterval (En_3o2_ - 100*Width_3o2_, En_3o2_ + 100*Width_3o2_, Width_3o2_/10) +	//coarse area
 				ColoredInterval (En_1o2_ - 15*Width_1o2_, En_1o2_ + 15*Width_1o2_, Width_1o2_/200) + 	//fine area
 				ColoredInterval (En_3o2_ - 15*Width_3o2_, En_3o2_ + 15*Width_3o2_, Width_3o2_/200);		//fine area
-	energy_Y_range.Trim(0, gSettings.ProgConsts()->maximal_energy);
+	energy_range.Trim(0, gSettings.ProgConsts()->maximal_energy);
 	std::vector<double> diff_XS, F, thetas;
 	diff_XS.resize(gSettings.ProgConsts()->angle_discretization, 0);
 	thetas.resize(gSettings.ProgConsts()->angle_discretization, 0);
 	F.resize(gSettings.ProgConsts()->angle_discretization, 0);
-	for (long int Ey_i=0, Ey_ind_end_ = energy_Y_range.NumOfIndices(); Ey_i!=Ey_ind_end_; ++Ey_i) {
-		double Ey = energy_Y_range.Value(Ey_i);
-		for (std::size_t i=0, i_end_=diff_XS.size(); i!=i_end_; ++i) {
+	for (long int E_i=0, E_ind_end_ = energy_range.NumOfIndices(); E_i!=E_ind_end_; ++E_i) {
+		double E = energy_range.Value(E_i);
+		std::size_t i_end_ = diff_XS.size();
+		for (std::size_t i=0; i!=i_end_; ++i) {
 			thetas[i] = i*M_PI/(double)(i_end_-1);
 			F[i]=0;
-			diff_XS[i]=ArAllData_.argon_cross_elastic_diff(Ey, thetas[i], 0);
+			diff_XS[i]=ArAllData_.argon_cross_elastic_diff(E, thetas[i], 0);
 			if (i!=0) {
 				F[i] = F[i-1] + 0.5*(diff_XS[i]+diff_XS[i-1])*(thetas[i]-thetas[i-1]);//Integral
 			}
 		}
-		for (std::size_t i=0, i_end_=diff_XS.size(); i!=i_end_; ++i)
-			F[i] /= F[i_end_-1];//normalize probability function
+		double norm = 1.0 / F[i_end_ - 1];
+		for (std::size_t i=0; i!=i_end_; ++i)
+			F[i] *= norm;//normalize probability function
 		for (std::size_t th_i=0, th_i_end_=thetas.size(); th_i!=th_i_end_;++th_i)
-			theta_table_->push(thetas[th_i], Ey, F[th_i]);
+			theta_table_->push(E, thetas[th_i], F[th_i]);
 	}
 	return true;
 }
@@ -1473,7 +1475,7 @@ bool ArgonParticle::generate_time_delay_spin_flip_table(void)
 		double Ey = energy_Y_range.Value(Ey_i);
 		for (std::size_t th_i = 0, th_i_end_ = gSettings.ProgConsts()->angle_discretization; th_i != th_i_end_; ++th_i) {
 			double theta = th_i*M_PI / (th_i_end_ - 1);
-			time_delay_spin_flip_table_->push(theta, Ey, ArAllData_.argon_delay_spin_flip(Ey, theta));
+			time_delay_spin_flip_table_->push(Ey, theta, ArAllData_.argon_delay_spin_flip(Ey, theta));
 		}
 	}
 	return true;
@@ -1497,7 +1499,7 @@ bool ArgonParticle::generate_time_delay_spin_nonflip_table(void)
 		double Ey = energy_Y_range.Value(Ey_i);
 		for (std::size_t th_i = 0, th_i_end_ = gSettings.ProgConsts()->angle_discretization; th_i != th_i_end_; ++th_i) {
 			double theta = th_i*M_PI / (th_i_end_ - 1);
-			time_delay_spin_nonflip_table_->push(theta, Ey, ArAllData_.argon_delay_spin_nonflip(Ey, theta));
+			time_delay_spin_nonflip_table_->push(Ey, theta, ArAllData_.argon_delay_spin_nonflip(Ey, theta));
 		}
 	}
 	return true;
@@ -1521,7 +1523,7 @@ bool ArgonParticle::generate_time_delay_spin_nonflip_prob_table(void)
 		double Ey = energy_Y_range.Value(Ey_i);
 		for (std::size_t th_i = 0, th_i_end_ = gSettings.ProgConsts()->angle_discretization; th_i != th_i_end_; ++th_i) {
 			double theta = th_i*M_PI / (th_i_end_ - 1);
-			time_delay_spin_nonflip_prob_table_->push(theta, Ey, ArAllData_.argon_delay_spin_nonflip_prob(Ey, theta));
+			time_delay_spin_nonflip_prob_table_->push(Ey, theta, ArAllData_.argon_delay_spin_nonflip_prob(Ey, theta));
 		}
 	}
 	return true;
@@ -1711,7 +1713,7 @@ double ArgonParticle::GenerateScatterAngle(const Particle *target, double E, uns
 	}
 	if (target->GetName()== ELECTRON_NAME) {
 		if (0 == process) { //elastic
-			return theta_table_->find_E(E, Rand);
+			return theta_table_->getY(E, Rand);
 		}
 		//considered isotropic for other processes
 		Rand = Rand*2.0 - 1.0;
@@ -1841,12 +1843,12 @@ double ArgonParticle::GenerateTimeDelay(const Particle *target, double E, double
 		if (0 == process) {
 			switch (gSettings.PhysConsts()->time_delay_model) {
 			case (PhysicalConstants::TimeDelayMode::Precise) : {
-				double P = (*time_delay_spin_nonflip_prob_table_)(theta, E);
+				double P = (*time_delay_spin_nonflip_prob_table_)(E, theta);
 				P = std::max(P, 0.0);
 				if (Rand < P) {
-					return (*time_delay_spin_nonflip_table_)(theta, E);
+					return (*time_delay_spin_nonflip_table_)(E, theta);
 				} else {
-					return (*time_delay_spin_flip_table_)(theta, E);
+					return (*time_delay_spin_flip_table_)(E, theta);
 				}
 				return 0;
 			}
@@ -1899,7 +1901,7 @@ double ArgonParticle::GenerateUntabScatterAngle(const Particle *target, double E
 				diff_XS[i]=ArAllData_.argon_cross_elastic_diff(E, thetas[i], 0);
 			}
 			PDF_routine prob_function(thetas, diff_XS);
-			return prob_function.generate(Rand);
+			return prob_function(Rand);
 		}
 		//considered isotropic for other processes
 		Rand = Rand*2.0 - 1.0;

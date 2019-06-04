@@ -370,7 +370,7 @@ void Manager::Initialize(Event &event)
 	}
 	const boost::optional<PDF_routine> *Ec_spec = &(gSettings.ProgConsts()->run_specifics[*run_index_].Ec_spectrum);
 	if (*Ec_spec) {
-		event.En_collision = (*Ec_spec)->generate(Uniform());
+		event.En_collision = (**Ec_spec)(Uniform());
 		event.En_start= 0;
 	} else {
 		event.En_start = 1 + 3*Uniform();
@@ -732,7 +732,7 @@ void Manager::DoGotoNext(Event &event)
 	if (Event::None != event.process) { //== for the very first event
 		const boost::optional<PDF_routine> *Ec_spec = &(gSettings.ProgConsts()->run_specifics[*run_index_].Ec_spectrum);
 		if (*Ec_spec) {
-			event.En_collision = (*Ec_spec)->generate(Uniform());
+			event.En_collision = (**Ec_spec)(Uniform());
 			double Rand = Uniform()*2.0 - 1.0;
 			event.theta_collision = std::acos(Rand); //Actually thete_start is uniform but theta collision is not (but close)
 			event.En_start = 0;

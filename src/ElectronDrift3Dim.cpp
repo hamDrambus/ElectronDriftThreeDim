@@ -156,8 +156,5 @@ int main(int argn, char * argv[]) {
 		std::cin>>a;
 	}
 #endif //_NO_CERN_ROOT
-#if defined(_WIN32)||defined(_WIN64)
-	system("pause");
-#endif
 	return 0;
 }
