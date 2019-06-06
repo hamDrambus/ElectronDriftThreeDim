@@ -90,7 +90,7 @@ void DataVector::initialize(std::vector<double> &xx, std::vector<double> &yy, st
 		std::cout<<"DataVector::initialize(): Error: x and y data size mismatch!"<<std::endl;
 		return;
 	}
-	std::size_t i_end_ = xys.size();
+	std::size_t i_end_ = xx.size();
 	xys.resize(i_end_);
 	for (std::size_t i = 0; i != i_end_; ++i)
 		xys[i] = std::pair<double, double>(xx[i], yy[i]);
@@ -114,25 +114,11 @@ void DataVector::insert(double x, double y) //do not disrupt order
 		xys.push_back(std::pair<double, double>(x, y));
 		return;
 	}
-	//find first x which is not less that X_point. That is index bounding X_point: xs[first] <= X_point < xs[first + 1]
-	//See std::lower_bound
-	std::size_t count = sz;
-	std::size_t first = 0;
-	while (count > 0) {
-		std::size_t step = count / 2;
-		std::size_t ind = step;
-		if (xys[ind].first < x) {
-			first = ++ind;
-			count -= step + 1;
-		} else
-			count = step;
-	}
-	//first is such, that x>=xs[first] and x<xs[first+1]
-	if (xys[first].first == x) { //do not insert points with equal x, replace only
-		xys[first].second = y;
-		return;
-	}
-	xys.insert(xys.begin() + first + 1, std::pair<double, double>(x, y));
+	boost::optional<std::pair<std::size_t, std::size_t>> inds = getX_indices(x);
+	if (inds->first == inds->second) //do not insert points with equal x, replace only
+		xys[inds->first].second = y;
+	else
+		xys.insert(xys.begin() + inds->second, std::pair<double, double>(x, y));
 }
 
 void DataVector::push_back (double x, double y)//faster version not checking that the new array is ordered.
@@ -150,93 +136,96 @@ void DataVector::read(std::ifstream& str) //TODO: add try/catch for handling sto
 		++line_n;
 		if (1 == line_n) {
 			//parse "//Order	N_used	use_left use_right is_set_left is_set_right left_value right_value"
-			double dval;
-			int ival;
 			int word_n = 0;
-			bool is_set_right;
-			bool is_set_left;
-			if (line.size() < 2)
-				goto wrong_format;
-			if ((line[0] != '/') || (line[1] != '/'))
-				goto wrong_format;
-			line.erase(line.begin(), line.begin() + 2);
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			setOrder(ival);
+			try {
+				double dval;
+				std::size_t ival;
+				bool is_set_right;
+				bool is_set_left;
+				if (line.size() < 2)
+					throw std::runtime_error("Header line has wrong format (too small)");
+				if ((line[0] != '/') || (line[1] != '/'))
+					throw std::runtime_error("Header line has wrong format (does not start with \"//\")");
+				line.erase(line.begin(), line.begin() + 2);
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = boost::lexical_cast<std::size_t>(word);
+				setOrder(ival);
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			setNused(ival);
-			
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			use_leftmost(ival);
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = boost::lexical_cast<std::size_t>(word);
+				setNused(ival);
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			use_rightmost(ival);
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = std::stoi(word);
+				use_leftmost(ival);
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			is_set_left = ival;
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = std::stoi(word);
+				use_rightmost(ival);
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			ival = std::stoi(word);
-			is_set_right = ival;
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = std::stoi(word);
+				is_set_left = ival;
 
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			dval = std::stoi(word);
-			if (is_set_left)
-				left_value = dval;
-			else
-				left_value = boost::none;
-			word = strtoken(line, "\t ");
-			++word_n;
-			if (word.empty())
-				goto wrong_format;
-			dval = std::stoi(word);
-			if (is_set_right)
-				right_value = dval;
-			else
-				right_value = boost::none;
-			continue;
-		wrong_format:
-			std::cerr << "DataVector::read: Error on line " << line_n << " word "<<word_n<<": wrong header format" << std::endl;
-			return;
+				word = strtoken(line, "\t ");
+				++word_n;
+				ival = std::stoi(word);
+				is_set_right = ival;
+
+				word = strtoken(line, "\t ");
+				++word_n;
+				dval = boost::lexical_cast<double>(word);
+				if (is_set_left)
+					left_value = dval;
+				else
+					left_value = boost::none;
+				word = strtoken(line, "\t ");
+				++word_n;
+				dval = boost::lexical_cast<double>(word);
+				if (is_set_right)
+					right_value = dval;
+				else
+					right_value = boost::none;
+				continue;
+			} catch (boost::bad_lexical_cast &e) {
+				std::cerr << "DataVector::read: Error on line " << line_n << ". Can't convert word #"<<word_n<<" \""<<word<<"\" to numerical value" << std::endl;
+				std::cerr << e.what() << std::endl;
+				std::cerr << "DataVector::read: bad header"<<std::endl;
+				use_rightmost(false);
+				use_leftmost(false);
+				unset_out_value();
+				return;
+			} catch (std::exception &e) {
+				std::cerr << "DataVector::read: Unforeseen exception on line " << line_n << " word #"<<word_n<<":" << std::endl;
+				std::cerr << e.what() << std::endl;
+				std::cerr << "DataVector::read: bad header"<<std::endl;
+				use_rightmost(false);
+				use_leftmost(false);
+				unset_out_value();
+				return;
+			}
 		}
 		if (line.size() >= 2) //Ignore simple c style comment
 			if ((line[0] == '/') && (line[1] == '/'))
 				continue;
-		word = strtoken(line, "\t ");
-		if (word.empty())
-			break;
-		double x = std::stod(word);
-		word = strtoken(line, "\t ");
-		if (word.empty())
-			break;
-		double val = std::stod(word);
-		push_back(x, val);
+		try {
+			word = strtoken(line, "\t ");
+			double x = boost::lexical_cast<double>(word);
+			word = strtoken(line, "\t ");
+			double val = boost::lexical_cast<double>(word);
+			insert(x, val);
+		} catch (boost::bad_lexical_cast &e) {
+			continue;
+		} catch (std::exception &e) {
+			std::cerr << "DataVector::read: Unforeseen exception on line " << line_n << std::endl;
+			std::cerr << e.what() << std::endl;
+			return;
+		}
 	}
 }
 
@@ -251,18 +240,23 @@ void DataVector::write(std::string fname, std::string comment) const
 void DataVector::write(std::ofstream& str, std::string comment) const
 {
 	//"//Order	N_used	use_left use_right is_set_left is_set_right left_value right_value"
-	str << "//" << getOrder() << "\t" << N_used << "\t" << (use_left ? 1 : 0) << "\t" << (use_right ? 1 : 0)
-		<< "\t" << (left_value ? 1 : 0) << "\t" << (right_value ? 1 : 0) << "\t" << (left_value ? *left_value : 0) << "\t" << (right_value ? *right_value : 0 )<< std::endl;
+	str << "//" << boost::lexical_cast<std::string>(getOrder())
+		<< "\t" << boost::lexical_cast<std::string>(N_used)
+		<< "\t" << (use_left ? 1 : 0) << "\t" << (use_right ? 1 : 0)
+		<< "\t" << (left_value ? 1 : 0) << "\t" << (right_value ? 1 : 0)
+		<< "\t" << boost::lexical_cast<std::string>(left_value ? *left_value : 0)
+		<< "\t" << boost::lexical_cast<std::string>(right_value ? *right_value : 0 )<< std::endl;
 	if (!comment.empty())
 		str << "//" << comment << std::endl;
 	for (std::size_t i = 0, i_end_ = xys.size(); i != i_end_; ++i) {
-		str << xys[i].first << "\t" << xys[i].second << std::endl;
+		str << boost::lexical_cast<std::string>(xys[i].first) << "\t"
+			<< boost::lexical_cast<std::string>(xys[i].second) << std::endl;
 	}
 }
 
 double DataVector::operator()(double X_point, boost::optional<double> x0) const
 {
-	if (xys.empty())
+	if (!isValid())
 		return DBL_MAX;
 	if (X_point < xys.front().first) {
 		if (use_left)
@@ -279,70 +273,75 @@ double DataVector::operator()(double X_point, boost::optional<double> x0) const
 	boost::optional<std::pair<std::size_t, std::size_t>> indices = getX_indices(X_point);
 	if (boost::none == indices)
 		return DBL_MAX;
+	//expand indices to [n_min, n_max] are used, not [n_min, n_max). N_used == n_max - n_min + 1 >= order + 1
+	std::size_t span = (N_used - 1) / 2;  //asymmetrical interpolation range in the case of odd order.
+	if (indices->first < span) { //first is too low
+		indices = std::pair<std::size_t, std::size_t>(0, N_used - 1);
+	} else {
+		indices->first = indices->first - span;
+		indices->second = indices->first + (N_used - 1);
+		std::size_t sz = xys.size();
+		if (indices->second >= sz) {
+			indices = std::pair<std::size_t, std::size_t>(sz - N_used, sz - 1);
+		}
+	}
 	std::vector<double> coefs = fitter(xys, indices->first, indices->second - indices->first + 1, x0); //i_max-i_min+1==N_used
 	if (0 != coefs.size())
 		return polynomial_value(X_point, *x0, coefs);
 	return DBL_MAX;
 }
 
-//[n_min, n_max] are used, not [n_min, n_max). N_used == n_max - n_min + 1 >= order + 1
 boost::optional<std::pair<std::size_t, std::size_t>> DataVector::getX_indices(double x) const
 {
 	boost::optional<std::pair<std::size_t, std::size_t>> out;
-	if (!isValid())
-		return out;
 	std::size_t sz = xys.size();
+	if (0 == sz)
+		return out;
 	if (x <= xys.front().first) {
-		out = std::pair<std::size_t, std::size_t>(0, N_used - 1);
+		out = std::pair<std::size_t, std::size_t>(0, 0);
 		return out;
 	}
 	if (x >= xys.back().first) {
-		out = std::pair<std::size_t, std::size_t>(sz - N_used, sz - 1);
+		out = std::pair<std::size_t, std::size_t>(sz - 1, sz - 1);
 		return out;
 	}
 	//find first x which is not less that X_point. That is index bounding X_point: xs[first] <= X_point < xs[first + 1]
 	//See std::lower_bound
 	std::size_t count = sz;
 	std::size_t first = 0;
+	//std::lower_bound(xys.begin(), xys.end(), [](const std::pair<double, double> &a, const std::pair<double, double> &b)->bool{
+	//	return a.first<b.first;
+	//});
 	while (count > 0) {
 		std::size_t step = count / 2;
-		std::size_t ind = step;
-		if (xys[ind].first < x) {
-			first = ++ind;
+		std::size_t ind = first + step;
+		if (xys[ind].first <= x) {
+			first = ind;
 			count -= step + 1;
 		} else
 			count = step;
 	}
 	//first is such, that x>=xs[first] and x<xs[first+1]
-	count = (N_used - 1) / 2;  //asymmetrical interpolation range in the case of odd order.
-	if (first < count) { //first is too low
-		out = std::pair<std::size_t, std::size_t>(0, N_used - 1);
+	if (x == xys[first].first) {
+		out = std::pair<std::size_t, std::size_t>(first, first);
 		return out;
 	}
-	first = first - count;
-	count = first + (N_used - 1);
-	if (count >= sz) {
-		out = std::pair<std::size_t, std::size_t>(sz - N_used, sz - 1);
-		return out;
-	}
-	out = std::pair<std::size_t, std::size_t>(first, count);
+	out = std::pair<std::size_t, std::size_t>(first, first + 1);
 	return out;
 }
-
-//[n_min, n_max] are used, not [n_min, n_max). N_used == n_max - n_min + 1 >= order + 1
 //I chose to copy getX_indices code here instead of using parameter or lambda value picker function in the fear that it will reduce the performance. I did not test that it would.
 boost::optional<std::pair<std::size_t, std::size_t>> DataVector::getY_indices(double y) const
 {
 	boost::optional<std::pair<std::size_t, std::size_t>> out;
-	if (!isValid())
-		return out;
 	std::size_t sz = xys.size();
+	if (0==sz)
+		return out;
 	if (y <= xys.front().second) {
-		out = std::pair<std::size_t, std::size_t>(0, N_used - 1);
+		out = std::pair<std::size_t, std::size_t>(0, 0);
 		return out;
 	}
-	if (y > xys.back().second) {
-		out = std::pair<std::size_t, std::size_t>(sz - N_used, sz - 1);
+	if (y >= xys.back().second) {
+		out = std::pair<std::size_t, std::size_t>(sz - 1, sz - 1);
 		return out;
 	}
 	//find first x which is not less that X_point. That is index bounding X_point: xs[first] <= X_point < xs[first + 1]
@@ -351,26 +350,19 @@ boost::optional<std::pair<std::size_t, std::size_t>> DataVector::getY_indices(do
 	std::size_t first = 0;
 	while (count > 0) {
 		std::size_t step = count / 2;
-		std::size_t ind = step;
-		if (xys[ind].second < y) {
-			first = ++ind;
+		std::size_t ind = first + step;
+		if (xys[ind].second <= y) {
+			first = ind;
 			count -= step + 1;
 		} else
 			count = step;
 	}
-	//out_ is such, that x>xs[out] and x<=xs[out+1]
-	count = (N_used - 1) / 2;  //asymmetrical interpolation range in the case of odd order.
-	if (first < count) { //first is too low
-		out = std::pair<std::size_t, std::size_t>(0, N_used - 1);
+	//first is such, that x>=xs[first] and x<xs[first+1]
+	if (y == xys[first].second) {
+		out = std::pair<std::size_t, std::size_t>(first, first);
 		return out;
 	}
-	first = first - count;
-	count = first + (N_used - 1);
-	if (count >= sz) {
-		out = std::pair<std::size_t, std::size_t>(sz - N_used, sz - 1);
-		return out;
-	}
-	out = std::pair<std::size_t, std::size_t>(first, count);
+	out = std::pair<std::size_t, std::size_t>(first, first + 1);
 	return out;
 }
 
@@ -444,7 +436,7 @@ void PDF_routine::pdf_to_cdf(void)
 PDF_routine::~PDF_routine()
 {}
 
-void PDF_routine::push(double x, double y) //Preserves sorting, recalculates pdf, quite expensive when insering not to the end
+void PDF_routine::insert(double x, double y) //Preserves sorting, recalculates pdf, quite expensive when insering not to the end
 {
 	pdf_data temp;
 	for (auto i = vals.begin(), i_end_ = vals.end(); i != i_end_; ++i) {
@@ -529,7 +521,8 @@ void PDF_routine::write(std::ofstream& str, std::string comment) const
 	if (!comment.empty())
 		str << "//" << comment << std::endl;
 	for (std::size_t i = 0, i_end_ = vals.size(); i != i_end_; ++i) {
-		str << vals[i].x << "\t" << vals[i].pdf << std::endl;
+		str << boost::lexical_cast<std::string>(vals[i].x) << "\t"
+			<< boost::lexical_cast<std::string>(vals[i].pdf) << std::endl;
 	}
 }
 
@@ -561,16 +554,21 @@ void PDF_routine::read(std::ifstream& str)
 		if (line.size() >= 2) //Ignore simple c style comment
 			if ((line[0] == '/') && (line[1] == '/'))
 				continue;
-		double val, x;
 		try {
+			double val, x;
 			word = strtoken(line, "\t ");
-			x = std::stod(word);
+			x = boost::lexical_cast<double>(word);
 			word = strtoken(line, "\t ");
-			val = std::stod(word);
-		} catch (std::exception &e) {
+			val = boost::lexical_cast<double>(word);
+			insert(x, val);
+		}  catch (boost::bad_lexical_cast &e) {
 			continue;
+		} catch (std::exception &e) {
+			std::cerr << "PDF_routine::read: Unforeseen exception on line " << line_n << std::endl;
+			std::cerr << e.what() << std::endl;
+			pdf_to_cdf();
+			return;
 		}
-		push_back(x, val, false);
 	}
 	pdf_to_cdf();
 }

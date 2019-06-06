@@ -108,8 +108,7 @@
     <random_seed>42</random_seed> <!--default value for each run-->
     <random_generator>TRandom1</random_generator> <!-- TRandom1 (best, slowest), TRandom2 (BAD), TRandom3 (faster, good) --> 
     <Mixture>
-    	<Argon>0.99</Argon>
-    	<ArgonVanDerWaals>0.01</ArgonVanDerWaals>
+    	<Argon>1</Argon>
     </Mixture>  
     <Runs>
       <Run>

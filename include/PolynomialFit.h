@@ -207,7 +207,7 @@ public:
 		return (2 >= size()) && cdf_ready;
 	}
 
-	void push(double x, double y); //Preserves sorting, recalculates pdf, quite expensive when insering not to the end
+	void insert(double x, double y); //Preserves sorting, recalculates pdf, quite expensive when insering not to the end
 	void push_back(double x, double y, bool recalculate_cdf = true); //Faster version, not checking whether sorting is preserved.
 	//void set_back(double x, double y, std::size_t ind);
 protected:

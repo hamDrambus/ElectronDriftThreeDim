@@ -1,12 +1,14 @@
 //============================================================================
 // Name        : ElectronDrift3Dim.cpp
 // Author      : Frolov Egor geffdroid@gmail.com
-// Version     :
+// Version     : 1.2
 // Copyright   : No copyrights
 // Description : uses boost and ROOT libraries
 //============================================================================
 
 #include <iostream>
+#include <chrono>
+#include <ctime>
 #ifndef _NO_CERN_ROOT
 #include <TApplication.h>
 #endif
@@ -19,9 +21,6 @@ void process_runs_in_thread(void* manager)
 }
 
 bool Process(void) {
-	std::cout << "Starting simulation of electron drift:" << std::endl;
-	std::cout << "  Material: pure gaseous argon" << std::endl;
-	auto start = std::chrono::system_clock::now();
 	unsigned int N_threads = gSettings.ProgConsts()->thread_number;
 	if (N_threads < 1u)
 		N_threads = 1u;
@@ -35,8 +34,11 @@ bool Process(void) {
     auto end_t = std::chrono::system_clock::now();
     std::chrono::duration<double> diff = end_t - start_t;
     std::cout << std::endl << "  Elapsed time for prepairing mixture = \t" << diff.count() << " s." << std::endl;
-	//TODO: It is currently implied that calling FunctionTable methods is thread-safe because there is only reading and no changes in their internal states.
-	//It would be better to fix this fact in the code explicitly (cost methods, locks, etc.)
+
+	auto start = std::chrono::system_clock::now();
+	std::cout << "Starting simulation of electron drift at ";
+	std::time_t srart_time = std::chrono::system_clock::to_time_t(start);
+    std::cout << std::ctime(&srart_time) << std::endl;
 	for (unsigned int n = 0u; n < N_threads; ++n) {
 		_submanagers.push_back(new MTManager(&mixture, n));
 		pThreads.push_back(std::thread());
@@ -113,7 +115,9 @@ bool Process(void) {
 	}
 	auto end = std::chrono::system_clock::now();
     diff = end - start;
-	std::cout << "Finished simulation." << std::endl;
+	std::cout << "Finished simulation at ";
+	srart_time = std::chrono::system_clock::to_time_t(end);
+	std::cout << std::ctime(&srart_time) << std::endl;
 	std::cout << "Elapsed time  = \t" << diff.count() << " s." << std::endl;
 	return true;
 }

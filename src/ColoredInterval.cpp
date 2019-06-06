@@ -86,9 +86,25 @@ void ColoredRange::Trim (long double left, long double right)
 				arr_.erase(arr_.begin()+j);
 				break;
 			}
+			if (arr_[j].right_ == left) {
+				if (j != (end_ - 1))
+					if (arr_[j+1].left_ <= left) {
+						arr_.erase(arr_.begin()+j);
+						break;
+					}
+				arr_[j].left_ = left; //leave one point intersection
+			}
 			if (arr_[j].left_>right) {
 				arr_.erase(arr_.begin()+j);
 				break;
+			}
+			if (arr_[j].left_ == right) {
+				if (j != (0))
+					if (arr_[j-1].right_ >= right) {
+						arr_.erase(arr_.begin()+j);
+						break;
+					}
+				arr_[j].right_ = right; //leave one point intersection
 			}
 			if (arr_[j].left_<left) {
 				arr_[j].left_ = left;
@@ -105,7 +121,9 @@ void ColoredRange::Trim (long double left, long double right)
 void ColoredRange::Print(std::ostream & str)
 {
 	for (int j=0, end_ = arr_.size(); j!=end_; ++j) {
-		str<<"["<<arr_[j].left_<<"; "<<arr_[j].color_<<"; "<<arr_[j].right_<<"]"<<std::endl;
+		str << "["<<boost::lexical_cast<std::string>(arr_[j].left_) << "; "
+			<< boost::lexical_cast<std::string>(arr_[j].color_) << "; "
+			<< boost::lexical_cast<std::string>(arr_[j].right_) << "]" << std::endl;
 	}
 }
 

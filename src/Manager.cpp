@@ -466,6 +466,9 @@ void Manager::Solve (long double LnR, Event &event)
 	} else {
 		event.theta_collision = acos(sqrt((event.En_collision-Eny)/event.En_collision));
 	}
+	if (isnan(event.theta_collision)) {
+		event.theta_collision = 0;
+	}
 }
 
 void Manager::Solve_table (long double LnR, Event &event)
@@ -487,18 +490,20 @@ void Manager::Solve_table (long double LnR, Event &event)
 		INT = INT + LnR;
 	}
 	event.En_collision = material_->GetEnergyFromXSIntegral(particle, Eny, INT); //TODO: add debug info - uncertainty and overflow - status output variable
-	if (isnan(event.En_collision))
-		event.En_collision = -1;
 	if (event.En_collision<0) {
 		std::cout<<"Manager::Solve_table::Error: found E<0 in table. Eny= "<<Eny<<" Ei= "<<event.En_start<<" Int= "<<INT<<std::endl;
 		event.En_collision = std::min(0.01*event.En_start, 0.001) + event.En_start;
+		event.En_collision = std::max(event.En_collision, gSettings.ProgConsts()->maximal_energy);
 	}
 	if (1==case_) {
 		event.theta_collision = acos(-sqrt((event.En_collision-Eny)/event.En_collision));
 	} else {
 		event.theta_collision = acos(sqrt((event.En_collision-Eny)/event.En_collision));
 	}
-	INT+=1;
+	if (isnan(event.theta_collision)) {
+		event.theta_collision = 0;
+		//event.En_collision = material_->GetEnergyFromXSIntegral(particle, Eny, INT);
+	}
 }
 
 //Solve with high accuracy integral
@@ -662,6 +667,9 @@ void Manager::DoScattering(Event &event)
 	if (cos_th_f>1.0)
 		cos_th_f = 1.0;
 	event.theta_finish = std::acos(cos_th_f);
+	if (std::isnan(event.theta_finish)) {
+		event.theta_finish = 0;
+	}
 	double R5 = Uniform();
 	double EnergyLoss = target->GenerateEnergyLoss(incident, event.En_collision, event.delta_theta, event.process, R5);
 	event.photon_En = target->GeneratePhoton(incident, event.En_collision, event.delta_theta, event.process, R5); //same random value must be used!

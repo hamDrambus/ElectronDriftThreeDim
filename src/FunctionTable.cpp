@@ -9,9 +9,8 @@ FunctionTable::~FunctionTable()
 boost::optional<std::pair<std::size_t, std::size_t>> FunctionTable::getX_indices(double X) const
 {
 	boost::optional<std::pair<std::size_t, std::size_t>> out;
-	if (xs_.empty()) {
+	if (xs_.empty())
 		return out;
-	}
 	std::size_t sz = xs_.size();
 	if (X <= xs_[0]) {
 		out = std::pair<std::size_t, std::size_t>(0, 0);
@@ -27,14 +26,14 @@ boost::optional<std::pair<std::size_t, std::size_t>> FunctionTable::getX_indices
 	std::size_t first = 0;
 	while (count > 0) {
 		std::size_t step = count / 2;
-		std::size_t ind = step;
-		if (xs_[ind] < X) {
-			first = ++ind;
+		std::size_t ind = first + step;
+		if (xs_[ind] <= X) {
+			first = ind;
 			count -= step + 1;
 		} else
 			count = step;
 	}
-	if (X == xs_[first] || (sz - 1) == first) {
+	if (X == xs_[first]) {
 		out = std::pair<std::size_t, std::size_t>(first, first);
 		return out;
 	}
@@ -47,6 +46,8 @@ double FunctionTable::operator ()(double X, double Y) const
 	boost::optional<std::pair<std::size_t, std::size_t>> X_inds = getX_indices(X);
 	if (!X_inds)
 		return 0;
+	if (X_inds->second >= xs_.size())
+		X_inds->second = X_inds->first;
 	if (X_inds->first == X_inds->second) {
 		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds = ys_[X_inds->first].getX_indices(Y);
 		if (!Y_inds)
@@ -61,6 +62,13 @@ double FunctionTable::operator ()(double X, double Y) const
 	} else {
 		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds_left = ys_[X_inds->first].getX_indices(Y);
 		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds_right = ys_[X_inds->second].getX_indices(Y);
+		if (Y_inds_left)
+			if (Y_inds_left->second >= ys_[X_inds->first].size())
+				Y_inds_left->second = Y_inds_left->first;
+		if (Y_inds_right)
+			if (Y_inds_right->second >= ys_[X_inds->second].size())
+				Y_inds_right->second = Y_inds_right->first;
+
 		if ((!Y_inds_right)&&(!Y_inds_left))
 			return 0;
 		if (!Y_inds_right) {
@@ -129,6 +137,8 @@ double FunctionTable::getY(double X, double val) const
 	boost::optional<std::pair<std::size_t, std::size_t>> X_inds = getX_indices(X);
 	if (!X_inds)
 		return -1;
+	if (X_inds->second >= xs_.size())
+		X_inds->second = X_inds->first;
 	if (X_inds->first == X_inds->second) {
 		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds = ys_[X_inds->first].getY_indices(val);
 		if (!Y_inds)
@@ -143,6 +153,13 @@ double FunctionTable::getY(double X, double val) const
 	} else {
 		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds_left = ys_[X_inds->first].getY_indices(val);
 		boost::optional<std::pair<std::size_t, std::size_t>> Y_inds_right = ys_[X_inds->second].getY_indices(val);
+		if (Y_inds_left)
+			if (Y_inds_left->second >= ys_[X_inds->first].size())
+				Y_inds_left->second = Y_inds_left->first;
+		if (Y_inds_right)
+			if (Y_inds_right->second >= ys_[X_inds->second].size())
+				Y_inds_right->second = Y_inds_right->first;
+
 		if ((!Y_inds_right) && (!Y_inds_left))
 			return 0;
 		if (!Y_inds_right) {
@@ -307,11 +324,11 @@ void FunctionTable::write (std::ofstream& str) const
 void FunctionTable::plot_E_Ey (void) const
 {
 #ifndef _NO_CERN_ROOT
-	TCanvas *c1 = new TCanvas("E_Ey", "E_Ey", 900, 700);
-	TH2D * hist = new TH2D ("E_Ey points", "E_Ey points", 5000, 0, 5, 5000, 0, 5);
-	for (std::size_t ey = 0, ey_end_ = _Eys.size(); ey!=ey_end_; ++ey) {
-		for (std::size_t e = 0, e_end_ = _Es[ey].size(); e!=e_end_; ++e) {
-			hist->Fill(_Es[ey][e], _Eys[ey]);
+	TCanvas *c1 = new TCanvas("X-Y", "X-Y", 900, 700);
+	TH2D * hist = new TH2D ("X_Y points", "X_Y points", 5000, 0, 5, 5000, 0, 5);
+	for (std::size_t ey = 0, ey_end_ = xs_.size(); ey!=ey_end_; ++ey) {
+		for (std::size_t e = 0, e_end_ = ys_[ey].size(); e!=e_end_; ++e) {
+			hist->Fill(xs_[ey], ys_[ey].getX(e));
 		}
 	}
 	hist->Draw();

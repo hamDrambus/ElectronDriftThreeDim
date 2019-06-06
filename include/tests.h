@@ -11,7 +11,7 @@
 #include <TPaveText.h>
 #include <TRandom3.h>
 #include <TRandom1.h>
-#endif _NO_CERN_ROOT
+#endif //_NO_CERN_ROOT
 #include "PolynomialFit.h"
 #include "FunctionTable.h"
 #include "ParticleTable.h"

@@ -1584,8 +1584,12 @@ double ArgonParticle::GetCrossSection(const Particle *target, double E) const
 		std::cerr << GetName() << "::GetCrossSection: Error: unsupported target particle \"" << target->GetName() << "\"" << std::endl;
 		return 0;
 	}
-	if (target->GetName() == ELECTRON_NAME)
+	if (target->GetName() == ELECTRON_NAME) {
+		double output = total_cross_(E, E);
+		if (std::isnan(output))
+			output = 0;
 		return total_cross_(E, E);
+	}
 	return 0;
 }
 

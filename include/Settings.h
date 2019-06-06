@@ -69,7 +69,7 @@ struct ProgramConstants {
 	double temperature; //in SI (Kelvins)
 	double pressure; //in SI (Pascals)
 	unsigned int thread_number;
-	double maximal_energy;
+	double maximal_energy; //maximal energy which electron is allowed to have. Necessary for table construction.
 	unsigned int angle_discretization;
 	boost::optional<double> drift_distance_ignore_history;
 	boost::optional<int> skip_history_rate;

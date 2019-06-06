@@ -13,6 +13,7 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/lexical_cast.hpp>
 
 #if defined(_WIN32)||defined(_WIN64)
 #define NOMINMAX

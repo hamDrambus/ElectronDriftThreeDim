@@ -8,6 +8,7 @@
 #include <math.h>
 #include <ctgmath>
 #include <float.h>
+#include <boost/lexical_cast.hpp>
 
 class ColoredRange;
 class ColoredInterval

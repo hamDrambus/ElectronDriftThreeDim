@@ -17,32 +17,69 @@ void test_polynomial_fit (void)
 		xs[ i>=25 ? i-25 : i+25 ] = x;
 		double y = sin(x)/x;
 		ys[ i>=25 ? i-25 : i+25 ] = y;
-		str<<x<<"\t"<<y<<std::endl;
+		str<<boost::lexical_cast<std::string>(x)<<"\t"<<boost::lexical_cast<std::string>(y)<<std::endl;
 	}
 	str.close();
 	std::vector<double> ys1 = ys;
 	ys1.pop_back();
+	//TESTING CONSTRUCTION:
+	std::cout << "DataVector::insert test:" << std::endl;
+	DataVector data0(1, 2);
+	data0.insert(0, 1);
+	data0.insert(0, 2);
+	data0.insert(1, 2.5);
+	data0.insert(2, 2.5);
+	data0.insert(2, 2.5);
+	std::cout << "DataVector must be [3]: "<<std::endl;
+	std::cout << "X:\t0.0\t1.0\t2.0"<<std::endl;
+	std::cout << "Y:\t2.0\t2.5\t2.5"<<std::endl;
+	std::cout << "DataVector is ["<<data0.size()<<"]"<<std::endl;
+	std::cout << "X:";
+	for (std::size_t i = 0, i_end_ = data0.size(); i!=i_end_; ++i)
+		std::cout<<"\t"<<data0.getX(i);
+	std::cout << std::endl << "Y:";
+	for (std::size_t i = 0, i_end_ = data0.size(); i!=i_end_; ++i)
+		std::cout<<"\t"<<data0.getY(i);
+	std::cout << std::endl;
 	//TESTING PARAMETERS:
+	std::cout<<"Testing DataVector parameters (order and n of used points)"<<std::endl;
 	DataVector data1(3, 4);
+	std::cout<<"-------------------------------------------------------"<<std::endl;
+	std::cout<<"#1 Must throw error:"<<std::endl;
 	data1.initialize(xs, ys1, 3, 4);
 	std::cout<<"data(0.5)(xs, ys1, 3, 4): "<<data1(0.5)<<std::endl;
+	std::cout<<"-------------------------------------------------------"<<std::endl;
+	std::cout<<"#2 Must return DBL_MAX("<<boost::lexical_cast<std::string>(DBL_MAX)<<"):"<<std::endl;
 	data1.initialize(xs, ys, 3, 3);
 	std::cout<<"data(0.5)(xs, ys, 3, 3): "<<data1(0.5)<<std::endl;
+	std::cout<<"-------------------------------------------------------"<<std::endl;
+	std::cout<<"#3 Must return ~"<<boost::lexical_cast<std::string>(sin(0.5)/0.5)<<":"<<std::endl;
 	data1.setNused(4);
 	std::cout<<"data(0.5)(xs, ys, 3, 4): "<<data1(0.5)<<std::endl;
+	std::cout<<"-------------------------------------------------------"<<std::endl;
+	std::cout<<"#4 Must return DBL_MAX("<<boost::lexical_cast<std::string>(DBL_MAX)<<"):"<<std::endl;
 	data1.initialize(xs, ys, 50, 51);
 	std::cout<<"data(0.5)(xs, ys, 50, 51): "<<data1(0.5)<<std::endl;
+	std::cout<<"-------------------------------------------------------"<<std::endl;
+	std::cout<<"#5 Must return ~"<<boost::lexical_cast<std::string>(sin(0.5)/0.5)<<":"<<std::endl;
 	data1.initialize(xs, ys, 49, 50);
 	std::cout<<"data(0.5)(xs, ys, 49, 50): "<<data1(0.5)<<std::endl;
+	std::cout<<"-------------------------------------------------------"<<std::endl;
+	std::cout<<"#6 Must return ~"<<boost::lexical_cast<std::string>(sin(0.5)/0.5)<<":"<<std::endl;
 	data1.setOrder(0);
 	data1.setNused(1);
 	std::cout<<"data(0.5)(xs, ys, 0, 1): "<<data1(0.5)<<std::endl;
+	std::cout<<"-------------------------------------------------------"<<std::endl;
+	std::cout<<"#7 Must return ~"<<boost::lexical_cast<std::string>(sin(0.5)/0.5)<<":"<<std::endl;
 	data1.setOrder(0);
 	data1.setNused(50);
 	std::cout<<"data(0.5)(xs, ys, 0, 50): "<<data1(0.5)<<std::endl;
+	std::cout<<"-------------------------------------------------------"<<std::endl;
+	std::cout<<"#8 Must return DBL_MAX("<<boost::lexical_cast<std::string>(DBL_MAX)<<"):"<<std::endl;
 	data1.setOrder(0);
 	data1.setNused(51);
 	std::cout<<"data(0.5)(xs, ys, 0, 51): "<<data1(0.5)<<std::endl;
+	std::cout<<"-------------------------------------------------------"<<std::endl;
 
 	//TESTING QUALITY:
 	data1.setOrder(4);
@@ -51,7 +88,7 @@ void test_polynomial_fit (void)
 	for (int i = 0; i<150; ++i) {
 		double x = i*M_PI*3/250;
 		double y = data1(x, x);
-		str<<x<<"\t"<<y<<std::endl;
+		str<<boost::lexical_cast<std::string>(x)<<"\t"<<boost::lexical_cast<std::string>(y)<<std::endl;
 	}
 	str.close();
 	data1.setOrder(6);
@@ -61,7 +98,7 @@ void test_polynomial_fit (void)
 	for (int i = 0; i<150; ++i) {
 		double x = i*M_PI*3/250;
 		double y = data1(x, x);
-		str<<x<<"\t"<<y<<std::endl;
+		str<<boost::lexical_cast<std::string>(x)<<"\t"<<boost::lexical_cast<std::string>(y)<<std::endl;
 	}
 	str.close();
 	str.close();
@@ -72,7 +109,7 @@ void test_polynomial_fit (void)
 	for (int i = 0; i<150; ++i) {
 		double x = i*M_PI*3/250;
 		double y = data1(x, x);
-		str<<x<<"\t"<<y<<std::endl;
+		str<<boost::lexical_cast<std::string>(x)<<"\t"<<boost::lexical_cast<std::string>(y)<<std::endl;
 	}
 	str.close();
 	std::string name = prefix + "test_fit.sc";
@@ -86,7 +123,7 @@ void test_polynomial_fit (void)
 	INVOKE_GNUPLOT(name);
 }
 
-void test_2_dim_table (void)
+void test_2_dim_table (void) //TODO: improve this test
 {
 	FunctionTable table;
 	//F(x,y) = -0.5x + y. x:[0,2] y:[x,1]
@@ -99,11 +136,11 @@ void test_2_dim_table (void)
 	}
 	std::cout<<"(X, Y):\t(0.0,0.0)\t(2.0,1,0)\t(0.0,1.0)\t(0.5,0.5)\t(0.2,0.7)"<<std::endl;
 	std::cout<<"F(X,Y):\t0.000\t0.000\t1.000\t0.250\t0.600"<<std::endl;
-	std::cout<<"Table:\t"<<table(0,0)<<"\t";
-	std::cout<<table(1,2)<<"\t";
-	std::cout<<table(1,0.0)<<"\t";
-	std::cout<<table(0.5,0.5)<<"\t";
-	std::cout<<table(0.7,0.2)<<std::endl;
+	std::cout<<"Table:\t"<<boost::lexical_cast<std::string>(table(0,0))<<"\t";
+	std::cout<<boost::lexical_cast<std::string>(table(1,2))<<"\t";
+	std::cout<<boost::lexical_cast<std::string>(table(1,0.0))<<"\t";
+	std::cout<<boost::lexical_cast<std::string>(table(0.5,0.5))<<"\t";
+	std::cout<<boost::lexical_cast<std::string>(table(0.7,0.2))<<std::endl;
 }
 
 void test_phase_shift_fit (void)
@@ -134,7 +171,8 @@ void test_phase_shift_fit (void)
 				double PS_l = (*ps_pos)[l].getY(i);
 				for (std::size_t j = 0, j_end_ = (*ps_neg)[l].size(); j!=j_end_; ++j) {
 					if (((*ps_neg)[l].getX(j)<k)&&((*ps_neg)[l].getX(j)>k_l_neg_written)){
-						str<< pow((*ps_neg)[l].getX(j)/gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)<< "\t"<< (*ps_neg)[l].getY(j)<<std::endl;
+						str << boost::lexical_cast<std::string>(pow((*ps_neg)[l].getX(j)/gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)) << "\t"
+							<< boost::lexical_cast<std::string>((*ps_neg)[l].getY(j))<<std::endl;
 						k_l_neg_written = (*ps_neg)[l].getX(j);
 					}
 					if ((*ps_neg)[l].getX(j)==k) {
@@ -142,16 +180,19 @@ void test_phase_shift_fit (void)
 						break;
 					}
 				}
-				str<< pow(k/ gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)<< "\t"<< PS_l<<std::endl;
+				str << boost::lexical_cast<std::string>(pow(k/ gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2))<< "\t"
+					<< boost::lexical_cast<std::string>(PS_l)<<std::endl;
 			}
 		}
 		if (l<ps_pos->size()) { //only ps_pos is present
 			for (std::size_t i = 0, i_end_ = (*ps_pos)[l].size(); i!=i_end_; ++i) {
-				str<< pow((*ps_pos)[l].getX(i)/ gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)<< "\t"<< (*ps_pos)[l].getY(i)<<std::endl;
+				str << boost::lexical_cast<std::string>(pow((*ps_pos)[l].getX(i)/ gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)) << "\t"
+					<< boost::lexical_cast<std::string>((*ps_pos)[l].getY(i))<<std::endl;
 			}
 		} else { //only ps_neg is present
 			for (std::size_t i = 0, i_end_ = (*ps_neg)[l].size(); i!=i_end_; ++i) {
-				str<< pow((*ps_neg)[l].getX(i)/ gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)<< "\t"<< (*ps_neg)[l].getY(i)<<std::endl;
+				str << boost::lexical_cast<std::string>(pow((*ps_neg)[l].getX(i)/ gSettings.PhysConsts()->a_h_bar_2eM_e_SI, 2)) << "\t"
+					<< boost::lexical_cast<std::string>((*ps_neg)[l].getY(i)) <<std::endl;
 			}
 		}
 		str.close();
@@ -168,7 +209,7 @@ void test_phase_shift_fit (void)
 			if (0!=err)
 				break;
 			k = sqrt(E)*gSettings.PhysConsts()->a_h_bar_2eM_e_SI;
-			str<<E<<"\t";
+			str << boost::lexical_cast<std::string>(E)<<"\t";
 			for (std::size_t l = 0, l_end_ = std::max(ps_pos->size(), ps_neg->size()); l!=l_end_; ++l) {
 				double PS_l;
 				if ((l<ps_pos->size())&&(l<ps_neg->size())) {
@@ -179,9 +220,9 @@ void test_phase_shift_fit (void)
 				} else { 				//only ps_neg is present
 					PS_l = (*ps_neg)[l](k,k);
 				}
-				str<< PS_l<<"\t";
+				str << boost::lexical_cast<std::string>(PS_l)<<"\t";
 			}
-			str<<std::endl;
+			str << std::endl;
 		}
 		str.close();
 	}
@@ -197,11 +238,11 @@ void test_phase_shift_fit (void)
 			if (E>gSettings.PhysConsts()->XS_el_En_thresold)
 				break;
 			k = sqrt(E)*gSettings.PhysConsts()->a_h_bar_2eM_e_SI;
-			str<<E<<"\t";
+			str << boost::lexical_cast<std::string>(E) << "\t";
 			for (std::size_t l = 0, l_end = std::max(ps_pos->size(), ps_neg->size()); l!=l_end; ++l) {
 				long double ps_p, ps_n;
 				argon->ArAllData_.argon_phase_values_MERT5(k, l, ps_p, ps_n);
-				str<<ps_p<<"\t";
+				str << boost::lexical_cast<std::string>(ps_p) << "\t";
 			}
 			str<<std::endl;
 		}
@@ -224,59 +265,59 @@ void test_phase_shift_fit (void)
 void test_legendre_polynomial(void)
 {
 	LegendrePolynom Pl;
-	std::cout<<"Pl(3,0.36) =\t "<<Pl(0.36, 3)<<std::endl;
+	std::cout<<"Pl(3,0.36) =\t "<<boost::lexical_cast<std::string>(Pl(0.36, 3))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -0.42336"<<std::endl;
-	std::cout<<"Pl(4,0.36) =\t "<<Pl(0.36, 4)<<std::endl;
+	std::cout<<"Pl(4,0.36) =\t "<<boost::lexical_cast<std::string>(Pl(0.36, 4))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -0.0375168"<<std::endl;
-	std::cout<<"Pl(20,0.36) =\t "<<Pl(0.36, 20)<<std::endl;
+	std::cout<<"Pl(20,0.36) =\t "<<boost::lexical_cast<std::string>(Pl(0.36, 20))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 0.0542800664"<<std::endl;
-	std::cout<<"Pl(50,0.5) =\t "<<Pl(0.5, 50)<<std::endl;
+	std::cout<<"Pl(50,0.5) =\t "<<boost::lexical_cast<std::string>(Pl(0.5, 50))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -0.031059099239"<<std::endl;
-	std::cout<<"Pl(49,0.5) =\t "<<Pl(0.5, 49)<<std::endl;
+	std::cout<<"Pl(49,0.5) =\t "<<boost::lexical_cast<std::string>(Pl(0.5, 49))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 0.086292778960940"<<std::endl;
-	std::cout<<"Pl(48,0.5) =\t "<<Pl(0.5, 48)<<std::endl;
+	std::cout<<"Pl(48,0.5) =\t "<<boost::lexical_cast<std::string>(Pl(0.5, 48))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 0.118866275929531"<<std::endl;
-	std::cout<<"Pl(47,0.5) =\t "<<Pl(0.5, 47)<<std::endl;
+	std::cout<<"Pl(47,0.5) =\t "<<boost::lexical_cast<std::string>(Pl(0.5, 47))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 0.032013921114504"<<std::endl;
-	std::cout<<"Pl(6,-1) =\t "<<Pl(-1.0, 6)<<std::endl;
+	std::cout<<"Pl(6,-1) =\t "<<boost::lexical_cast<std::string>(Pl(-1.0, 6))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
-	std::cout<<"Pl(6,0) =\t "<<Pl(0, 6)<<std::endl;
+	std::cout<<"Pl(6,0) =\t "<<boost::lexical_cast<std::string>(Pl(0, 6))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -0.3125"<<std::endl;
-	std::cout<<"Pl(6,1) =\t "<<Pl(1, 6)<<std::endl;
+	std::cout<<"Pl(6,1) =\t "<<boost::lexical_cast<std::string>(Pl(1, 6))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
-	std::cout<<"Pl(7,-1) =\t "<<Pl(-1.0, 7)<<std::endl;
+	std::cout<<"Pl(7,-1) =\t "<<boost::lexical_cast<std::string>(Pl(-1.0, 7))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -1"<<std::endl;
-	std::cout<<"Pl(7,0) =\t "<<Pl(0, 7)<<std::endl;
+	std::cout<<"Pl(7,0) =\t "<<boost::lexical_cast<std::string>(Pl(0, 7))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 0"<<std::endl;
-	std::cout<<"Pl(7,1) =\t "<<Pl(1, 7)<<std::endl;
+	std::cout<<"Pl(7,1) =\t "<<boost::lexical_cast<std::string>(Pl(1, 7))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
 	LegendrePolynom Pl2;
 	std::cout<<"===Pl2==="<<std::endl;
-	std::cout<<"Pl(7,-1) =\t "<<Pl2(-1, 7)<<std::endl;
+	std::cout<<"Pl(7,-1) =\t "<<boost::lexical_cast<std::string>(Pl2(-1, 7))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -1"<<std::endl;
-	std::cout<<"Pl(7,-1) =\t "<<Pl2(-1, 7)<<std::endl;
+	std::cout<<"Pl(7,-1) =\t "<<boost::lexical_cast<std::string>(Pl2(-1, 7))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -1"<<std::endl;
-	std::cout<<"Pl(8,-1) =\t "<<Pl2(-1, 8)<<std::endl;
+	std::cout<<"Pl(8,-1) =\t "<<boost::lexical_cast<std::string>(Pl2(-1, 8))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
-	std::cout<<"Pl(8,-1) =\t "<<Pl2(-0.9, 8)<<std::endl;
+	std::cout<<"Pl(8,-1) =\t "<<boost::lexical_cast<std::string>(Pl2(-0.9, 8))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -0.409685903515625"<<std::endl;
 	LegendrePolynom Pl3;
 	std::cout<<"===Pl3==="<<std::endl;
-	std::cout<<"Pl(0,-1) =\t "<<Pl3(-1, 0)<<std::endl;
+	std::cout<<"Pl(0,-1) =\t "<<boost::lexical_cast<std::string>(Pl3(-1, 0))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
-	std::cout<<"Pl(0,-1) =\t "<<Pl3(-1, 0)<<std::endl;
+	std::cout<<"Pl(0,-1) =\t "<<boost::lexical_cast<std::string>(Pl3(-1, 0))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 1"<<std::endl;
 	AssociatedLegendrePolynom APl;
 	std::cout<<"Associated Legendre polynomials:"<<std::endl;
-	std::cout<<"APl(3, 3, 0.36) =\t"<<APl(0.36, 3, 3)<<std::endl;
+	std::cout<<"APl(3, 3, 0.36) =\t"<<boost::lexical_cast<std::string>(APl(0.36, 3, 3))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -12.18062527"<<std::endl;
-	std::cout<<"APl(2, 1, -0.36) =\t"<<APl(-0.36, 2, 1)<<std::endl;
+	std::cout<<"APl(2, 1, -0.36) =\t"<<boost::lexical_cast<std::string>(APl(-0.36, 2, 1))<<std::endl;
 	std::cout<<"Wolfram alpha:\t 1.0075884874"<<std::endl;
-	std::cout<<"APl(1, 1, -0.36) =\t"<<APl(-0.36, 1, 1)<<std::endl;
+	std::cout<<"APl(1, 1, -0.36) =\t"<<boost::lexical_cast<std::string>(APl(-0.36, 1, 1))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -0.93295230317"<<std::endl;
-	std::cout<<"APl(10, 1, 0.27) =\t"<<APl(0.27, 10, 1)<<std::endl;
+	std::cout<<"APl(10, 1, 0.27) =\t"<<boost::lexical_cast<std::string>(APl(0.27, 10, 1))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -0.73106380723"<<std::endl;
-	std::cout<<"APl(10, 1, 0.27) =\t"<<APl(0.27, 10, 1)<<std::endl;
+	std::cout<<"APl(10, 1, 0.27) =\t"<<boost::lexical_cast<std::string>(APl(0.27, 10, 1))<<std::endl;
 	std::cout<<"Wolfram alpha:\t -0.73106380723"<<std::endl;
 }
 
@@ -345,8 +386,8 @@ void test_legendre_intregral (void)
 	std::cout<<"Pl(20,x)Pl(18,x)dx [-1.0 ; 0.0]:"<<std::endl;
 	std::cout<<"Method\tValue\ttime[s] for "<<Ncalls<<" calls"<<std::endl;
 	//std::cout<<"Sum:\t"<<Int_PlPl_1_0 (20, 18)<<"\t"<<diff_my.count()<<std::endl;
-	std::cout<<"dx=1e-5:\t"<<Int_PlPl (20, 18, -1, 0, 1e-5)<<"\t"<<diff_low_dx.count()<<std::endl;
-	std::cout<<"dx=1e-7:\t"<<Int_PlPl (20, 18, -1, 0, 1e-7)<<"\t"<<diff_high_dx.count()<<std::endl;
+	std::cout<<"dx=1e-5:\t"<<boost::lexical_cast<std::string>(Int_PlPl (20, 18, -1, 0, 1e-5))<<"\t"<<diff_low_dx.count()<<std::endl;
+	std::cout<<"dx=1e-7:\t"<<boost::lexical_cast<std::string>(Int_PlPl (20, 18, -1, 0, 1e-7))<<"\t"<<diff_high_dx.count()<<std::endl;
 	//std::cout<<"dx=1e-8:\t"<<Int_PlPl (20, 18, -1, 0, 1e-8)<<"\t"<<diff_highest_dx.count()<<std::endl;
 	std::cout<<"Wolfram Alpha: 0.0"<<std::endl;
 	std::cout<<"========================"<<std::endl;
@@ -379,8 +420,8 @@ void test_legendre_intregral (void)
 	std::cout<<"Pl(18,x)Pl(18,x)dx [-1.0 ; 0.0]:"<<std::endl;
 	std::cout<<"Method\tValue\ttime[s] for "<<Ncalls<<" calls"<<std::endl;
 	//std::cout<<"Sum:\t"<<Int_PlPl_1_0 (18, 18)<<"\t"<<diff_my.count()<<std::endl;
-	std::cout<<"dx=1e-5:\t"<<Int_PlPl (18, 18, -1, 0, 1e-5)<<"\t"<<diff_low_dx.count()<<std::endl;
-	std::cout<<"dx=1e-7:\t"<<Int_PlPl (18, 18, -1, 0, 1e-7)<<"\t"<<diff_high_dx.count()<<std::endl;
+	std::cout<<"dx=1e-5:\t"<<boost::lexical_cast<std::string>(Int_PlPl (18, 18, -1, 0, 1e-5))<<"\t"<<diff_low_dx.count()<<std::endl;
+	std::cout<<"dx=1e-7:\t"<<boost::lexical_cast<std::string>(Int_PlPl (18, 18, -1, 0, 1e-7))<<"\t"<<diff_high_dx.count()<<std::endl;
 	//std::cout<<"dx=1e-8:\t"<<Int_PlPl (18, 18, -1, 0, 1e-8)<<"\t"<<diff_highest_dx.count()<<std::endl;
 	std::cout<<"Wolfram Alpha: 0.027027"<<std::endl;
 	std::cout<<"========================"<<std::endl;
@@ -413,8 +454,8 @@ void test_legendre_intregral (void)
 	std::cout<<"Pl(20,x)Pl(15,x)dx [0.0 ; 1.0]:"<<std::endl;
 	std::cout<<"Method\tValue\ttime[s] for "<<Ncalls<<" calls"<<std::endl;
 	//std::cout<<"Sum:\t"<<Int_PlPl_0_1 (20, 15)<<"\t"<<diff_my.count()<<std::endl;
-	std::cout<<"dx=1e-5:\t"<<Int_PlPl (20, 15, 0, 1, 1e-5)<<"\t"<<diff_low_dx.count()<<std::endl;
-	std::cout<<"dx=1e-7:\t"<<Int_PlPl (20, 15, 0, 1, 1e-7)<<"\t"<<diff_high_dx.count()<<std::endl;
+	std::cout<<"dx=1e-5:\t"<<boost::lexical_cast<std::string>(Int_PlPl (20, 15, 0, 1, 1e-5))<<"\t"<<diff_low_dx.count()<<std::endl;
+	std::cout<<"dx=1e-7:\t"<<boost::lexical_cast<std::string>(Int_PlPl (20, 15, 0, 1, 1e-7))<<"\t"<<diff_high_dx.count()<<std::endl;
 	//std::cout<<"dx=1e-8:\t"<<Int_PlPl (20, 15, 0, 1, 1e-8)<<"\t"<<diff_highest_dx.count()<<std::endl;
 	std::cout<<"Wolfram Alpha: 0.00307571"<<std::endl;
 	std::cout<<"========================"<<std::endl;
@@ -447,8 +488,8 @@ void test_legendre_intregral (void)
 	std::cout<<"Pl(20,x)Pl(15,x)(1-x)dx [-1.0 ; 0.0]:"<<std::endl;
 	std::cout<<"Method\tValue\ttime[s] for "<<Ncalls<<" calls"<<std::endl;
 	//std::cout<<"Sum:\t"<<Int_PlPl_transf_1_0 (20, 15)<<"\t"<<diff_my.count()<<std::endl;
-	std::cout<<"dx=1e-5:\t"<<Int_PlPl_transf (20, 15, -1, 0, 1e-5)<<"\t"<<diff_low_dx.count()<<std::endl;
-	std::cout<<"dx=1e-7:\t"<<Int_PlPl_transf (20, 15, -1, 0, 1e-7)<<"\t"<<diff_high_dx.count()<<std::endl;
+	std::cout<<"dx=1e-5:\t"<<boost::lexical_cast<std::string>(Int_PlPl_transf (20, 15, -1, 0, 1e-5))<<"\t"<<diff_low_dx.count()<<std::endl;
+	std::cout<<"dx=1e-7:\t"<<boost::lexical_cast<std::string>(Int_PlPl_transf (20, 15, -1, 0, 1e-7))<<"\t"<<diff_high_dx.count()<<std::endl;
 	//std::cout<<"dx=1e-8:\t"<<Int_PlPl_transf (20, 15, -1, 0, 1e-8)<<"\t"<<diff_highest_dx.count()<<std::endl;
 	std::cout<<"Wolfram Alpha: -0.00307571"<<std::endl;
 	std::cout<<"========================"<<std::endl;
@@ -481,8 +522,8 @@ void test_legendre_intregral (void)
 	std::cout<<"Pl(20,x)Pl(15,x)dx [0.0 ; 1.0]:"<<std::endl;
 	std::cout<<"Method\tValue\ttime[s] for "<<Ncalls<<" calls"<<std::endl;
 	//std::cout<<"Sum:\t"<<Int_PlPl_transf_0_1 (20, 15)<<"\t"<<diff_my.count()<<std::endl;
-	std::cout<<"dx=1e-5:\t"<<Int_PlPl_transf (20, 15, 0, 1, 1e-5)<<"\t"<<diff_low_dx.count()<<std::endl;
-	std::cout<<"dx=1e-7:\t"<<Int_PlPl_transf (20, 15, 0, 1, 1e-7)<<"\t"<<diff_high_dx.count()<<std::endl;
+	std::cout<<"dx=1e-5:\t"<<boost::lexical_cast<std::string>(Int_PlPl_transf (20, 15, 0, 1, 1e-5))<<"\t"<<diff_low_dx.count()<<std::endl;
+	std::cout<<"dx=1e-7:\t"<<boost::lexical_cast<std::string>(Int_PlPl_transf (20, 15, 0, 1, 1e-7))<<"\t"<<diff_high_dx.count()<<std::endl;
 	//std::cout<<"dx=1e-8:\t"<<Int_PlPl_transf (20, 15, 0, 1, 1e-8)<<"\t"<<diff_highest_dx.count()<<std::endl;
 	std::cout<<"Wolfram Alpha: 0.00307571"<<std::endl;
 	std::cout<<"========================"<<std::endl;
@@ -519,7 +560,7 @@ void test_colored_interval (void)
 	ColoredInterval ran10 (6,7, 0.5);
 	range1 = ran8 + ran9 +ran10;
 	for (int i=0, end_=range1.NumOfIndices(); i!=end_; ++i) {
-		std::cout<<range1.Value(i)<<"; ";
+		std::cout<<boost::lexical_cast<std::string>(range1.Value(i))<<"; ";
 	}
 	std::cout<<std::endl;
 	std::cout<<"========================"<<std::endl;
@@ -537,8 +578,8 @@ void test_factor_helper (void)
 	helper.Print();
 	std::cout<<"Direct = ";
 	long double val = 396.0*500*22/pow(2,5)/11;
-	std::cout<<val<<std::endl;
-	std::cout<<"Helper = "<< helper.Output()<<std::endl;
+	std::cout<<boost::lexical_cast<std::string>(val)<<std::endl;
+	std::cout<<"Helper = "<< boost::lexical_cast<std::string>(helper.Output())<<std::endl;
 	std::cout<<"Wolfram = 12375"<<std::endl;
 	helper.Clear();
 	//=================================================
@@ -555,8 +596,8 @@ void test_factor_helper (void)
 	for (int i=1;i<=9;++i)
 		val/=i;
 	val/=80;
-	std::cout<<val<<std::endl;
-	std::cout<<"Helper = "<< helper.Output()<<std::endl;
+	std::cout<<boost::lexical_cast<std::string>(val)<<std::endl;
+	std::cout<<"Helper = "<< boost::lexical_cast<std::string>(helper.Output())<<std::endl;
 	std::cout<<"Wolfram = 2099.5"<<std::endl;
 	helper.Clear();
 	//=================================================
@@ -586,7 +627,7 @@ void test_factor_helper (void)
 	for (int i=2;i<=10;++i)
 		val/=i;
 	std::cout<<val<<std::endl;
-	std::cout<<"Helper = "<< helper.Output()<<std::endl;
+	std::cout<<"Helper = "<< boost::lexical_cast<std::string>(helper.Output())<<std::endl;
 	std::cout<<"Wolfram = 3.32682902e+9"<<std::endl;
 	helper.Clear();
 	//=================================================
@@ -608,9 +649,9 @@ void test_factor_helper (void)
 	helper1.Print();
 	std::cout<<"Direct = ";
 	val = 30.0*27*17/125/121/8 + 9.0*9*13*5/17/11/1024;
-	std::cout<<val<<std::endl;
+	std::cout<<boost::lexical_cast<std::string>(val)<<std::endl;
 	helper+=helper1;
-	std::cout<<"Helper = "<< helper.Output()<<std::endl;
+	std::cout<<"Helper = "<< boost::lexical_cast<std::string>(helper.Output())<<std::endl;
 	helper.Clear();
 	helper1.Clear();
 	std::cout<<"27/81 - 6/18:"<<std::endl;
@@ -622,9 +663,9 @@ void test_factor_helper (void)
 	helper1.Print();
 	std::cout<<"Direct = ";
 	val = 27.0/81 - 6.0/18;
-	std::cout<<val<<std::endl;
+	std::cout<<boost::lexical_cast<std::string>(val)<<std::endl;
 	helper-=helper1;
-	std::cout<<"Helper = "<< helper.Output()<<std::endl;
+	std::cout<<"Helper = "<< boost::lexical_cast<std::string>(helper.Output())<<std::endl;
 	helper.Clear();
 	helper1.Clear();
 }
@@ -689,9 +730,11 @@ void test_diff_tot_cross (void)
 				if ((0!=err)||(E>2.0))
 					break;
 				long double integral = 0;
-				for (int j=0;j<10001; ++j)
+				for (int j=0; j<10001; ++j)
 					integral+=(M_PI/10000.0)*argon->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0, 1)*sin(j*M_PI/10000.0);
-				str<<E<<"\t"<<integral<<"\t"<< argon->ArAllData_.argon_cross_elastic(E, 1)<<std::endl;
+				str << boost::lexical_cast<std::string>(E) << "\t"
+					<< boost::lexical_cast<std::string>(integral) << "\t"
+					<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic(E, 1)) << std::endl;
 			}
 		}
 		str.close();
@@ -709,7 +752,9 @@ void test_diff_tot_cross (void)
 				long double integral = 0;
 				for (int j=0;j<10001; ++j)
 					integral+=(M_PI/10000.0)*argon->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0, 2)*sin(j*M_PI/10000.0);
-				str<<E<<"\t"<<integral<<"\t"<< argon->ArAllData_.argon_cross_elastic(E, 2)<<std::endl;
+				str << boost::lexical_cast<std::string>(E) << "\t"
+					<< boost::lexical_cast<std::string>(integral) << "\t"
+					<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic(E, 2)) << std::endl;
 			}
 		}
 		str.close();
@@ -725,7 +770,9 @@ void test_diff_tot_cross (void)
 				long double integral = 0;
 				for (int j=0;j<10001; ++j)
 					integral+=(M_PI/10000.0)*argon->ArAllData_.argon_cross_elastic_diff(E, j*M_PI/10000.0)*sin(j*M_PI/10000.0);
-				str<<E<<"\t"<<integral<<"\t"<< argon->ArAllData_.argon_cross_elastic(E)<<std::endl;
+				str << boost::lexical_cast<std::string>(E) << "\t"
+					<< boost::lexical_cast<std::string>(integral) << "\t"
+					<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic(E)) << std::endl;
 			}
 		}
 		str.close();
@@ -759,11 +806,12 @@ void test_diff_tot_cross (void)
 			double E = eScan.Next(err);
 			if ((0 != err))
 				break;
-			str << E << "\t" << argon->ArAllData_.argon_cross_elastic_diff(E, th0) <<"\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th1) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th2) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th3) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th4) <<std::endl;
+			str << boost::lexical_cast<std::string>(E) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th0)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th1)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th2)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th3)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th4)) <<std::endl;
 			}
 		str.close();
 		std::string name = prefix + "test_diff_XS_elastic_profiles.sc";
@@ -827,7 +875,7 @@ void test_J_L_probabilities(void)
 			}
 		}
 		std::cout << "Test of probability of scattering through defined J L " << std::endl;
-		std::cout << "E = " << E << "; N_theta = "<< N_th << std::endl;
+		std::cout << "E = " << boost::lexical_cast<std::string>(E) << "; N_theta = "<< N_th << std::endl;
 		std::cout << "Num of negative probabilities: "<< N_lz << std::endl;
 		std::cout << "Num of positive probabilities: "<< N_gz << std::endl;
 		std::cout << "Sum of negative probabilities: " << I_lz << std::endl;
@@ -839,7 +887,9 @@ void test_J_L_probabilities(void)
 		str<<"theta[deg]\tdiff.XS_standard[1e-20m^2]\tdiff.XS_Pjl[1e-20m^2]"<<std::endl;
 		for (int i=0; i<600; ++i) {
 			double th = i*(M_PI)/599;
-			str<<th*180/M_PI<<"\t"<< argon->ArAllData_.argon_cross_elastic_diff(10.0, th)<<"\t"<< argon->ArAllData_.argon_cross_elastic_diff(10.0, th, 3) <<std::endl;
+			str << boost::lexical_cast<std::string>(th*180/M_PI) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(10.0, th)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(10.0, th, 3)) << std::endl;
 		}
 		str.close();
 		std::string name = prefix + "test_diff_XS_elastic_10eV_Pjl.sc";
@@ -866,7 +916,10 @@ void test_J_L_probabilities(void)
 					integral += (M_PI / 10000.0)*argon->ArAllData_.argon_cross_elastic_diff(E, j*M_PI / 10000.0)*sin(j*M_PI / 10000.0);
 					integral2 += (M_PI / 10000.0)*argon->ArAllData_.argon_cross_elastic_diff(E, j*M_PI / 10000.0, 3)*sin(j*M_PI / 10000.0);
 				}
-				str << E << "\t" << argon->ArAllData_.argon_cross_elastic(E)<<"\t" << integral << "\t" << integral2 << std::endl;
+				str << boost::lexical_cast<std::string>(E) << "\t"
+					<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic(E)) << "\t"
+					<< boost::lexical_cast<std::string>(integral) << "\t"
+					<< boost::lexical_cast<std::string>(integral2) << std::endl;
 			}
 		}
 		str.close();
@@ -898,16 +951,17 @@ void test_J_L_probabilities(void)
 			double E = eScan.Next(err);
 			if ((0 != err))
 				break;
-			str << E << "\t" << argon->ArAllData_.argon_cross_elastic_diff(E, th0) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th1) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th2) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th3) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th4) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th0, 3) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th1, 3) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th2, 3) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th3, 3) << "\t"
-				<< argon->ArAllData_.argon_cross_elastic_diff(E, th4, 3) << std::endl;
+			str << boost::lexical_cast<std::string>(E) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th0)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th1)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th2)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th3)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th4)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th0, 3)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th1, 3)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th2, 3)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th3, 3)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic_diff(E, th4, 3)) << std::endl;
 		}
 		str.close();
 		std::string name = prefix + "test_diff_XS_elastic_profiles_Pjl.sc";
@@ -975,11 +1029,8 @@ void test_time_delay()
 			delay = argon->GenerateTimeDelay(electron, Energy, theta, 0, random_generator_->Uniform());
 			hist2->Fill(delay);
 		}
-		std::ostringstream str1, str2;
-		str1 << hist1->GetMean();
-		str2 << hist2->GetMean();
-		legend->AddEntry(hist1, (std::string("N = 2000000, Mean = ") + str1.str()).c_str(), "l");
-		legend->AddEntry(hist2, (std::string("Tabulated. N = 2000000, Mean = ") + str1.str()).c_str(), "l");
+		legend->AddEntry(hist1, (std::string("N = 2000000, Mean = ") + boost::lexical_cast<std::string>(hist1->GetMean())).c_str(), "l");
+		legend->AddEntry(hist2, (std::string("Tabulated. N = 2000000, Mean = ") + boost::lexical_cast<std::string>(hist2->GetMean())).c_str(), "l");
 		hist1->Draw();
 		hist2->Draw("same");
 		legend->Draw("same");
@@ -1012,9 +1063,7 @@ void test_time_delay()
 				double delay = argon->GenerateTimeDelay(electron, Energy, theta, 0, random_generator_->Uniform());
 				hist1->Fill(delay);
 			}
-			std::ostringstream str1;
-			str1 << hist1->GetMean();
-			legend->AddEntry(hist1, (std::string("N = 2000000, ")+En.str()+" eV, Mean = " + str1.str()).c_str(), "l");
+			legend->AddEntry(hist1, (std::string("N = 2000000, ")+En.str()+" eV, Mean = " + boost::lexical_cast<std::string>(hist1->GetMean())).c_str(), "l");
 			if (i==0)
 				hist1->Draw();
 			else
@@ -1038,9 +1087,10 @@ void test_time_delay()
 			str << "//theta\tP_sflip\tT_sflip[s]\tT_snonflip[s]" << std::endl;
 			for (unsigned int th = 0, th_end_ = 1301; th < th_end_; ++th) {
 				double theta = M_PI * th / (th_end_ - 1);
-				str << theta << "\t" << 1 - std::max((*argon->time_delay_spin_nonflip_prob_table_)(theta, Es[i]), 0.0)
-					<< "\t" << (*argon->time_delay_spin_flip_table_)(theta, Es[i])
-					<< "\t" << (*argon->time_delay_spin_nonflip_table_)(theta, Es[i]) << std::endl;
+				str << boost::lexical_cast<std::string>(theta) << "\t"
+					<< boost::lexical_cast<std::string>(1 - std::max((*argon->time_delay_spin_nonflip_prob_table_)(theta, Es[i]), 0.0))
+					<< "\t" << boost::lexical_cast<std::string>((*argon->time_delay_spin_flip_table_)(theta, Es[i]))
+					<< "\t" << boost::lexical_cast<std::string>((*argon->time_delay_spin_nonflip_table_)(theta, Es[i])) << std::endl;
 			}
 			str.close();
 			std::string name = prefix + "spin_flip-nonflip_prob_and_dt_" + En.str() + "eV.sc";
@@ -1083,7 +1133,8 @@ void test_backward_scatter_prob (void)
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<<"\t"<<argon->ArAllData_.argon_back_scatter_prob(E)<<std::endl;
+			str << boost::lexical_cast<std::string>(E) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_back_scatter_prob(E)) << std::endl;
 		}
 		str.close();
 	}
@@ -1116,7 +1167,8 @@ void test_TM_forward (void)
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<<"\t"<<argon->ArAllData_.argon_TM_forward(E)<<std::endl;
+			str << boost::lexical_cast<std::string>(E) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_TM_forward(E)) << std::endl;
 		}
 		str.close();
 	}
@@ -1149,7 +1201,8 @@ void test_TM_backward (void)
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<<"\t"<<argon->ArAllData_.argon_TM_backward(E)<<std::endl;
+			str << boost::lexical_cast<std::string>(E) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_TM_backward(E)) << std::endl;
 		}
 		str.close();
 	}
@@ -1209,7 +1262,11 @@ void test_total_cross_all (void)
 			XS_P = std::max(1e-4, XS_P);
 			XS_EXT = std::max(1e-4, XS_EXT);
 			XS_ION = std::max(1e-4, XS_ION);
-			str1<<E<<"\t"<<XS_S<<"\t"<<XS_P<<"\t"<<XS_EXT<<"\t"<<XS_ION<<std::endl;
+			str1 << boost::lexical_cast<std::string>(E) << "\t"
+				 << boost::lexical_cast<std::string>(XS_S) << "\t"
+				 << boost::lexical_cast<std::string>(XS_P) << "\t"
+				 << boost::lexical_cast<std::string>(XS_EXT) << "\t"
+				 << boost::lexical_cast<std::string>(XS_ION) << std::endl;
 		}
 		str.close();
 		str1.close();
@@ -1260,7 +1317,11 @@ void test_total_cross_all (void)
 			XS_P = std::max(1e-4, XS_P);
 			XS_EXT = std::max(1e-4, XS_EXT);
 			XS_ION = std::max(1e-4, XS_ION);
-			str<<E<<"\t"<<XS_S<<"\t"<<XS_P<<"\t"<<XS_EXT<<"\t"<<XS_ION<<std::endl;
+			str << boost::lexical_cast<std::string>(E) << "\t"
+				<< boost::lexical_cast<std::string>(XS_S) << "\t"
+				<< boost::lexical_cast<std::string>(XS_P) << "\t"
+				<< boost::lexical_cast<std::string>(XS_EXT) << "\t"
+				<< boost::lexical_cast<std::string>(XS_ION) << std::endl;
 		}
 		str.close();
 		std::string name = prefix + "test_XS_ext.sc";
@@ -1286,7 +1347,9 @@ void test_total_cross_all (void)
 			double E = eScan.Next(err);
 			if (0!=err)
 				break;
-			str<<E<< "\t" << argon->ArAllData_.argon_cross_elastic(E)<<"\t"<<argon->GetCrossSection(electron, E, 0)<<std::endl;
+			str << boost::lexical_cast<std::string>(E) << "\t"
+				<< boost::lexical_cast<std::string>(argon->ArAllData_.argon_cross_elastic(E)) << "\t"
+				<< boost::lexical_cast<std::string>(argon->GetCrossSection(electron, E, 0)) << std::endl;
 		}
 		str.close();
 		std::string name = prefix + "test_resonance_XS.sc";
@@ -1329,11 +1392,11 @@ void test_all (void)
 	std::cout<<"Testing integrals of legendre polynomials:"<<std::endl;
 	test_legendre_intregral ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-	*/
+	*//*
 	std::cout<<"Testing differential cross section:"<<std::endl;
 	test_diff_tot_cross ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-
+	*/
 /*	std::cout<<"Testing J-L probabilities:"<<std::endl;
 	test_J_L_probabilities ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
@@ -1350,14 +1413,14 @@ void test_all (void)
 	test_TM_backward ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 	*/
-
+	/*
 	std::cout<<"Testing total cross sections:"<<std::endl;
 	test_total_cross_all ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-
+	*//*
 	std::cout<<"Testing time delay:"<<std::endl;
 	test_time_delay();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-
+	*/
 	std::cout<<"Testing finished."<<std::endl<<std::endl<<std::endl;
 }

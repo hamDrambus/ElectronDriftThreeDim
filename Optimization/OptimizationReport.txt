@@ -28,8 +28,18 @@ Optimized verison 1:
 	t mixture loading =		102 s; 103.3 s
 	t drift (5 e on 1e-3 m) = 10337 s; 10157 s
 03.06.2019 Ubuntu - Release build in eclipse (gcc)
-	t particle generating =	 s
+	t particle generating =	7086.56 s
 	t particle loading =	 s
-	t mixture generating (integral table) =	 s
+	t mixture generating (integral table) =	73.4 s
 	t mixture loading =		 s
-	t drift (5 e on 1e-3 m) =  ( events)
+	t drift (5 e on 1e-3 m) = 50.56 s (9480585 events)
+=============================================================
+Optimized verison 2: Reworked DataVector and FunctionTable, especially improved index search algorithm
+=============================================================
+06.06.2019 Ubuntu - Release build in eclipse (gcc)
+	t particle generating =	9657.67 s
+	t particle loading =	2.25058 s; 2.55271 s
+	t mixture generating (integral table) =	81.4724 s
+	t mixture loading =		8.05316 s; 9.18072 s
+	t drift (5 e on 1e-3 m) = 40.0391 s (8908387 events)
+
