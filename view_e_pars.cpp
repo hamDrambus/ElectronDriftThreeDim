@@ -37,7 +37,7 @@ void view_e_pars(void) {
   double dt = 6e-12;
   double DRIFT_DISTANCE = 3e-3;
   //std::string fname1("Optimization/eData_7.0Td.root");
-  std::string fname1("Output/v15.1/eData_7.0Td_SN.root");
+  std::string fname1("Output/v15.1/eData_7.0Td_VN.root");
   double En_start;
   double En_collision;
   double En_finish;

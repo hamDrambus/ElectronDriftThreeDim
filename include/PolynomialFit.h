@@ -126,12 +126,11 @@ public:
 	void read(std::ifstream& str);
 	void write(std::string fname, std::string comment = "") const;
 	void write(std::ofstream& str, std::string comment = "") const;
-protected:
 	//Warning! These functions have defined behaviour only when X/Y values are sorted in the ascending order.
 	//DataVector's X values are supposed to be always sorted, but there is no guarantee about Ys;
 	boost::optional<std::pair<std::size_t, std::size_t>> getX_indices(double X_point) const; //[n_min, n_max] are used, not [n_min, n_max).N_used == n_max - n_min + 1 >= order + 1
 	boost::optional<std::pair<std::size_t, std::size_t>> getY_indices(double Y_point) const; //[n_min, n_max] are used, not [n_min, n_max).N_used == n_max - n_min + 1 >= order + 1
-	//add X_from_Y(double) and Y_from_X(double) ?
+protected:
 	double polynomial_value(double x, double x0, const std::vector<double>& coefs) const;
 public:
 	friend class FunctionTable;

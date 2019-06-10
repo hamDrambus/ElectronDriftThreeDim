@@ -1,7 +1,7 @@
 #include "Manager.h"
 
 Manager::Manager(const Mixture *Ar_tables) :
-	skip_counter_(0), material_(Ar_tables), skipping_early_events(true), num_of_events(0), num_of_10millions(0)
+	skip_counter_(0), material_(Ar_tables), skipping_early_events(true), num_of_events(0)
 #ifndef _NO_CERN_ROOT
 	, sim_data_(NULL), processes_data_(NULL)
 #endif //_NO_CERN_ROOT
@@ -175,7 +175,6 @@ void Manager::Clear(void)
 	skip_counter_ = 0;
 	skipping_early_events = true;
 	num_of_events = 0;
-	num_of_10millions = 0;
 	eField_ = boost::none;
 	Concentration_ = boost::none;
 	Coefficient_ = boost::none;
@@ -347,7 +346,6 @@ void Manager::Initialize(void)
 	skip_counter_ = 0;
 	skipping_early_events = true;
 	num_of_events = 0;
-	num_of_10millions = 0;
 	//processes_counters; //preserve
 #ifndef _NO_CERN_ROOT
 	if (NULL != random_generator_) {
@@ -492,8 +490,9 @@ void Manager::Solve_table (long double LnR, Event &event)
 	event.En_collision = material_->GetEnergyFromXSIntegral(particle, Eny, INT); //TODO: add debug info - uncertainty and overflow - status output variable
 	if (event.En_collision<0) {
 		std::cout<<"Manager::Solve_table::Error: found E<0 in table. Eny= "<<Eny<<" Ei= "<<event.En_start<<" Int= "<<INT<<std::endl;
+		//event.En_collision = material_->GetEnergyFromXSIntegral(particle, Eny, INT);
 		event.En_collision = std::min(0.01*event.En_start, 0.001) + event.En_start;
-		event.En_collision = std::max(event.En_collision, gSettings.ProgConsts()->maximal_energy);
+		event.En_collision = std::min(event.En_collision, gSettings.ProgConsts()->maximal_energy);
 	}
 	if (1==case_) {
 		event.theta_collision = acos(-sqrt((event.En_collision-Eny)/event.En_collision));
@@ -718,10 +717,6 @@ void Manager::PostStepAction(Event &event)
 		++skip_counter_;
 		++num_of_events;
 		return;
-	}
-	if ((num_of_10millions+1)<=(num_of_events/10000000)) {
-		std::cout<<"Processed "<<(num_of_10millions+1)<<"e7 collisions. Position: "<<event.pos_finish<<std::endl;
-		++num_of_10millions;
 	}
 	if (!skipping_early_events) {
 		if ((0==skip_counter_)||(event.process>Event::Elastic)) {

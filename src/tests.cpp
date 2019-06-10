@@ -127,20 +127,60 @@ void test_2_dim_table (void) //TODO: improve this test
 {
 	FunctionTable table;
 	//F(x,y) = -0.5x + y. x:[0,2] y:[x,1]
+	std::function<double(double, double)> F = [](double x, double y)->double  {
+		double X = std::max(x, 0.0);
+		X = std::min(X, 2.0);
+		double Y = std::max(y, X);
+		Y = std::min(Y, 1.0);
+		return -0.5 * X + Y;
+	};
 	for (int ix = 0, ix_end_=11; ix!=ix_end_; ++ix) {
 		for (int iy = 0, iy_end_ = ix_end_ - ix; iy!=iy_end_; ++iy) {
 			double Ey = ix * 2.0/(ix_end_-1);
 			double E = (iy_end_==1) ? Ey : (Ey + iy * (1.0-Ey)/(iy_end_ -1));
-			table.push(E, Ey, -0.5*Ey + E);
+			table.push(Ey, E, F(Ey, E));
 		}
 	}
+
+
 	std::cout<<"(X, Y):\t(0.0,0.0)\t(2.0,1,0)\t(0.0,1.0)\t(0.5,0.5)\t(0.2,0.7)"<<std::endl;
-	std::cout<<"F(X,Y):\t0.000\t0.000\t1.000\t0.250\t0.600"<<std::endl;
 	std::cout<<"Table:\t"<<boost::lexical_cast<std::string>(table(0,0))<<"\t";
 	std::cout<<boost::lexical_cast<std::string>(table(1,2))<<"\t";
 	std::cout<<boost::lexical_cast<std::string>(table(1,0.0))<<"\t";
 	std::cout<<boost::lexical_cast<std::string>(table(0.5,0.5))<<"\t";
 	std::cout<<boost::lexical_cast<std::string>(table(0.7,0.2))<<std::endl;
+	std::cout<<"Must be:"<<std::endl;
+	std::cout<<"F(X,Y):\t"<<boost::lexical_cast<std::string>(F(0, 0))<<"\t";
+	std::cout<<boost::lexical_cast<std::string>(F(1, 2))<<"\t";
+	std::cout<<boost::lexical_cast<std::string>(F(1, 0.0))<<"\t";
+	std::cout<<boost::lexical_cast<std::string>(F(0.5, 0.5))<<"\t";
+	std::cout<<boost::lexical_cast<std::string>(F(0.7, 0.2))<<std::endl;
+
+	std::cout<<"Testing index search functions:"<<std::endl;
+	FunctionTable table2;
+	for (std::size_t i = 0; i!=155; ++i) {
+		table2.push(0, i/10.0, std::pow(i/10.0, 2));
+	}
+	boost::optional<std::pair<std::size_t, std::size_t>> inds = table2.getY_data(0).getY_indices(1.01);
+	std::cout<<"getY_indices(1.01) = ["<<inds->first<<", " << inds->second <<"]. Must be [10, 11]"<<std::endl;
+	inds = table2.getY_data(0).getY_indices(1.54);
+	std::cout<<"getY_indices(1.54) = ["<<inds->first<<", " << inds->second <<"]. Must be [12, 13]"<<std::endl;
+	inds = table2.getY_data(0).getY_indices(-1);
+	std::cout<<"getY_indices(-1) = ["<<inds->first<<", " << inds->second <<"]. Must be [0, 0]"<<std::endl;
+	inds = table2.getY_data(0).getY_indices(0.0);
+	std::cout<<"getY_indices(0.0) = ["<<inds->first<<", " << inds->second <<"]. Must be [0, 0]"<<std::endl;
+	inds = table2.getY_data(0).getY_indices(0.005);
+	std::cout<<"getY_indices(0.005) = ["<<inds->first<<", " << inds->second <<"]. Must be [0, 1]"<<std::endl;
+	inds = table2.getY_data(0).getY_indices(0.01);
+	std::cout<<"getY_indices(0.01) = ["<<inds->first<<", " << inds->second <<"]. Must be [1, 1]"<<std::endl;
+	inds = table2.getY_data(0).getY_indices(237.16);
+	std::cout<<"getY_indices(237.16) = ["<<inds->first<<", " << inds->second <<"]. Must be [154, 154]"<<std::endl;
+	inds = table2.getY_data(0).getY_indices(300);
+	std::cout<<"getY_indices(300) = ["<<inds->first<<", " << inds->second <<"]. Must be [154, 154]"<<std::endl;
+	inds = table2.getY_data(0).getY_indices(1.54);
+	std::cout<<"getY_indices(1.54) = ["<<inds->first<<", " << inds->second <<"]. Must be [12, 13]"<<std::endl;
+	inds = table2.getY_data(0).getY_indices(200);
+	std::cout<<"getY_indices(200) = ["<<inds->first<<", " << inds->second <<"]. Must be [141, 142]"<<std::endl;
 }
 
 void test_phase_shift_fit (void)
@@ -1368,10 +1408,10 @@ void test_all (void)
 	test_polynomial_fit ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
 
-/*	std::cout<<"Testing function table:"<<std::endl;
+	std::cout<<"Testing function table:"<<std::endl;
 	test_2_dim_table ();
 	std::cout<<"==============================================="<<std::endl<<std::endl<<std::endl;
-*/
+
 	/*
 	std::cout<<"Testing phase shifts fit:"<<std::endl;
 	test_phase_shift_fit (ArTables);

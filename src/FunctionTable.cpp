@@ -21,18 +21,19 @@ boost::optional<std::pair<std::size_t, std::size_t>> FunctionTable::getX_indices
 		return out;
 	}
 	//find first x which is not less that X_point. That is index bounding X_point: xs[first] <= X < xs[first + 1]
-	//See std::lower_bound
+	//See std::lower_bound and std::upper_bound
 	std::size_t count = sz;
 	std::size_t first = 0;
 	while (count > 0) {
 		std::size_t step = count / 2;
 		std::size_t ind = first + step;
-		if (xs_[ind] <= X) {
-			first = ind;
+		if (!(X < xs_[ind])) {
+			first = ++ind;
 			count -= step + 1;
 		} else
 			count = step;
 	}
+	--first;
 	if (X == xs_[first]) {
 		out = std::pair<std::size_t, std::size_t>(first, first);
 		return out;

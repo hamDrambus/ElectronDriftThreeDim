@@ -46,7 +46,6 @@ protected:
 	int skip_counter_;
 	bool skipping_early_events;
 	unsigned long int num_of_events;
-	unsigned long int num_of_10millions;
 	//Event current_event;
 
 	void DoStepLength (Event &event);
