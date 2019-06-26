@@ -42,19 +42,22 @@ protected:
 	std::vector<std::vector<std::string> > processes_legends_; //particle_ID->process_ID->NULL terminated String
 
 	Event event_;
+	Event prev_event_;
+	bool prev_event_saved_;
 	const Mixture *material_;
-	int skip_counter_;
+	unsigned int skip_counter_;
+	double skip_time_residue_;
 	bool skipping_early_events;
 	unsigned long int num_of_events;
 	//Event current_event;
 
-	void DoStepLength (Event &event);
+	void DoStepLength (void);
 	void Solve (long double LnR, Event &event);
 	void Solve_table (long double LnR, Event &event);
 	void Solve_test (long double LnR, Event &event);
-	void DoScattering(Event &event);
-	void PostStepAction(Event &event);
-	void DoGotoNext(Event &event);
+	void DoScattering(void);
+	void PostStepAction(void);
+	void DoGotoNext(void);
 	void InitTree (void);
 	//long double XS_integral(long double from, long double to, long double Eny, Event &event);
 	long double XS_integral_for_test(long double from, long double to, long double Eny, long double dE);
@@ -64,10 +67,10 @@ protected:
 public:
 	virtual bool isReady(void) const;
 	virtual void Initialize(void);
-	virtual void Initialize(Event &event);
+	virtual void InitializeEvent(void);
 	virtual void Clear(void); //fully clears manager state, subsequent resetting of parameters is required. 
-	void DoStep(Event &event);
-	bool IsFinished(Event &event);
+	void DoStep(void);
+	bool IsFinished(void);
 	void setParameters(double Concetr /*in SI*/, double E /*in SI*/, double drift_distance /*in m*/);
 	void setParameters(double T /*in K*/, double Pressure /*in SI*/, double E /*in SI*/, double drift_distance /*in m*/);
 	bool setInitialSeed(unsigned long int seed);

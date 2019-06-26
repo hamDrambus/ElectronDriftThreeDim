@@ -173,7 +173,7 @@ void Manager::Clear(void)
 	processes_data_ = NULL;
 #endif //_NO_CERN_ROOT
 	skip_counter_ = 0;
-	skipping_early_events = true;
+	skipping_early_events = (gSettings.ProgConsts()->drift_distance_ignore_history ? true : false);
 	num_of_events = 0;
 	eField_ = boost::none;
 	Concentration_ = boost::none;
@@ -340,12 +340,13 @@ long double Manager::XS_integral_for_test(long double from, long double to, long
 void Manager::Initialize(void)
 {
 	if (!isReady()) {
-		std::cout << "Manager::Initialize: some of the parameters are not initiaized, exiting" << std::endl;
+		std::cout << "Manager::Initialize: some of the parameters are not initialized, exiting" << std::endl;
 		return;
 	}
 	skip_counter_ = 0;
-	skipping_early_events = true;
+	skipping_early_events = (gSettings.ProgConsts()->drift_distance_ignore_history ? true : false);
 	num_of_events = 0;
+	skip_time_residue_ = 0;
 	//processes_counters; //preserve
 #ifndef _NO_CERN_ROOT
 	if (NULL != random_generator_) {
@@ -360,7 +361,7 @@ void Manager::Initialize(void)
 	}
 }
 
-void Manager::Initialize(Event &event)
+void Manager::InitializeEvent()
 {
 	if (!isReady()) {
 		std::cout << "Manager::Initialize: some of the parameters are not initialized, exiting" << std::endl;
@@ -368,31 +369,29 @@ void Manager::Initialize(Event &event)
 	}
 	const boost::optional<PDF_routine> *Ec_spec = &(gSettings.ProgConsts()->run_specifics[*run_index_].Ec_spectrum);
 	if (*Ec_spec) {
-		event.En_collision = (**Ec_spec)(Uniform());
-		event.En_start= 0;
+		event_.En_collision = (**Ec_spec)(Uniform());
+		event_.En_start= 0;
 	} else {
-		event.En_start = 1 + 3*Uniform();
-		event.En_collision = 0;
+		event_.En_start = 1 + 3*Uniform();
+		event_.En_collision = 0;
 	}
-	event.En_finish = 0;
-	event.pos_start = 0;
-	event.pos_finish = 0;
-	event.delta_x = 0;
-	event.time_start = 0;
-	event.delta_time = 0;
-	event.delta_time_full = 0;
-	event.process = Event::None;
-	event.particle_ID = gParticleTable.GetParticleID(ELECTRON_NAME);
+	event_.En_finish = 0;
+	event_.pos_start = 0;
+	event_.pos_finish = 0;
+	event_.delta_x = 0;
+	event_.time_start = 0;
+	event_.delta_time = 0;
+	event_.delta_time_full = 0;
+	event_.process = Event::None;
+	event_.particle_ID = gParticleTable.GetParticleID(ELECTRON_NAME);
 
-	event.theta_start = 0;
-	event.theta_collision = 0;
-	event.theta_finish = 0;
-	event.delta_theta = 0;
-	event.delta_l = 0;
+	event_.theta_start = 0;
+	event_.theta_collision = 0;
+	event_.theta_finish = 0;
+	event_.delta_theta = 0;
+	event_.delta_l = 0;
 
-	event.photon_En = 0;
-
-	event_ = event;
+	event_.photon_En = 0;
 }
 
 //TODO: maybe move solving to material
@@ -586,15 +585,15 @@ long double Manager::Path_integral (long double x, long double cos_th)
 	return out;
 }
 
-void Manager::DoStepLength(Event &event) //In case Ec spectrum is fixed, stepping is done reversed in time
+void Manager::DoStepLength(void) //In case Ec spectrum is fixed, stepping is done reversed in time
 {
 	if (!isReady())
 		return;
-	bool reverse_mode = (event.En_collision!=0);
-	Event step_pars = event;
+	bool reverse_mode = (event_.En_collision!=0);
+	Event step_pars = event_;
 	if (reverse_mode) {
-		step_pars.theta_start = M_PI - event.theta_collision;
-		step_pars.En_start = event.En_collision;
+		step_pars.theta_start = M_PI - event_.theta_collision;
+		step_pars.En_start = event_.En_collision;
 	}
 	long double L = - log(Uniform());
 	L *= *Coefficient_; //Calculated once for fixed parameters;
@@ -602,176 +601,196 @@ void Manager::DoStepLength(Event &event) //In case Ec spectrum is fixed, steppin
 	Solve_table(L, step_pars);
 
 	if (reverse_mode) {
-		event.En_start = step_pars.En_collision;
-		event.theta_start = M_PI - step_pars.theta_collision;
+		event_.En_start = step_pars.En_collision;
+		event_.theta_start = M_PI - step_pars.theta_collision;
 	} else {
-		event.En_collision = step_pars.En_collision;
-		event.theta_collision = step_pars.theta_collision;
+		event_.En_collision = step_pars.En_collision;
+		event_.theta_collision = step_pars.theta_collision;
 	}
 	double eom = gSettings.PhysConsts()->e_charge_SI / gSettings.PhysConsts()->e_mass_SI;
-	long double vel_0 = sqrt(2.0*eom*event.En_start)*cos(event.theta_start);
-	long double vel_1 = sqrt(2.0*eom*event.En_collision)*cos(event.theta_collision);
-	event.delta_time = (vel_1 - vel_0) / (eom * *eField_); //in s
-	event.delta_x = (event.En_collision - event.En_start) / *eField_;
+	long double vel_0 = sqrt(2.0*eom*event_.En_start)*cos(event_.theta_start);
+	long double vel_1 = sqrt(2.0*eom*event_.En_collision)*cos(event_.theta_collision);
+	event_.delta_time = (vel_1 - vel_0) / (eom * *eField_); //in s
+	event_.delta_x = (event_.En_collision - event_.En_start) / *eField_;
 	if (reverse_mode) {
-		event.delta_x *= -1;
-		event.delta_time *= 1;
+		event_.delta_x *= -1;
+		event_.delta_time *= 1;
 	}
-	event.pos_finish = event.pos_start + event.delta_x;
-	event.En_avr = event.En_start + *eField_*vel_0*event.delta_time / 4.0 + eom*std::pow(*eField_*event.delta_time, 2) / 6.0;
+	event_.pos_finish = event_.pos_start + event_.delta_x;
+	event_.En_avr = event_.En_start + *eField_*vel_0*event_.delta_time / 4.0 + eom*std::pow(*eField_*event_.delta_time, 2) / 6.0;
 	//Total path in meters:
 	//calculated as Int{sqrt((dy/dt)^2 + (dx/dt)^2 ) dt} from 0 to delta_time
-	long double up_limit = event.delta_time**eField_*sqrt(eom/(2*event.En_start));
-	event.delta_l = Path_integral(up_limit, event.theta_start) - Path_integral(0, event.theta_start);
-	event.delta_l*=2*step_pars.En_start/ *eField_;
-	event_ = event;
+	long double up_limit = event_.delta_time**eField_*sqrt(eom/(2*event_.En_start));
+	event_.delta_l = Path_integral(up_limit, event_.theta_start) - Path_integral(0, event_.theta_start);
+	event_.delta_l*=2*step_pars.En_start/ *eField_;
 }
 
-void Manager::DoScattering(Event &event)
+void Manager::DoScattering(void)
 {
 	if (!isReady())
 		return;
-	bool is_overflow = (event.process==Event::Overflow);
-	const Particle* incident = gParticleTable.GetParticle(event.particle_ID);
+	bool is_overflow = (event_.process==Event::Overflow);
+	const Particle* incident = gParticleTable.GetParticle(event_.particle_ID);
 	double R2 = Uniform(); //R1 is used in DoStepLength
-	const Particle* target = material_->GenerateScatteringParticle(incident, event.En_collision, R2);
+	const Particle* target = material_->GenerateScatteringParticle(incident, event_.En_collision, R2);
 	//TODO: implement exception system
 	if (NULL == target) {
 		std::cerr<<"Attempting again"<<std::endl;
 		R2 = Uniform(); //R1 is used in DoStepLength
-		target = material_->GenerateScatteringParticle(incident, event.En_collision, R2);
+		target = material_->GenerateScatteringParticle(incident, event_.En_collision, R2);
 		if (NULL == target) {
 			std::cerr<<"Fallback to the most abundant element in the mixture"<<std::endl;
-			target = material_->GetDominatingParticle(incident, event.En_collision);
+			target = material_->GetDominatingParticle(incident, event_.En_collision);
 			if (NULL == target) {
 				//throw;
-				event_ = event;
 				return;
 			}
 		}
 	}
 	double R3 = Uniform();
-	event.process = target->GenerateProcess(incident, event.En_collision, R3);
-	if (Event::None == event.process) {
+	event_.process = target->GenerateProcess(incident, event_.En_collision, R3);
+	if (Event::None == event_.process) {
 		//throw
-		event_ = event;
 		return;
 	}
 	double R4 = Uniform();
-	event.delta_theta = target->GenerateScatterAngle(incident, event.En_collision, event.process, R4);
+	event_.delta_theta = target->GenerateScatterAngle(incident, event_.En_collision, event_.process, R4);
 	double phi = Uniform()*2.0*M_PI;
-	double cos_th_f = std::cos(event.delta_theta)*std::cos(event.theta_collision) + std::sin(event.delta_theta)*std::sin(event.theta_collision)*std::cos(phi);
+	double cos_th_f = std::cos(event_.delta_theta)*std::cos(event_.theta_collision) + std::sin(event_.delta_theta)*std::sin(event_.theta_collision)*std::cos(phi);
 	if (cos_th_f<-1.0) //just in case of precision problems
 		cos_th_f = -1.0;
 	if (cos_th_f>1.0)
 		cos_th_f = 1.0;
-	event.theta_finish = std::acos(cos_th_f);
-	if (std::isnan(event.theta_finish)) {
-		event.theta_finish = 0;
+	event_.theta_finish = std::acos(cos_th_f);
+	if (std::isnan(event_.theta_finish)) {
+		event_.theta_finish = 0;
 	}
 	double R5 = Uniform();
-	double EnergyLoss = target->GenerateEnergyLoss(incident, event.En_collision, event.delta_theta, event.process, R5);
-	event.photon_En = target->GeneratePhoton(incident, event.En_collision, event.delta_theta, event.process, R5); //same random value must be used!
-	event.En_finish = event.En_collision - EnergyLoss;
+	double EnergyLoss = target->GenerateEnergyLoss(incident, event_.En_collision, event_.delta_theta, event_.process, R5);
+	event_.photon_En = target->GeneratePhoton(incident, event_.En_collision, event_.delta_theta, event_.process, R5); //same random value must be used!
+	event_.En_finish = event_.En_collision - EnergyLoss;
 	double R6 = Uniform();
-	double time_delay = target->GenerateTimeDelay(incident, event.En_collision, event.delta_theta, event.process, R6);
-	event.delta_time_full = event.delta_time + time_delay;
-	std::vector<const Particle*> outputs = target->GetFinalStates(incident, event.En_collision, event.delta_theta, event.process);
+	double time_delay = target->GenerateTimeDelay(incident, event_.En_collision, event_.delta_theta, event_.process, R6);
+	event_.delta_time_full = event_.delta_time + time_delay;
+	std::vector<const Particle*> outputs = target->GetFinalStates(incident, event_.En_collision, event_.delta_theta, event_.process);
 	if (outputs.size()<2) {
 		//throw
-		event_ = event;
 		return;
 	}
-	event.particle_ID_finish = gParticleTable.GetParticleID(outputs[1]);
-	event.particle_ID_target = gParticleTable.GetParticleID(outputs[0]);
+	event_.particle_ID_finish = gParticleTable.GetParticleID(outputs[1]);
+	event_.particle_ID_target = gParticleTable.GetParticleID(outputs[0]);
 	if (is_overflow)
-		event.process = Event::Overflow;
-	event_ = event;
+		event_.process = Event::Overflow;
 }
 
-void Manager::PostStepAction(Event &event)
+void Manager::PostStepAction(void)
 {
 	if (!isReady())
 		return;
+	bool do_write = false;
+	//Operations which are always performed regardless of writing configuration (every nth event, every x seconds, ignore events before e reached fixed Z):
 	std::size_t e_ID = gParticleTable.GetParticleID(ELECTRON_NAME);
 	for (int i = 0, i_end_ = processes_counters_.size(); i != i_end_; ++i) {
-		if (i == event.particle_ID_target && e_ID == event.particle_ID) {
+		if (i == event_.particle_ID_target && e_ID == event_.particle_ID) {
 			for (int j = 0, j_end_ = processes_counters_[i].size(); j!=j_end_; ++j) {
-				if (processes_IDs_[i][j] == event.process) {
+				if (processes_IDs_[i][j] == event_.process) {
 					++processes_counters_[i][j];
 					break;
 				}
 			}
 		}
 	}
-	if (event.pos_start>=gSettings.ProgConsts()->drift_distance_ignore_history) { //assert (double>boost::none)
-		skipping_early_events = false; //if true (set at initialization) all events with position less that gSettings.ProgConsts()->drift_distance_ignore_history (if present) are not recored.
-		skip_counter_ = 0;
-	}
-	if (skip_counter_ == gSettings.ProgConsts()->skip_history_rate || boost::none == gSettings.ProgConsts()->skip_history_rate)
-		skip_counter_ = 0;
-	if ((0==num_of_events)||IsFinished(event)) { //always record first and last drift event
-#ifndef _NO_CERN_ROOT
-		sim_data_->Fill();
-#endif //_NO_CERN_ROOT
-		++skip_counter_;
-		++num_of_events;
-		return;
-	}
-	if (!skipping_early_events) {
-		if ((0==skip_counter_)||(event.process>Event::Elastic)) {
-#ifndef _NO_CERN_ROOT
-			sim_data_->Fill();
-#endif //_NO_CERN_ROOT
-			skip_counter_=0;
+	if ((0==num_of_events)||IsFinished()) //always record first and last drift event
+		do_write = true;
+	//End of operations which are always performed
+	//Logic of different writing modes:
+	if (gSettings.ProgConsts()->skip_history_time) { //ignores drift_distance_ignore_history and skip_history_rate
+		if (event_.delta_time_full >=*gSettings.ProgConsts()->skip_history_time) {
+			//Event current = event_;
+			double delta = event_.delta_time_full;
+			while (delta >=*gSettings.ProgConsts()->skip_history_time) {
+				event_.delta_time_full = *gSettings.ProgConsts()->skip_history_time;
+				if (event_.delta_time > event_.delta_time_full)
+					event_.delta_time_full = event_.delta_time;
+				sim_data_->Fill();
+				delta -= event_.delta_time_full;
+				event_.time_start += event_.delta_time_full;
+				event_.delta_time = 0;
+			}
+			event_.delta_time_full = delta;
 		}
-		++skip_counter_;
+		skip_time_residue_ += event_.delta_time_full;
+		if (skip_time_residue_ >= *gSettings.ProgConsts()->skip_history_time) {
+			skip_time_residue_ -= *gSettings.ProgConsts()->skip_history_time;
+			do_write = true;
+		}
+	} else {
+		if (skipping_early_events) {  //if true (set at initialization) all events with position less than
+			//gSettings.ProgConsts()->drift_distance_ignore_history (if present) are not recored.
+			if (event_.pos_start >= gSettings.ProgConsts()->drift_distance_ignore_history) {
+				skipping_early_events = false;
+				skip_counter_ = 0;
+			}
+		}
+		if (skip_counter_ >= gSettings.ProgConsts()->skip_history_rate || boost::none == gSettings.ProgConsts()->skip_history_rate)
+			skip_counter_ = 0;
+		if (!skipping_early_events && 0 == skip_counter_)
+			do_write = true;
 	}
-	++num_of_events;
+	//End of logic
+#ifndef _NO_CERN_ROOT
+	//prev_event_ = event_;
+	//prev_event_saved_ = false;
+	if (do_write) {
+		sim_data_->Fill();
+		prev_event_saved_ = true;
+	}
+#endif //_NO_CERN_ROOT
+	++num_of_events; //May overflow
+	++skip_counter_;
 }
 
-void Manager::DoGotoNext(Event &event)
+void Manager::DoGotoNext(void)
 {
-	if (Event::None != event.process) { //== for the very first event
+	if (Event::None != event_.process) { //== for the very first event
 		const boost::optional<PDF_routine> *Ec_spec = &(gSettings.ProgConsts()->run_specifics[*run_index_].Ec_spectrum);
 		if (*Ec_spec) {
-			event.En_collision = (**Ec_spec)(Uniform());
+			event_.En_collision = (**Ec_spec)(Uniform());
 			double Rand = Uniform()*2.0 - 1.0;
-			event.theta_collision = std::acos(Rand); //Actually thete_start is uniform but theta collision is not (but close)
-			event.En_start = 0;
+			event_.theta_collision = std::acos(Rand); //Actually thete_start is uniform but theta collision is not (but close)
+			event_.En_start = 0;
 		} else {
-			event.En_start = event.En_finish;
-			event.theta_start = event.theta_finish;
-			event.En_collision = 0;
+			event_.En_start = event_.En_finish;
+			event_.theta_start = event_.theta_finish;
+			event_.En_collision = 0;
 		}
-		event.time_start += event.delta_time_full;
-		event.pos_start = event.pos_finish;
-		event.process = Event::None;
-		event.delta_time = 0;
-		event.delta_x = 0;
-		event.delta_time_full = 0;
-		event.photon_En = 0;
-		event.particle_ID = event.particle_ID_finish;
+		event_.time_start += event_.delta_time_full;
+		event_.pos_start = event_.pos_finish;
+		event_.process = Event::None;
+		event_.delta_time = 0;
+		event_.delta_x = 0;
+		event_.delta_time_full = 0;
+		event_.photon_En = 0;
+		event_.particle_ID = event_.particle_ID_finish;
 	}
-	event_ = event;
 }
 
-void Manager::DoStep(Event &event)
+void Manager::DoStep(void)
 {
 	if (!isReady())
 		return;
-	DoGotoNext(event);
-	DoStepLength(event); //In case Ec spectrum is fixed, stepping is done reversed in time
-	DoScattering(event);
-	PostStepAction(event);
+	DoGotoNext();
+	DoStepLength(); //In case Ec spectrum is fixed, stepping is done reversed in time
+	DoScattering();
+	PostStepAction();
 }
 
-bool Manager::IsFinished(Event &event)
+bool Manager::IsFinished(void)
 {
 	if (!isReady())
 		return true;
 	//return sim_data_->GetEntries()>=100;
-	return !(event.pos_finish < Drift_distance_);
+	return !(event_.pos_finish < Drift_distance_);
 }
 
 void Manager::LoopSimulation(void)
@@ -783,9 +802,9 @@ void Manager::LoopSimulation(void)
 		std::cerr << "Manager::LoopSimulation: invalid material" << std::endl;
 		return;
 	}
-	Initialize(event_);
-	while (!IsFinished(event_)) {
-		DoStep(event_);
+	InitializeEvent();
+	while (!IsFinished()) {
+		DoStep();
 	}
 }
 

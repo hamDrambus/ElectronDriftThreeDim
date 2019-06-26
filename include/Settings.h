@@ -72,7 +72,9 @@ struct ProgramConstants {
 	double maximal_energy; //maximal energy which electron is allowed to have. Necessary for table construction.
 	unsigned int angle_discretization;
 	boost::optional<double> drift_distance_ignore_history;
-	boost::optional<int> skip_history_rate;
+	boost::optional<unsigned int> skip_history_rate;
+	bool history_record_non_elastic;
+	boost::optional<double> skip_history_time;
 	bool is_test_version; //TODO: specify testing modules in settings.xml
 
 	std::string data_folder;

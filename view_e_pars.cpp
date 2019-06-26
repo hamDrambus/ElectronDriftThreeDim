@@ -22,7 +22,7 @@ void view_e_pars(void) {
   TH1D* hist_Tdelay = new TH1D ("Time delay [s]","Time delay [s]",600, 0, 1e-5);
   TH1D* hist_dl = new TH1D ("dL [m]","dL [m]",300, 0, 2e-6);
   TH1D* hist_V_drift = new TH1D ("Drift velocity [m/s]","Drift velocity [m/s]",300,0, 1e4);
-  double Dtime_left = 3.0e-7, Dtime_right = 6e-7, lim = 4.50e-7;
+  double Dtime_left = 1.2e-6, Dtime_right = 6.6e-6;
   TH1D* hist_T_drift = new TH1D ("Drift time [s]","Drift time [s]",160, Dtime_left, Dtime_right);
   TH1D* histEAvr = new TH1D ("Energy average", "Energy average", 300, 0, 15);
   TH1D* hist_theta = new TH1D ("Scatter angle near 10 eV","Scatter angle near 10 eV",300, 0, 3.1416);
@@ -37,7 +37,7 @@ void view_e_pars(void) {
   double dt = 6e-12;
   double DRIFT_DISTANCE = 3e-3;
   //std::string fname1("Optimization/eData_7.0Td.root");
-  std::string fname1("Output/v15.1/eData_7.0Td_VN.root");
+  std::string fname1("Output/v16.3/eData_7.0Td_VN.root");
   double En_start;
   double En_collision;
   double En_finish;
@@ -195,7 +195,7 @@ void view_e_pars(void) {
               num_of_elastic += processes_counters_[proc];
               break;
             }
-            case 1: {
+            case 47: {
               num_of_disso_attach = processes_counters_[proc];                         
               break;                          
             }
@@ -255,24 +255,24 @@ void view_e_pars(void) {
   //gPad->SetLogy();
   TF1 *ff = new TF1("fit", FittingF_GE, Dtime_left, Dtime_right, 6);
   ff->SetParNames("Gaus amplitude", "Gaus mean", "Gaus sigma", "Slow t0[s]", "Slow amplitude", "Slow tau[s]");
-  ff->SetParLimits(0, 100, 2000);
-  ff->SetParLimits(1, 2.5e-7, lim);
-  ff->SetParLimits(2, 1e-8, 1e-7);
-  ff->SetParLimits(3, lim, 5e-7);
-  ff->SetParLimits(4, 0, 500);
-  ff->SetParLimits(5, 1e-7, 1e-5);
+  ff->SetParLimits(0, 100, 3000);
+  ff->SetParLimits(1, 1.55e-6, 1.65e-6);
+  ff->SetParLimits(2, 5e-8, 6e-7);
+  ff->SetParLimits(3, 1.7e-6, 1.775e-6);
+  ff->SetParLimits(4, 100, 2e4);
+  ff->SetParLimits(5, 3e-7, 8e-7);
   hist_T_drift->Draw();
   c_3_5->Update();
+  hist_T_drift->Fit(ff);
   TLine* line = new TLine();
-  line->SetX1(lim);
-  line->SetX2(lim);
+  line->SetX1(ff->GetParameter(3));
+  line->SetX2(ff->GetParameter(3));
   line->SetY1(c_3_5->GetUymin());
   line->SetY2(c_3_5->GetUymax());
   line->SetLineColor(kRed);
-  //hist_T_drift->Fit(ff);
-  //hist_T_drift->Draw();
-  //line->Draw("same");
-  //ff->Draw("same");
+  hist_T_drift->Draw();
+  line->Draw("same");
+  ff->Draw("same");
   TCanvas *c_4 = new TCanvas ("Delta L", "Delta L", DEF_W, DEF_H);
   hist_dl->Draw();
   TCanvas *c_5 = new TCanvas ("e energy average", "e energy average", DEF_W, DEF_H);

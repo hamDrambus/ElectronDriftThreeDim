@@ -99,7 +99,10 @@ bool Settings::Load(std::string fname)
 		prog_const_.angle_discretization = params.get<unsigned int>("angle_discretization");
 		prog_const_.maximal_energy = params.get<double>("maximal_energy");
 
-		prog_const_.skip_history_rate = params.get_optional<int>("skip_history_rate");
+		prog_const_.skip_history_rate = params.get_optional<unsigned int>("skip_history_rate");
+		prog_const_.skip_history_time = params.get_optional<double>("skip_history_time");
+		if (prog_const_.skip_history_time && ((double)0 == prog_const_.skip_history_time))
+			prog_const_.skip_history_time = boost::none;
 		prog_const_.drift_distance_ignore_history = params.get_optional<double>("drift_distance_ignore_history");
 		BOOST_FOREACH(ptree::value_type &w, params.get_child("RecordedValues"))
 		{

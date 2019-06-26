@@ -38,10 +38,24 @@ Optimized verison 2: Reworked DataVector and FunctionTable, especially improved 
 =============================================================
 06.06.2019 Ubuntu - Release build in eclipse (gcc)
 	t particle generating =	9657.67 s; 9690.1 s
-	t particle loading =	2.25058 s; 2.55271 s
+	t particle loading (1GB) =	2.25058 s; 2.55271 s; 2.16455 s 
 	t mixture generating (integral table) =	81.4724 s
-	t mixture loading =		8.05316 s; 9.18072 s
+	t mixture loading (3.4 GB) =	8.05316 s; 9.18072 s; 7.43236 s
 	t drift (5 e on 1e-3 m) = 40.0391 s (8908387 events)
 
 10.06.2019 Ubuntu Release. No new optimization.
-	t drift (1000 e/10 treads on 3e-3) = 4532 s
+	t drift (1000 e/10 treads on 3e-3m) = 4532 s
+10.06.2019
+	t drift (Ar+Ar2(1%) 10000 e/10 treads on 3e-3m) = 45854.9 s
+11.06.2019
+	t drift (Ar+Ar2(1%) 10000 e/10 treads on 18mm) = ~196200 s (~54.5 h) (forgot to write down precise finish time)
+Starting simulation of electron drift at Tue Jun 11 11:58:57 2019
+Finished at Fri Jun 14 ~18:30:00 2019 
+17.06.2019
+	t drift (Ar+Ar2(1%) 10000 e/10 treads on 10mm) = 153919 s (~42 h 45 m) 
+Starting simulation of electron drift at Mon Jun 17 14:52:09 2019
+Finished simulation at Wed Jun 19 09:37:28 2019
+24.06.2019
+	t drift (Ar+Ar2(1%) XS_DA=6-18 1000e/18mm/10threads 7.0 + 8.5 Td) = 54926.2 s (~15 h 15 m)
+Started simulation at Mon Jun 24 16:55:34 2019
+Finished simulation at Tue Jun 25 08:11:00 2019

@@ -115,6 +115,9 @@ bool Process(void) {
 	}
 	auto end = std::chrono::system_clock::now();
     diff = end - start;
+    std::cout << "Started simulation at ";
+	srart_time = std::chrono::system_clock::to_time_t(start);
+	std::cout << std::ctime(&srart_time) << std::endl;
 	std::cout << "Finished simulation at ";
 	srart_time = std::chrono::system_clock::to_time_t(end);
 	std::cout << std::ctime(&srart_time) << std::endl;
