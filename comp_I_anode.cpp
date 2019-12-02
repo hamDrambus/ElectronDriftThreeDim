@@ -1,7 +1,7 @@
 void comp_I_anode(void) {
   gStyle->SetStatY(0.9);
   gStyle->SetStatX(0.9);
-  double Dtime_left = 2.4e-6, Dtime_right = 12e-6;
+  double Dtime_left = 2.4e-6, Dtime_right = 3.0e-5;
   int NN = Dtime_right/2e-8;
   TH1D* hist_current0 = new TH1D ("Induced current 0", "Induced current 0", NN, 0, Dtime_right);
   TH1D* hist_current1 = new TH1D ("Induced current 1", "Induced current 1", NN, 0, Dtime_right);
@@ -11,8 +11,8 @@ void comp_I_anode(void) {
   int DEF_W = 900, DEF_H = 700;
   std::string fname0("Output/v17.1/eData_7.0Td_L1.8e-2m_VN.root");
   std::string fname1("Output/v17.2/eData_7.0Td_L1.8e-2m_VN.root");
-  std::string fname2("Output/v17.3/eData_7.0Td_L1.8e-2m_VN.root");
-  std::string fname3("Output/v17.4/eData_7.0Td_L1.8e-2m_VN.root");
+  std::string fname2("Output/v17.5/eData_7.0Td_L1.8e-2m_VN.root");
+  std::string fname3("Output/v17.6/eData_7.0Td_L1.8e-2m_VN.root");
   double En_start;
   double En_collision;
   double En_finish;
@@ -116,6 +116,7 @@ void comp_I_anode(void) {
   //gPad->SetLogy();
   c0->SetGrid();
 	c0->SetTicks();
+  c0->SetLogy();
   TLegend *legend = new TLegend( 0.55, 0.65, 0.9, 0.9);
 	//legend->SetHeader("");
 	legend->SetMargin(0.25);
@@ -133,14 +134,14 @@ void comp_I_anode(void) {
 	hist_current2->SetLineWidth(2);
 	hist_current2->SetLineColor(kBlue);
 	hist_current2->Draw("hist cpsame");
-  hist_current3->SetLineWidth(2);
+    hist_current3->SetLineWidth(2);
 	hist_current3->SetLineColor(kGreen);
 	hist_current3->Draw("hist cpsame");
 	
-	legend->AddEntry(hist_current0, (std::string("7.0 Td, 18mm, XS_DA = 1e-18 cm^{2}")).c_str(), "l");
-	legend->AddEntry(hist_current1, (std::string("7.0 Td, 18mm, XS_DA = 3e-18 cm^{2}")).c_str(), "l");
-	legend->AddEntry(hist_current2, (std::string("7.0 Td, 18mm, XS_DA = 6e-18 cm^{2}")).c_str(), "l");
-	legend->AddEntry(hist_current3, (std::string("7.0 Td, 18mm, XS_DA = 1e-17 cm^{2}")).c_str(), "l");
+	legend->AddEntry(hist_current0, (std::string("7.0 Td, 18mm, XS_{DA}=1e-18 cm^{2}, #tau=0.36 #mus")).c_str(), "l");
+	legend->AddEntry(hist_current1, (std::string("7.0 Td, 18mm, XS_{DA}=3e-18 cm^{2}, #tau=0.36 #mus")).c_str(), "l");
+	legend->AddEntry(hist_current2, (std::string("7.0 Td, 18mm, XS_{DA}=1e-18 cm^{2}, #tau=3.6 #mus")).c_str(), "l");
+	legend->AddEntry(hist_current3, (std::string("7.0 Td, 18mm, XS_{DA}=3e-17 cm^{2}, #tau=3.6 #mus")).c_str(), "l");
 	//legend->AddEntry(histE_4, (std::string("7.0 Td, W=3e-2 eV, Loss=150x")).c_str(), "l");
 	
 	frame->Draw("sameaxis");
