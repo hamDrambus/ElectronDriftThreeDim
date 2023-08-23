@@ -81,6 +81,7 @@ public:
 	virtual ~Manager();
 	void LoopSimulation(void);
 	void WriteHistory(std::string root_fname);
+	void WriteLegend(std::string legend_fname);
 	void Test(void);
 };
 

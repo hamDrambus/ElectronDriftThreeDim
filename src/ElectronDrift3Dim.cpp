@@ -90,8 +90,10 @@ bool Process(void) {
 				_submanagers[0]->Merge(_submanagers[n]);
 		}
 		//Merged() into _submanagers[0];
-		if (N_thread_active>0)
+		if (N_thread_active>0) {
 			_submanagers[0]->WriteHistory(rp->output_file);
+			_submanagers[0]->WriteLegend(rp->output_file + ".txt");
+		}
 
 		auto run_end_t = std::chrono::system_clock::now();
         diff = run_end_t - run_start_t;

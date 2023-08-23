@@ -18,7 +18,7 @@ void read_spectrum(TH1D* hist, std::string fname, bool average, bool renormalize
 
 	tree->SetBranchAddress("energy_coll", &En_collision);
 	tree->SetBranchAddress("time_delta", &delta_time);
-		
+
 	unsigned long int _end_ = tree->GetEntries();
 	for (unsigned long int i=0;i!=_end_;++i){
 	    tree->GetEntry(i);
@@ -64,18 +64,18 @@ void to_ascii(std::vector<TH1D*> hists, std::vector<std::string> Tds, std::strin
 int export_e_distributions (void) {
 	int DEF_W = 900, DEF_H = 700;
 	double EN_MIN_=0;
-	double EN_MAX_=14.2;
-	int NN = 90;
+	double EN_MAX_=15;
+	int NN = 150; //dE= 0.01
 	bool linear = true;
-	bool renormalized_f = true;
+	bool renormalized_f = false;
 	std::vector<Color_t> palette_major = {kBlack, kRed, kBlue, kGreen, kYellow + 2, kMagenta, kOrange + 7};
 	std::string framename_Ec = std::string("e- E before collision distributions in gaseous Ar");
 	std::string framename_Eavg = std::string("e- E average distributions in gaseous Ar");
-	std::vector<std::string> Tds = {"8.3"};
+	std::vector<std::string> Tds = {"5.1"};
 	std::string folder = "Output/v18.1_e_distr_normal/";
-	std::vector<std::string> files = {"eData_8.3Td_SN"};
-	std::string output_Ec = folder + "Table_Ec_8.3Td" + (renormalized_f ? "_maxwell" : "") + ".dat";
-	std::string output_Eavg = folder + "Table_Eavg_8.3Td" + (renormalized_f ? "_maxwell" : "") + ".dat";
+	std::vector<std::string> files = {"eData_5.1Td_SN"};
+	std::string output_Ec = folder + "Table_Ec_5.1Td" + (renormalized_f ? "_maxwell" : "") + ".dat";
+	std::string output_Eavg = folder + "Table_Eavg_5.1Td" + (renormalized_f ? "_maxwell" : "") + ".dat";
 	//std::string output_Ec = folder + "Table_Ec" + (renormalized_f ? "_maxwell" : "") + ".dat";
 	//std::string output_Eavg = folder + "Table_Eavg" + (renormalized_f ? "_maxwell" : "") + ".dat";
 	std::vector<TH1D*> hists_Ec, hists_Eavg;
@@ -100,7 +100,7 @@ int export_e_distributions (void) {
 	max_val_Ec*= linear ? 1.2 : 2;
 	//max_val_Ec = std::min(max_val_Ec, linear ? 1.0 : 10);
 	max_val_Eavg*= linear ? 1.2 : 2;
-	//max_val_Eavg = std::min(max_val_Eavg, linear ? 1.0 : 10);	
+	//max_val_Eavg = std::min(max_val_Eavg, linear ? 1.0 : 10);
 	gStyle->SetGridStyle(3);
 	gStyle->SetGridColor(14);
 	gStyle->SetGridWidth(1);
@@ -158,11 +158,8 @@ int export_e_distributions (void) {
 	frame2->Draw("sameaxis");
 	legend2->Draw("same");
 	c_2->Update();
-	
+
 	to_ascii(hists_Ec, Tds, output_Ec);
 	to_ascii(hists_Eavg, Tds, output_Eavg);
 	return 0;
 }
-
-
-

@@ -1,0 +1,197 @@
+<!--Test fixed Ec spectrum (load unmodified one)-->
+<Settings>
+  <!-- TODO: add separation User-changable and "do not touch"? -->
+  <!--OPT means value is optional. If it is not specified the default value/behaviour will be used-->
+  <PhysicalConstants>
+    <!--See global_definitions.h for unit and meanings description-->
+    <electron_charge_SI>1.60217662e-19</electron_charge_SI>
+    <electron_mass_SI>9.10938356e-31</electron_mass_SI>
+    <electron_mass_eV>5.109989461e5</electron_mass_eV>
+    <h_bar_SI>1.054571800e-34</h_bar_SI>
+    <h_bar_eVs>6.582119514e-16</h_bar_eVs>
+    <a_bohr_SI>5.2917721092e-1</a_bohr_SI> <!--multiplied by e10 for XS to be in 1e-20 m2-->
+    <Ry_energy_eV>13.605693</Ry_energy_eV>
+    <boltzmann_SI>1.38064852e-23</boltzmann_SI>
+    <light_speed_SI>299792458</light_speed_SI>
+    <Argon>
+      <Ar_mass_eV>3.726e10</Ar_mass_eV>
+      <Ar_primal_line_nm>128</Ar_primal_line_nm>
+      <MERT5_Lmax>10</MERT5_Lmax>
+      <!--see Kurokawa Phys. Rev. A84 2011, MERT5+ fit http://dx.doi.org/10.1103/PhysRevA.84.062717 -->
+      <MERT5_A>-1.365</MERT5_A>
+      <MERT5_D>80.5</MERT5_D>
+      <MERT5_F>-153</MERT5_F>
+      <MERT5_G>31.0</MERT5_G>
+      <MERT5_A1>8.8</MERT5_A1>
+      <MERT5_H>29.7</MERT5_H>
+      <MERT5_alpha_d>11.08</MERT5_alpha_d>
+      <MERT5_alpha_q>0.0</MERT5_alpha_q>
+      <elastic_phases_En_max>12.0</elastic_phases_En_max> <!--Could not find phaseshift values for larger E-->
+      <elastic_phases_En_min>5e-3</elastic_phases_En_min> <!--MERT5 phaseshifts are questionable below this E-->
+      <elastic_phases_En_threshold>0.24</elastic_phases_En_threshold> <!--MERT 5 is applied only below this energy for differential cross-section-->
+      <elastic_XS_En_max>20.0</elastic_XS_En_max> <!--No data for larger energy. They do exist, simply not in "./data/"-->
+      <elastic_XS_En_min>1e-3</elastic_XS_En_min> <!--linear extrapolation to XS(E=0) is used below En_min-->
+      <elastic_XS_En_threshold>1.0</elastic_XS_En_threshold>
+      <elastic_XS_En_smooth_width>0.1</elastic_XS_En_smooth_width>
+      <elastic_XS_no_Ramsauer_minimum>false</elastic_XS_no_Ramsauer_minimum> <!--OPT-->
+      <elastic_XS_Ramsauer_minimum_En>0.3286</elastic_XS_Ramsauer_minimum_En> <!--OPT if no Ramsauer minimum is false or not specified-->
+      <elastic_XS_at_0_En>7.491</elastic_XS_at_0_En>
+      <scattering_angle_model>0</scattering_angle_model> <!--OPT, 0 - normal, 1 - uniform-->
+      <time_delay_model>None</time_delay_model> <!--OPT, Precise - default - using dt = d/dE Im arg(f), Rough - using d/dE phaseshift, None - no time delay -->
+
+      <Feshbach_resonance_3o2_En>11.103</Feshbach_resonance_3o2_En>
+      <Feshbach_resonance_1o2_En>11.270</Feshbach_resonance_1o2_En>
+      <Feshbach_resonance_3o2_Width>2.3e-3</Feshbach_resonance_3o2_Width>
+      <Feshbach_resonance_1o2_Width>2.2e-3</Feshbach_resonance_1o2_Width>
+
+      <Dissoc_attachment_En_thresh>11.528</Dissoc_attachment_En_thresh>
+      <Dissoc_attachment_XS>0</Dissoc_attachment_XS>
+      <Argon_ion_decay_time>0</Argon_ion_decay_time> <!--In seconds-->
+
+      <Feshbach_resonance_NBrS_XS>0.0</Feshbach_resonance_NBrS_XS><!--in e-20 m^2-->
+      <Feshbach_resonance_NBrS_En_loss>0</Feshbach_resonance_NBrS_En_loss> <!--OPT-->
+    </Argon>
+  </PhysicalConstants>
+  <ProgramConstants>
+    <is_test_version>false</is_test_version> <!--OPT for running tests before simulation. TODO: test modules and mb even submodules-->
+    <temperature>87</temperature> <!--Kelvins-->
+    <pressure>1.013e5</pressure> <!--Pascals-->
+    <thread_number>8</thread_number>
+    <maximal_energy>16.0</maximal_energy>
+    <angle_discretization>1001</angle_discretization>
+    
+    <drift_distance_ignore_history>0</drift_distance_ignore_history> <!--OPT-->
+    <skip_history_rate>0</skip_history_rate> <!--OPT-->
+    <RecordedValues> <!-- if field is not specified, its value is taken as false by default (do not record) -->
+    <!-- TODO: add profiles: for E spectra, for V drift, Custom -->
+    	<process_type>false</process_type>
+		<time_initial>false</time_initial> <!-- Used for separation of dirrerent electrons! TODO: change TTree structure so that electrons are separate -->
+		<time_delta>false</time_delta>
+		<time_delta_full>false</time_delta_full>
+
+    	<energy_initial>false</energy_initial>
+    	<energy_collision>false</energy_collision>
+    	<energy_final>false</energy_final>
+    	<energy_average>false</energy_average> <!-- useless -->
+    	
+    	<position_initial>false</position_initial> <!-- position - coordinate against electric field (along e drift direction)-->
+    	<position_delta>false</position_delta>
+    	<position_final>false</position_final> <!-- there is redundancy here -->
+		<path_delta>false</path_delta> <!-- full covered path in 3D -->
+
+		<theta_initial>false</theta_initial>
+		<theta_collision>false</theta_collision>
+    	<theta_delta>false</theta_delta>
+    	<theta_final>false</theta_final>
+    	
+    	<photon_energy>false</photon_energy> <!-- required for NBrS study. -->
+
+		<deb_log_rand>false</deb_log_rand> <!-- TODO: 3D table solver does not support uncertainty tracking -->
+		<deb_solver_y_left>false</deb_solver_y_left>
+		<deb_solver_y_right>false</deb_solver_y_right>
+		<deb_solver_E_left>false</deb_solver_E_left>
+		<deb_solver_E_right>false</deb_solver_E_right>
+    </RecordedValues>
+    
+    <data_location>data</data_location><!--OPT-->
+    <DataFiles>
+      <elastic_XS_data>data/ArScatteringCross.dat</elastic_XS_data> <!--OPT-->
+      <elastic_XS_phaseshifts_data>data/McEachranArPhaseShifts.dat</elastic_XS_phaseshifts_data> <!--OPT-->
+      <excitation_XS_data>data/ArExcitations_Magboltz.dat</excitation_XS_data> <!--OPT-->
+      <ionization_XS_data>data/ArIonizations_Magboltz.dat</ionization_XS_data> <!--OPT-->
+    </DataFiles>
+    <cache_data_folder>data_derived</cache_data_folder>
+    <output_file>Output/v18.2_VUV_and_NIR_yields/eData_($Td)Td_PN.root</output_file>
+	<Ec_spectrum_data></Ec_spectrum_data> <!--OPT. If set, the simulation is run in fixed Ec spectrum mode.-->
+    
+    <drift_distance>3e-3</drift_distance> <!--default value for each run-->
+    <n_electrons>10</n_electrons> <!--default value for each run-->
+    <random_seed>42</random_seed> <!--default value for each run-->   
+	<random_generator>TRandom1</random_generator> <!-- TRandom1 (best, slowest), TRandom2 (BAD), TRandom3 (faster, good) -->   
+    <Mixture>
+    	<Argon>1.0</Argon>
+    </Mixture>
+    <Runs>
+     <Run>
+        <Td>9.0</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+	  <Run>
+        <Td>8.5</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+	  <Run>
+        <Td>8.0</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+	  <Run>
+        <Td>7.6</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+	  <Run>
+        <Td>7.4</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>7.2</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+	  <Run>
+        <Td>7.0</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>6.8</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>6.6</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>6.4</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>6.2</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+	  <Run>
+        <Td>6.0</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>5.8</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>5.6</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>5.4</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>5.2</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>5.0</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>4.8</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>4.6</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+      <Run>
+        <Td>4.4</Td>
+		<n_electrons>120</n_electrons>
+      </Run>
+    </Runs>
+    </ProgramConstants>
+</Settings>

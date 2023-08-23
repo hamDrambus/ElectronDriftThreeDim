@@ -827,6 +827,7 @@ void Manager::WriteHistory(std::string root_fname)
 	UInt_t processes_size; //particle_ID
 	UInt_t particle_ID;
 	char * particle_name;
+	//std::vector<std::string> *processes_names;
 
 	processes_data_->Branch("particle_ID", &particle_ID, "particle_ID/i");
 	processes_data_->Branch("proc_size", &processes_size, "proc_size/i");
@@ -834,6 +835,7 @@ void Manager::WriteHistory(std::string root_fname)
 	TBranch *brProcessesID = processes_data_->Branch("proc_IDs", processes_IDs, "proc_IDs[proc_size]/S");
 	TBranch *brProcessesCounters = processes_data_->Branch("proc_Ns", processes_counters, "proc_Ns[proc_size]/L");
 	TBranch *brProcessesName = processes_data_->Branch("proc_names", processes_legends, "proc_names[proc_size]/C");
+	//TBranch *brProcessesName1 = processes_data_->Branch("proc_names1", &processes_names);
 
 	for (std::size_t i = 0, i_end_ = processes_counters_.size(); i!=i_end_; ++i) {
 		particle_ID = i;
@@ -842,15 +844,18 @@ void Manager::WriteHistory(std::string root_fname)
 		processes_counters = new Long64_t [processes_size];
 		processes_IDs = new Short_t [processes_size];
 		processes_legends = new char* [processes_size];
+		//processes_names = new std::vector<std::string> [processes_size];
 		for (std::size_t proc = 0; proc != processes_size; ++proc) {
 			processes_counters[proc] = processes_counters_[i][proc];
 			processes_IDs[proc] = processes_IDs_[i][proc];
 			processes_legends[proc] = c_str_cp(processes_legends_[i][proc]);
+			//(*processes_names)[proc] = processes_legends_[i][proc];
 		}
 		brParticleName->SetAddress(particle_name);
 		brProcessesID->SetAddress(processes_IDs);
 		brProcessesCounters->SetAddress(processes_counters);
 		brProcessesName->SetAddress(processes_legends);
+		//brProcessesName1->SetAddress(&processes_names);
 		processes_data_->Fill();
 		for (std::size_t proc = 0; proc != processes_size; ++proc) {
 			delete [] processes_legends[proc];
@@ -858,6 +863,7 @@ void Manager::WriteHistory(std::string root_fname)
 		delete [] processes_counters;
 		delete [] processes_IDs;
 		delete [] processes_legends;
+		//delete [] processes_names;
 		delete [] particle_name;
 	}
 
@@ -870,6 +876,25 @@ void Manager::WriteHistory(std::string root_fname)
 #else //_NO_CERN_ROOT
 	std::cerr << "Manager::WriteHistory: Warning: ROOT is turned off" << std::endl;
 #endif //_NO_CERN_ROOT
+}
+
+void Manager::WriteLegend(std::string legend_fname)
+{
+	std::ofstream str;
+	open_output_file(legend_fname, str, std::ios_base::trunc);
+	if (!str.is_open())
+		return;
+	for (std::size_t i = 0, i_end_ = processes_counters_.size(); i!=i_end_; ++i) {
+		UInt_t processes_size = processes_counters_[i].size();
+		str<<"Particle_ID: "<<i<<"\tName: \""<<gParticleTable.GetParticle(i)->GetName()<<"\"\tN of procesess: "<<processes_size<<std::endl;
+		str<<"Processes:"<<std::endl;
+		for (std::size_t proc = 0; proc != processes_size; ++proc) {
+			str<<"ID: "<<processes_IDs_[i][proc]<<"\tName: "<<processes_legends_[i][proc]<<"\tCounter: "<<processes_counters_[i][proc]<<std::endl;
+		}
+		str<<"=========================================="<<std::endl;
+
+	}
+	str.close();
 }
 
 /*
